@@ -6,15 +6,21 @@
   "author": "BuildPilot PoE contributors",
   "description": "Windows desktop MVP scaffold for a Path of Exile build overlay app.",
   "main": "dist-electron/main.js",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Elyelx/Overlay-PoE-Build-.git"
+  },
   "scripts": {
     "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\" \"npm:dev:app\"",
     "dev:renderer": "vite",
     "dev:electron": "tsc -p tsconfig.electron.json --watch --preserveWatchOutput",
     "dev:app": "wait-on tcp:5173 file:dist-electron/main.js && electron .",
     "build": "tsc -p tsconfig.electron.json && vite build",
+    "build:icon": "python3 scripts/generate_icon.py",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "pack:win": "npm run build && electron-builder --publish never --win --dir",
-    "dist:win": "npm run build && electron-builder --publish never --win nsis --x64",
+    "dist:win": "npm run build && electron-builder --publish never --win nsis-web --x64",
+    "dist:win:offline": "npm run build && electron-builder --publish never --win nsis --x64",
     "dist:win:portable": "npm run build && electron-builder --publish never --win portable --x64"
   },
   "dependencies": {
@@ -42,6 +48,7 @@
     },
     "asar": true,
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -58,6 +65,15 @@
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "BuildPilot PoE"
+    },
+    "nsisWeb": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "BuildPilot PoE",
+      "artifactName": "BuildPilot-PoE-Installer.${ext}",
+      "appPackageUrl": "https://github.com/Elyelx/Overlay-PoE-Build-/releases/download/windows-installer-latest/BuildPilot-PoE-Web-Package-x64.nsis.7z"
     }
   }
 }

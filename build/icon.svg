@@ -1,0 +1,46 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="coinFill" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(92 74) rotate(49.576) scale(170.569)">
+      <stop stop-color="#1D1815"/>
+      <stop offset="1" stop-color="#110F0E"/>
+    </radialGradient>
+    <linearGradient id="ringStroke" x1="56" y1="48" x2="204" y2="208" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F0BD77"/>
+      <stop offset="1" stop-color="#A9682D"/>
+    </linearGradient>
+    <linearGradient id="needleFill" x1="128" y1="68" x2="128" y2="158" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD8A2"/>
+      <stop offset="1" stop-color="#C88037"/>
+    </linearGradient>
+    <linearGradient id="branchStroke" x1="74" y1="174" x2="182" y2="86" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A76731"/>
+      <stop offset="0.5" stop-color="#E6B06B"/>
+      <stop offset="1" stop-color="#FFD08D"/>
+    </linearGradient>
+    <radialGradient id="nodeFill" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 136) rotate(90) scale(18)">
+      <stop stop-color="#FFE0B2"/>
+      <stop offset="1" stop-color="#C88239"/>
+    </radialGradient>
+  </defs>
+
+  <circle cx="128" cy="128" r="88" fill="url(#coinFill)"/>
+  <circle cx="128" cy="128" r="87" stroke="url(#ringStroke)" stroke-width="6"/>
+  <path d="M70 82C98 54 160 50 194 86" stroke="#FFF4E6" stroke-opacity="0.08" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="96" cy="98" r="34" fill="#FFF7ED" fill-opacity="0.04"/>
+
+  <path d="M128 136L128 84" stroke="url(#branchStroke)" stroke-width="10" stroke-linecap="round"/>
+  <path d="M128 136L82 170" stroke="url(#branchStroke)" stroke-width="10" stroke-linecap="round"/>
+  <path d="M128 136L174 170" stroke="url(#branchStroke)" stroke-width="10" stroke-linecap="round"/>
+
+  <path d="M128 60L143 96H113L128 60Z" fill="url(#needleFill)"/>
+  <path d="M128 86L136 108H120L128 86Z" fill="#FFF4DF" fill-opacity="0.55"/>
+
+  <circle cx="128" cy="136" r="15" fill="url(#nodeFill)"/>
+  <circle cx="128" cy="136" r="6" fill="#1A1411"/>
+
+  <circle cx="82" cy="170" r="11" fill="#D79853"/>
+  <circle cx="82" cy="170" r="4" fill="#191310"/>
+
+  <circle cx="174" cy="170" r="11" fill="#D79853"/>
+  <circle cx="174" cy="170" r="4" fill="#191310"/>
+</svg>
