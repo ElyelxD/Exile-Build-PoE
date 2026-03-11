@@ -19,8 +19,8 @@
     "build:icon": "python3 scripts/generate_icon.py",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "pack:win": "npm run build && electron-builder --publish never --win --dir",
-    "dist:win": "npm run build && electron-builder --publish never --win nsis-web --x64",
-    "dist:win:offline": "npm run build && electron-builder --publish never --win nsis --x64",
+    "dist:win": "npm run build && electron-builder --publish never --win nsis --x64",
+    "dist:win:web": "npm run build && electron-builder --publish never --win nsis-web --x64",
     "dist:win:portable": "npm run build && electron-builder --publish never --win portable --x64"
   },
   "dependencies": {
@@ -72,7 +72,7 @@
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "BuildPilot PoE",
-      "artifactName": "BuildPilot-PoE-Installer.${ext}",
+      "artifactName": "BuildPilot-PoE-Web-Installer.${ext}",
       "appPackageUrl": "https://github.com/Elyelx/Overlay-PoE-Build/releases/download/windows-installer-latest"
     }
   }

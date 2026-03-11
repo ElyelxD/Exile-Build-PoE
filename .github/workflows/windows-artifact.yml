@@ -36,36 +36,21 @@ jobs:
         run: npm run dist:win
 
       - name: Prepare stable release assets
-        id: prepare_assets
         shell: pwsh
         run: |
-          $webReleaseDir = Join-Path "release" "nsis-web"
-          if (-not (Test-Path $webReleaseDir)) {
-            throw "NSIS web output directory not found: $webReleaseDir"
-          }
-
-          $installer = Get-ChildItem -Path $webReleaseDir -Filter "*.exe" |
+          $installer = Get-ChildItem -Path "release" -Filter "*.exe" |
             Where-Object { $_.Name -notlike "*__uninstaller*" } |
             Select-Object -First 1
           if (-not $installer) {
-            throw "Web installer .exe not found in $webReleaseDir"
+            throw "Offline installer .exe not found in release/"
           }
-          Copy-Item $installer.FullName "release/BuildPilot-PoE-Installer.exe" -Force
-
-          $package = Get-ChildItem -Path $webReleaseDir -Filter "*.nsis.7z" | Select-Object -First 1
-          if (-not $package) {
-            throw "NSIS web package not found in $webReleaseDir"
-          }
-
-          "package_name=$($package.Name)" >> $env:GITHUB_OUTPUT
+          Copy-Item $installer.FullName "release/BuildPilot-PoE-Setup.exe" -Force
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BuildPilot-PoE-web-installer-x64
-          path: |
-            release/BuildPilot-PoE-Installer.exe
-            release/nsis-web/${{ steps.prepare_assets.outputs.package_name }}
+          name: BuildPilot-PoE-installer-x64
+          path: release/BuildPilot-PoE-Setup.exe
           if-no-files-found: error
           retention-days: 14
 
@@ -73,23 +58,14 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          PACKAGE_NAME: ${{ steps.prepare_assets.outputs.package_name }}
         run: |
-          $tag = "windows-installer-latest"
+          $version = node -p "require('./package.json').version"
+          $tag = "windows-installer-v$version-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
           $notes = @"
-          Latest Windows installer built from `main`.
+          Windows installer build from `main`.
 
           Commit: $env:GITHUB_SHA
           Workflow run: https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
           "@
 
-          git tag -f $tag $env:GITHUB_SHA
-          git push --force origin "refs/tags/$tag"
-
-          gh release view $tag *> $null
-          if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag "release/BuildPilot-PoE-Installer.exe" "release/nsis-web/$env:PACKAGE_NAME" --clobber
-            gh release edit $tag --title "BuildPilot PoE Windows Installer" --notes $notes
-          } else {
-            gh release create $tag "release/BuildPilot-PoE-Installer.exe" "release/nsis-web/$env:PACKAGE_NAME" --title "BuildPilot PoE Windows Installer" --notes $notes
-          }
+          gh release create $tag "release/BuildPilot-PoE-Setup.exe" --title "BuildPilot PoE Windows Installer $version" --notes $notes --latest

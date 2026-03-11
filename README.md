@@ -110,18 +110,10 @@ Output:
 Optional:
 
 ```bash
-npm run dist:win
+npm run dist:win:web
 ```
 
-That command generates the web installer `.exe` for Windows. The installer is small and downloads the real app package from GitHub Releases during installation.
-
-Optional:
-
-```bash
-npm run dist:win:offline
-```
-
-That command generates the full offline NSIS installer.
+That command generates the web installer `.exe` for Windows. Use it only if the release assets are publicly reachable.
 
 Optional:
 
@@ -140,31 +132,29 @@ Notes:
 
 ## GitHub release installer
 
-The repository includes a Windows workflow that generates a web installer `.exe`, uploads the build output as a GitHub Actions artifact, and publishes a stable installer asset to GitHub Releases.
+The repository includes a Windows workflow that generates an offline Windows installer, uploads it as a GitHub Actions artifact, and publishes a stable installer asset to GitHub Releases.
 
 Windows download:
 
-- [Download BuildPilot for Windows](https://github.com/Elyelx/Overlay-PoE-Build/releases/download/windows-installer-latest/BuildPilot-PoE-Installer.exe)
+- [Download BuildPilot for Windows](https://github.com/Elyelx/Overlay-PoE-Build/releases/latest/download/BuildPilot-PoE-Setup.exe)
 
 Flow:
 
 1. Push code to `main`
 2. The `Windows Installer` workflow runs on GitHub Actions
-3. It builds the Windows web installer
-4. It uploads `BuildPilot-PoE-Installer.exe` and the web package as workflow artifacts
-5. It updates the `windows-installer-latest` GitHub Release with the latest installer assets
-6. End users download `BuildPilot-PoE-Installer.exe` from Releases and run it on Windows
-7. During installation, the installer downloads the latest app package from that same Release
+3. It builds the Windows offline installer
+4. It uploads `BuildPilot-PoE-Setup.exe` as a workflow artifact
+5. It publishes a new GitHub Release for that build and marks it as latest
+6. End users download `BuildPilot-PoE-Setup.exe` from the latest release and run it on Windows
 
 Important:
 
 - GitHub rejects files larger than 100 MB in the repository, so installer binaries must not be committed into git
 - `release/` is still build output and should not be committed manually
-- the stable public download is the release asset `BuildPilot-PoE-Installer.exe`
+- the stable public download is the release asset `BuildPilot-PoE-Setup.exe`
 - the workflow artifact is useful for short-term validation; the GitHub Release is the better end-user download
-- the web installer requires internet during installation because it downloads the packaged app from Releases
-- the web installer expects the release asset URL to be publicly reachable; for private distribution, prefer `npm run dist:win:offline`
-- if you need a single-file local installer for testing, use `npm run dist:win:offline`
+- the default installer is offline, so it does not depend on extra GitHub downloads during installation
+- if you explicitly need a small web installer for a public release flow, use `npm run dist:win:web`
 
 ### Post-MVP
 - [ ] Multiple saved builds
