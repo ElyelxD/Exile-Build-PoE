@@ -3,4 +3,3 @@ dist
 dist-electron
 release
 *.log
-downloads/

@@ -38,11 +38,13 @@ jobs:
       - name: Prepare stable release assets
         shell: pwsh
         run: |
-          $installer = Get-ChildItem -Path release -Filter "BuildPilot-PoE-Installer.exe" |
+          $installer = Get-ChildItem -Path release -Filter "*.exe" |
+            Where-Object { $_.Name -notlike "*__uninstaller*" } |
             Select-Object -First 1
           if (-not $installer) {
             throw "Web installer .exe not found in release/"
           }
+          Copy-Item $installer.FullName "release/BuildPilot-PoE-Installer.exe" -Force
 
           $package = Get-ChildItem -Path release -Filter "*.nsis.7z" | Select-Object -First 1
           if (-not $package) {
