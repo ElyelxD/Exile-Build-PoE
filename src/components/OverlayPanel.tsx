@@ -47,6 +47,12 @@ export function OverlayPanel({
   variant = "preview",
 }: OverlayPanelProps) {
   const compactObjectives = nextObjectives.slice(0, 2);
+  const pinnedCopy =
+    pinnedItems.length === 0
+      ? "Overlay leve · Ctrl + Shift + M conclui"
+      : `${pinnedItems.length} lembrete${pinnedItems.length === 1 ? "" : "s"} pinado${
+          pinnedItems.length === 1 ? "" : "s"
+        } · Ctrl + Shift + M conclui`;
 
   return (
     <section
@@ -64,13 +70,13 @@ export function OverlayPanel({
         </div>
         <div className="overlay-controls">
           <button className="icon-button" onClick={onResetPosition} type="button">
-            Center
+            Centro
           </button>
           <button className="icon-button" onClick={onToggleMode} type="button">
-            {overlayMode === "compact" ? "Expand" : "Compact"}
+            {overlayMode === "compact" ? "Detalhes" : "Resumo"}
           </button>
           <button className="icon-button" onClick={onToggleClickThrough} type="button">
-            {clickThrough ? "Unlock" : "Click-through"}
+            {clickThrough ? "Editar" : "Liberar mouse"}
           </button>
         </div>
       </header>
@@ -84,32 +90,45 @@ export function OverlayPanel({
             <p>{currentStage.summary}</p>
           </div>
 
-          <div className="overlay-objectives">
-            {compactObjectives.map((item) => (
-              <div className="overlay-objective" key={item.id}>
-                <button
-                  className="overlay-objective-main"
-                  onClick={() => onToggleChecklist?.(item.id)}
-                  type="button"
+          {compactObjectives.length > 0 ? (
+            <div className="overlay-objectives">
+              {compactObjectives.map((item, index) => (
+                <div
+                  className={`overlay-objective ${index === 0 ? "is-primary" : "is-secondary"}`}
+                  key={item.id}
                 >
-                  <strong>{item.text}</strong>
-                  <span>{item.stageTitle}</span>
-                </button>
-                <button
-                  className="icon-button"
-                  onClick={() => onTogglePin?.(item.id)}
-                  type="button"
-                >
-                  Pin
-                </button>
-              </div>
-            ))}
-          </div>
+                  <button
+                    className="overlay-objective-main"
+                    onClick={() => onToggleChecklist?.(item.id)}
+                    type="button"
+                  >
+                    <span className="overlay-objective-kicker">
+                      {index === 0 ? "Agora" : "Em seguida"}
+                    </span>
+                    <strong>{item.text}</strong>
+                    <span>{item.stageTitle}</span>
+                  </button>
+                  <button
+                    className="icon-button"
+                    onClick={() => onTogglePin?.(item.id)}
+                    type="button"
+                  >
+                    Pin
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="overlay-stage-summary is-complete">
+              <span className="pill">Checklist em dia</span>
+              <p>Sem pendencias imediatas. Abra os detalhes para revisar a build com calma.</p>
+            </div>
+          )}
 
           <footer className="overlay-footer">
-            <span>{pinnedItems.length} pinados · Ctrl + Shift + M conclui</span>
+            <span>{pinnedCopy}</span>
             <button className="primary-button is-small" onClick={onMarkObjective} type="button">
-              Marcar próximo
+              Concluir
             </button>
           </footer>
         </div>

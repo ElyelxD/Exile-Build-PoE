@@ -17,6 +17,7 @@ interface PersistedWindowState {
 
 let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
+let isAdjustingOverlayBounds = false;
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
 
@@ -68,27 +69,7 @@ function saveBounds(key: "mainBounds" | "overlayBounds", window: BrowserWindow) 
   writeWindowState({ overlayBounds: bounds });
 }
 
-function isBoundsVisible(bounds: Rectangle) {
-  const centerX = bounds.x + bounds.width / 2;
-  const centerY = bounds.y + bounds.height / 2;
-
-  return screen.getAllDisplays().some((display) => {
-    const { x, y, width, height } = display.workArea;
-
-    return (
-      centerX >= x &&
-      centerX <= x + width &&
-      centerY >= y &&
-      centerY <= y + height
-    );
-  });
-}
-
-function getOverlayAnchorDisplay() {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    return screen.getDisplayMatching(mainWindow.getBounds());
-  }
-
+function getPrimaryWorkArea() {
   return screen.getPrimaryDisplay();
 }
 
@@ -97,29 +78,69 @@ interface OverlaySizeHint {
   height?: number;
 }
 
+function clampBoundsToPrimaryDisplay(bounds: Rectangle): Rectangle {
+  const { x, y, width, height } = getPrimaryWorkArea().workArea;
+  const clampedWidth = Math.min(bounds.width, width);
+  const clampedHeight = Math.min(bounds.height, height);
+
+  return {
+    width: clampedWidth,
+    height: clampedHeight,
+    x: Math.min(Math.max(bounds.x, x), x + width - clampedWidth),
+    y: Math.min(Math.max(bounds.y, y), y + height - clampedHeight),
+  };
+}
+
+function areBoundsEqual(left: Rectangle, right: Rectangle) {
+  return (
+    left.x === right.x &&
+    left.y === right.y &&
+    left.width === right.width &&
+    left.height === right.height
+  );
+}
+
 function getCenteredOverlayBounds(size?: OverlaySizeHint): Rectangle {
-  const anchorDisplay = getOverlayAnchorDisplay();
-  const { x, y, width, height } = anchorDisplay.workArea;
+  const { x, y, width, height } = getPrimaryWorkArea().workArea;
   const overlayWidth = size?.width ?? 450;
   const overlayHeight = size?.height ?? 360;
 
-  return {
+  return clampBoundsToPrimaryDisplay({
     width: overlayWidth,
     height: overlayHeight,
     x: Math.round(x + (width - overlayWidth) / 2),
     y: Math.round(y + (height - overlayHeight) / 2),
-  };
+  });
 }
 
 function getInitialOverlayBounds(persisted: PersistedWindowState) {
-  if (persisted.overlayBounds && isBoundsVisible(persisted.overlayBounds)) {
-    return persisted.overlayBounds;
+  const persistedOverlayBounds = persisted.overlayBounds;
+  const overlaySizeHint: OverlaySizeHint = {
+    width: persistedOverlayBounds?.width,
+    height: persistedOverlayBounds?.height,
+  };
+
+  if (persistedOverlayBounds) {
+    return clampBoundsToPrimaryDisplay(persistedOverlayBounds);
   }
 
-  return getCenteredOverlayBounds({
-    width: persisted.overlayBounds?.width,
-    height: persisted.overlayBounds?.height,
-  });
+  return getCenteredOverlayBounds(overlaySizeHint);
+}
+
+function setOverlayBounds(nextBounds: Rectangle) {
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    return;
+  }
+
+  const currentBounds = overlayWindow.getBounds();
+
+  if (areBoundsEqual(currentBounds, nextBounds)) {
+    return;
+  }
+
+  isAdjustingOverlayBounds = true;
+  overlayWindow.setBounds(nextBounds);
+  isAdjustingOverlayBounds = false;
 }
 
 function recenterOverlayWindow() {
@@ -127,10 +148,12 @@ function recenterOverlayWindow() {
     return;
   }
 
-  overlayWindow.setBounds(
+  const currentBounds = overlayWindow.getBounds();
+
+  setOverlayBounds(
     getCenteredOverlayBounds({
-      width: overlayWindow.getBounds().width,
-      height: overlayWindow.getBounds().height,
+      width: currentBounds.width,
+      height: currentBounds.height,
     }),
   );
 }
@@ -140,9 +163,7 @@ function ensureOverlayWindowPosition() {
     return;
   }
 
-  if (!isBoundsVisible(overlayWindow.getBounds())) {
-    recenterOverlayWindow();
-  }
+  setOverlayBounds(clampBoundsToPrimaryDisplay(overlayWindow.getBounds()));
 }
 
 function createMainWindow() {
@@ -217,13 +238,15 @@ function createOverlayWindow() {
   });
 
   overlayWindow.on("move", () => {
-    if (overlayWindow) {
+    if (overlayWindow && !isAdjustingOverlayBounds) {
+      ensureOverlayWindowPosition();
       saveBounds("overlayBounds", overlayWindow);
     }
   });
 
   overlayWindow.on("resize", () => {
-    if (overlayWindow) {
+    if (overlayWindow && !isAdjustingOverlayBounds) {
+      ensureOverlayWindowPosition();
       saveBounds("overlayBounds", overlayWindow);
     }
   });
@@ -277,6 +300,10 @@ app.whenReady().then(() => {
   createMainWindow();
   createOverlayWindow();
   registerShortcuts();
+
+  screen.on("display-added", ensureOverlayWindowPosition);
+  screen.on("display-removed", ensureOverlayWindowPosition);
+  screen.on("display-metrics-changed", ensureOverlayWindowPosition);
 
   ipcMain.handle("app:toggle-overlay", async () => {
     toggleOverlayVisibility();

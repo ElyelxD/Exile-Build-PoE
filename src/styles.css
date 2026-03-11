@@ -19,6 +19,10 @@
   --mint: #7fcdb9;
   --danger: #ff9276;
   --shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  --overlay-live-bg: rgba(14, 12, 11, 0.72);
+  --overlay-live-surface: rgba(255, 255, 255, 0.035);
+  --overlay-live-border: rgba(255, 236, 214, 0.06);
+  --overlay-live-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
 * {
@@ -86,6 +90,8 @@ button {
 .hero-card,
 .overlay-panel,
 .overlay-empty {
+  position: relative;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--bg-panel);
@@ -110,6 +116,11 @@ button {
 
 .overlay-panel {
   padding: 12px;
+}
+
+.overlay-panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 .header-bar,
@@ -446,6 +457,19 @@ button {
   text-align: left;
 }
 
+.overlay-objective-main strong {
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.overlay-objective-kicker {
+  color: var(--accent-strong);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .warning-row,
 .mini-help-row {
   display: flex;
@@ -542,7 +566,7 @@ button {
 
 .overlay-route {
   min-height: 100vh;
-  padding: 10px;
+  padding: 12px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
@@ -561,8 +585,24 @@ button {
 }
 
 .overlay-panel.is-live {
-  border-color: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(6px);
+  width: min(100%, 388px);
+  border-color: var(--overlay-live-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 34%),
+    radial-gradient(circle at top right, rgba(242, 169, 91, 0.08), transparent 32%),
+    var(--overlay-live-bg);
+  box-shadow: var(--overlay-live-shadow);
+  cursor: move;
+  backdrop-filter: blur(10px) saturate(0.82);
+  -webkit-app-region: drag;
+}
+
+.overlay-panel.is-live::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), transparent 42%);
+  content: "";
+  pointer-events: none;
 }
 
 .overlay-meta h2 {
@@ -579,16 +619,23 @@ button {
   -webkit-app-region: drag;
 }
 
+.overlay-panel.is-live .overlay-header {
+  gap: 12px;
+}
+
 .overlay-controls {
   flex-wrap: wrap;
   justify-content: flex-end;
   -webkit-app-region: no-drag;
 }
 
+.overlay-panel.is-live .overlay-controls {
+  gap: 6px;
+}
+
 .overlay-controls button,
 .tab-bar,
 .tab-bar button,
-.overlay-objective,
 .overlay-objective-main,
 .checklist-main,
 .icon-button,
@@ -606,8 +653,23 @@ textarea {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.overlay-stage-summary.is-complete {
+  background: rgba(255, 255, 255, 0.015);
+}
+
 .overlay-objective {
   border-radius: 12px;
+}
+
+.overlay-objective.is-primary {
+  border-color: rgba(242, 169, 91, 0.14);
+  background:
+    linear-gradient(180deg, rgba(242, 169, 91, 0.08), transparent 120%),
+    var(--bg-panel-alt);
+}
+
+.overlay-objective.is-secondary {
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .overlay-empty {
@@ -641,6 +703,126 @@ textarea {
 
 .icon-button {
   min-width: 40px;
+}
+
+.overlay-panel.is-live .overlay-meta h2 {
+  font-size: 0.96rem;
+}
+
+.overlay-panel.is-live .overlay-meta p,
+.overlay-panel.is-live .overlay-footer {
+  font-size: 0.78rem;
+}
+
+.overlay-panel.is-live .overlay-body,
+.overlay-panel.is-live .overlay-expanded-content,
+.overlay-panel.is-live .overlay-objectives {
+  gap: 8px;
+}
+
+.overlay-panel.is-live .pill,
+.overlay-panel.is-live .check-badge {
+  background: rgba(242, 169, 91, 0.1);
+}
+
+.overlay-panel.is-live .overlay-stage-summary,
+.overlay-panel.is-live .overlay-objective,
+.overlay-panel.is-live .panel,
+.overlay-panel.is-live .list-block,
+.overlay-panel.is-live .detail-card,
+.overlay-panel.is-live .stage-card,
+.overlay-panel.is-live .note-block,
+.overlay-panel.is-live .checklist-item {
+  border-color: rgba(255, 255, 255, 0.04);
+  background: var(--overlay-live-surface);
+  box-shadow: none;
+}
+
+.overlay-panel.is-live .overlay-objective.is-primary {
+  border-color: rgba(242, 169, 91, 0.12);
+  background:
+    linear-gradient(180deg, rgba(242, 169, 91, 0.07), transparent 110%),
+    rgba(255, 255, 255, 0.04);
+}
+
+.overlay-panel.is-live .overlay-objective.is-secondary,
+.overlay-panel.is-live .overlay-stage-summary.is-complete {
+  background: rgba(255, 255, 255, 0.022);
+}
+
+.overlay-panel.is-live .overlay-stage-summary p {
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.overlay-panel.is-live .overlay-objective-main,
+.overlay-panel.is-live .checklist-main {
+  padding: 11px;
+}
+
+.overlay-panel.is-live .overlay-objective-main span:last-child,
+.overlay-panel.is-live .checklist-main span:last-child {
+  font-size: 0.74rem;
+}
+
+.overlay-panel.is-live .tab-bar {
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.overlay-panel.is-live .tab-button,
+.overlay-panel.is-live .icon-button,
+.overlay-panel.is-live .ghost-button,
+.overlay-panel.is-live .primary-button {
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  letter-spacing: 0.01em;
+}
+
+.overlay-panel.is-live .tab-button,
+.overlay-panel.is-live .icon-button,
+.overlay-panel.is-live .ghost-button,
+.overlay-panel.is-live .primary-button {
+  cursor: pointer;
+}
+
+.overlay-panel.is-live input,
+.overlay-panel.is-live textarea {
+  cursor: text;
+}
+
+.overlay-panel.is-live .tab-button,
+.overlay-panel.is-live .icon-button,
+.overlay-panel.is-live .ghost-button {
+  border-color: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-1);
+}
+
+.overlay-panel.is-live .primary-button {
+  background: rgba(242, 169, 91, 0.14);
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.overlay-panel.is-live .tab-button.is-active {
+  border-color: rgba(242, 169, 91, 0.14);
+  background: rgba(242, 169, 91, 0.08);
+}
+
+.overlay-panel.is-live .overlay-footer {
+  padding-top: 2px;
+}
+
+.overlay-route .overlay-empty {
+  border-color: var(--overlay-live-border);
+  background: rgba(14, 12, 11, 0.74);
+  box-shadow: var(--overlay-live-shadow);
+  backdrop-filter: blur(10px);
 }
 
 @media (max-width: 1340px) {
