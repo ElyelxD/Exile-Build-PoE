@@ -69,7 +69,7 @@ function normalizeState(candidate: Partial<AppState>): AppState {
     progressByBuildId: candidate.progressByBuildId ?? {},
     activeTab: candidate.activeTab ?? "overview",
     overlayMode: candidate.overlayMode ?? "compact",
-    overlayClickThrough: candidate.overlayClickThrough ?? false,
+    overlayClickThrough: false,
   };
 }
 

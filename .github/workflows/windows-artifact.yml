@@ -5,6 +5,11 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - downloads/**
+
+permissions:
+  contents: write
 
 jobs:
   build-windows-installer:
@@ -13,6 +18,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -36,3 +44,23 @@ jobs:
           path: release/*.exe
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish installer into repository
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path downloads | Out-Null
+          $installer = Get-ChildItem -Path release -Filter *.exe | Select-Object -First 1
+          if (-not $installer) {
+            throw "Installer .exe not found in release/"
+          }
+          Copy-Item $installer.FullName "downloads/BuildPilot-PoE-Setup.exe" -Force
+
+      - name: Commit installer to repository
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/BuildPilot-PoE-Setup.exe
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: update windows installer [skip ci]"
+          git push

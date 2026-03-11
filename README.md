@@ -122,24 +122,26 @@ Notes:
 - if you want a custom app icon, add `build/icon.ico`
 - if you try to generate the Windows installer from Linux, `wine` is required by Electron Builder
 
-## GitHub Actions installer
+## GitHub repository installer
 
-The repository now includes a Windows workflow that generates the installer `.exe` and uploads it as a GitHub Actions artifact.
+The repository now includes a Windows workflow that generates the installer `.exe`, uploads it as an artifact, and also commits a stable installer file back into the repository.
 
 Flow:
 
-1. Run the `Windows Installer` workflow in GitHub Actions
-2. Download the artifact `BuildPilot-PoE-installer-x64`
-3. GitHub will deliver that artifact as a zip download
-4. Extract it
-5. Run `BuildPilot PoE-Setup-0.1.0.exe`
-6. Install the app on Windows
+1. Push code to `main`
+2. The `Windows Installer` workflow runs on GitHub Actions
+3. It builds the Windows installer
+4. It commits `downloads/BuildPilot-PoE-Setup.exe` back into the repository
+5. A user can click `Code` -> `Download ZIP`
+6. After extracting the repository zip, the user runs `downloads/BuildPilot-PoE-Setup.exe`
+7. The installer installs the app on Windows
 
 Important:
 
-- this is now the recommended distribution path
-- `release/` is build output and should not be committed
-- users no longer need the `win-unpacked` folder for normal installs
+- `release/` is still build output and should not be committed manually
+- the committed file intended for end users is `downloads/BuildPilot-PoE-Setup.exe`
+- the repository zip will only contain the installer after the workflow has completed and pushed the generated file back to `main`
+- the installer installs the app; it does not need the `win-unpacked` folder for normal users
 
 ### Post-MVP
 - [ ] Multiple saved builds

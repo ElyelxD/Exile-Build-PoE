@@ -13,9 +13,9 @@
     "dev:app": "wait-on tcp:5173 file:dist-electron/main.js && electron .",
     "build": "tsc -p tsconfig.electron.json && vite build",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
-    "pack:win": "npm run build && electron-builder --win --dir",
-    "dist:win": "npm run build && electron-builder --win nsis --x64",
-    "dist:win:portable": "npm run build && electron-builder --win portable --x64"
+    "pack:win": "npm run build && electron-builder --publish never --win --dir",
+    "dist:win": "npm run build && electron-builder --publish never --win nsis --x64",
+    "dist:win:portable": "npm run build && electron-builder --publish never --win portable --x64"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -115,13 +115,14 @@ export function BuildTabContent({
             <section className="panel">
               <div className="section-heading">
                 <h3>Warnings</h3>
-                <span>Produto manual</span>
+                <span>Antes de jogar</span>
               </div>
-              <div className="warning-grid">
+              <div className="warning-list">
                 {[...build.warnings, ...build.summary.warningCards].map((warning) => (
-                  <article className="warning-card" key={warning}>
-                    {warning}
-                  </article>
+                  <div className="warning-row" key={warning}>
+                    <span className="warning-dot" />
+                    <p>{warning}</p>
+                  </div>
                 ))}
               </div>
             </section>
@@ -334,4 +335,3 @@ export function BuildTabContent({
       return null;
   }
 }
-

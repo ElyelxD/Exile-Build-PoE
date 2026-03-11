@@ -23,6 +23,7 @@ interface OverlayPanelProps {
   onMarkObjective?: () => void;
   onTogglePin?: (itemId: string) => void;
   onToggleClickThrough?: () => void;
+  onResetPosition?: () => void;
   onToggleChecklist?: (itemId: string) => void;
   variant?: "preview" | "live";
 }
@@ -41,9 +42,12 @@ export function OverlayPanel({
   onMarkObjective,
   onTogglePin,
   onToggleClickThrough,
+  onResetPosition,
   onToggleChecklist,
   variant = "preview",
 }: OverlayPanelProps) {
+  const compactObjectives = nextObjectives.slice(0, 2);
+
   return (
     <section
       className={`overlay-panel ${overlayMode === "compact" ? "is-compact" : "is-expanded"} ${
@@ -59,6 +63,9 @@ export function OverlayPanel({
           </p>
         </div>
         <div className="overlay-controls">
+          <button className="icon-button" onClick={onResetPosition} type="button">
+            Center
+          </button>
           <button className="icon-button" onClick={onToggleMode} type="button">
             {overlayMode === "compact" ? "Expand" : "Compact"}
           </button>
@@ -78,7 +85,7 @@ export function OverlayPanel({
           </div>
 
           <div className="overlay-objectives">
-            {nextObjectives.map((item) => (
+            {compactObjectives.map((item) => (
               <div className="overlay-objective" key={item.id}>
                 <button
                   className="overlay-objective-main"
@@ -100,7 +107,7 @@ export function OverlayPanel({
           </div>
 
           <footer className="overlay-footer">
-            <span>{pinnedItems.length} pinados</span>
+            <span>{pinnedItems.length} pinados · Ctrl + Shift + M conclui</span>
             <button className="primary-button is-small" onClick={onMarkObjective} type="button">
               Marcar próximo
             </button>
@@ -138,4 +145,3 @@ export function OverlayPanel({
     </section>
   );
 }
-

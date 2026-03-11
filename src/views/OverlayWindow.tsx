@@ -27,6 +27,12 @@ export function OverlayWindow() {
     }
   }, [state.overlayClickThrough]);
 
+  const resetOverlayPosition = () => {
+    if (window.desktop) {
+      void window.desktop.resetOverlayPosition();
+    }
+  };
+
   if (!build || !progress || !currentStage) {
     return (
       <div className="overlay-route">
@@ -55,6 +61,7 @@ export function OverlayWindow() {
         }
         onToggleMode={actions.toggleOverlayMode}
         onTogglePin={(itemId) => actions.togglePin(build.id, itemId)}
+        onResetPosition={resetOverlayPosition}
         overlayMode={state.overlayMode}
         pinnedItems={pinnedItems}
         progress={progress}
@@ -63,4 +70,3 @@ export function OverlayWindow() {
     </div>
   );
 }
-

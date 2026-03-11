@@ -17,6 +17,12 @@ const sourceOptions: Array<{ value: BuildSourceType; label: string }> = [
   { value: "file", label: "PoB file" },
 ];
 
+const quickHotkeys = [
+  "Ctrl + Shift + O abre o overlay",
+  "Ctrl + Shift + M marca o próximo objetivo",
+  "Ctrl + Shift + L ajusta o nível rapidamente",
+];
+
 export function MainShell() {
   const { state, actions } = useAppStore();
   const [sourceType, setSourceType] = useState<BuildSourceType>("link");
@@ -78,6 +84,12 @@ export function MainShell() {
   const toggleOverlay = () => {
     if (window.desktop) {
       void window.desktop.toggleOverlay();
+    }
+  };
+
+  const resetOverlayPosition = () => {
+    if (window.desktop) {
+      void window.desktop.resetOverlayPosition();
     }
   };
 
@@ -220,6 +232,9 @@ export function MainShell() {
                 <button className="ghost-button" onClick={toggleOverlay} type="button">
                   Toggle overlay
                 </button>
+                <button className="ghost-button" onClick={resetOverlayPosition} type="button">
+                  Recentrar
+                </button>
                 <button
                   className="ghost-button"
                   onClick={actions.toggleOverlayMode}
@@ -243,11 +258,25 @@ export function MainShell() {
         <header className="header-bar">
           <div className="header-copy">
             <span className="eyebrow">BuildPilot PoE</span>
-            <h1>Desktop overlay para executar builds do Path of Building sem alt-tab constante.</h1>
+            <h1>{build ? build.name : "Overlay operacional para Path of Building"}</h1>
+            <p className="header-subcopy">
+              {build
+                ? `${build.className} · ${build.ascendancy} · ${currentStage?.title ?? "Sem stage"}`
+                : "Importe um PoB e acompanhe a build com uma janela sempre visível e menos ruído."}
+            </p>
           </div>
-          <div className="inline-actions">
+          <div className="inline-actions header-actions">
+            {build && (
+              <button
+                className="ghost-button"
+                onClick={() => actions.markNextObjective(build.id)}
+                type="button"
+              >
+                Marcar próximo
+              </button>
+            )}
             <button className="primary-button" onClick={toggleOverlay} type="button">
-              Ctrl + Shift + O
+              Abrir overlay
             </button>
           </div>
         </header>
@@ -264,28 +293,48 @@ export function MainShell() {
             <div className="hero-grid">
               <section className="hero-card">
                 <div className="section-heading">
-                  <h2>{build.name}</h2>
-                  <span>
-                    {build.className} · {build.ascendancy}
-                  </span>
+                  <h2>Agora</h2>
+                  <span>Stage ativo</span>
                 </div>
-                <p className="lead-copy">{currentStage.summary}</p>
+                <div className="hero-stage">
+                  <span className="pill">
+                    Lvl {currentStage.levelMin}-{currentStage.levelMax}
+                  </span>
+                  <h3>{currentStage.title}</h3>
+                  <p className="lead-copy">{currentStage.summary}</p>
+                </div>
                 <div className="metric-stack">
                   <div>
-                    <span>Próximos 10-20 min</span>
+                    <span>Próxima ação</span>
                     <strong>{nextObjectives[0]?.text ?? "Checklist atual completo"}</strong>
                   </div>
                   <div>
                     <span>Próximo upgrade</span>
                     <strong>{build.summary.nextUpgrade}</strong>
                   </div>
+                  <div>
+                    <span>Nível atual</span>
+                    <strong>{progress.playerLevel}</strong>
+                  </div>
+                </div>
+                <div className="inline-actions">
+                  <button
+                    className="primary-button"
+                    onClick={() => actions.markNextObjective(build.id)}
+                    type="button"
+                  >
+                    Concluir próximo
+                  </button>
+                  <button className="ghost-button" onClick={toggleOverlay} type="button">
+                    Mostrar overlay
+                  </button>
                 </div>
               </section>
 
               <section className="hero-card">
                 <div className="section-heading">
-                  <h2>Next steps</h2>
-                  <span>{nextObjectives.length} visíveis</span>
+                  <h2>Fila curta</h2>
+                  <span>{nextObjectives.length} objetivos</span>
                 </div>
                 <div className="checklist">
                   {nextObjectives.map((item) => (
@@ -309,22 +358,49 @@ export function MainShell() {
                     </div>
                   ))}
                 </div>
+                <div className="mini-help">
+                  {pinnedItems.length > 0 ? (
+                    <>
+                      <span className="mini-help-title">Pinados</span>
+                      {pinnedItems.slice(0, 2).map((item) => (
+                        <div className="mini-help-row" key={item.id}>
+                          <strong>{item.text}</strong>
+                          <span>{item.stageTitle}</span>
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <span className="mini-help-title">Hotkeys úteis</span>
+                      {quickHotkeys.map((item) => (
+                        <div className="mini-help-row" key={item}>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
               </section>
 
-              <div className="overlay-preview">
+              <div className="hero-card overlay-preview-shell">
+                <div className="section-heading">
+                  <h2>Overlay compacto</h2>
+                  <span>Preview</span>
+                </div>
                 <OverlayPanel
                   activeTab={state.activeTab}
                   build={build}
                   clickThrough={state.overlayClickThrough}
                   currentStage={currentStage}
-                  nextObjectives={nextObjectives}
+                  nextObjectives={nextObjectives.slice(0, 2)}
                   onMarkObjective={() => actions.markNextObjective(build.id)}
                   onSetTab={actions.setActiveTab}
                   onToggleChecklist={(itemId) => actions.toggleChecklist(build.id, itemId)}
                   onToggleClickThrough={toggleClickThrough}
                   onToggleMode={actions.toggleOverlayMode}
                   onTogglePin={(itemId) => actions.togglePin(build.id, itemId)}
-                  overlayMode={state.overlayMode}
+                  onResetPosition={resetOverlayPosition}
+                  overlayMode="compact"
                   pinnedItems={pinnedItems}
                   progress={progress}
                   variant="preview"

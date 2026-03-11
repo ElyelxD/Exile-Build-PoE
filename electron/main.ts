@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { app, BrowserWindow, globalShortcut, ipcMain } from "electron";
+import { app, BrowserWindow, globalShortcut, ipcMain, screen } from "electron";
 import type { Rectangle } from "electron";
 
 type ShortcutName =
@@ -13,7 +13,6 @@ type ShortcutName =
 interface PersistedWindowState {
   mainBounds?: Rectangle;
   overlayBounds?: Rectangle;
-  overlayClickThrough?: boolean;
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -69,6 +68,83 @@ function saveBounds(key: "mainBounds" | "overlayBounds", window: BrowserWindow) 
   writeWindowState({ overlayBounds: bounds });
 }
 
+function isBoundsVisible(bounds: Rectangle) {
+  const centerX = bounds.x + bounds.width / 2;
+  const centerY = bounds.y + bounds.height / 2;
+
+  return screen.getAllDisplays().some((display) => {
+    const { x, y, width, height } = display.workArea;
+
+    return (
+      centerX >= x &&
+      centerX <= x + width &&
+      centerY >= y &&
+      centerY <= y + height
+    );
+  });
+}
+
+function getOverlayAnchorDisplay() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return screen.getDisplayMatching(mainWindow.getBounds());
+  }
+
+  return screen.getPrimaryDisplay();
+}
+
+interface OverlaySizeHint {
+  width?: number;
+  height?: number;
+}
+
+function getCenteredOverlayBounds(size?: OverlaySizeHint): Rectangle {
+  const anchorDisplay = getOverlayAnchorDisplay();
+  const { x, y, width, height } = anchorDisplay.workArea;
+  const overlayWidth = size?.width ?? 450;
+  const overlayHeight = size?.height ?? 360;
+
+  return {
+    width: overlayWidth,
+    height: overlayHeight,
+    x: Math.round(x + (width - overlayWidth) / 2),
+    y: Math.round(y + (height - overlayHeight) / 2),
+  };
+}
+
+function getInitialOverlayBounds(persisted: PersistedWindowState) {
+  if (persisted.overlayBounds && isBoundsVisible(persisted.overlayBounds)) {
+    return persisted.overlayBounds;
+  }
+
+  return getCenteredOverlayBounds({
+    width: persisted.overlayBounds?.width,
+    height: persisted.overlayBounds?.height,
+  });
+}
+
+function recenterOverlayWindow() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    return;
+  }
+
+  overlayWindow.setBounds(
+    getCenteredOverlayBounds({
+      width: overlayWindow.getBounds().width,
+      height: overlayWindow.getBounds().height,
+    }),
+  );
+}
+
+function ensureOverlayWindowPosition() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    return;
+  }
+
+  if (!isBoundsVisible(overlayWindow.getBounds())) {
+    recenterOverlayWindow();
+  }
+}
+
 function createMainWindow() {
   const persisted = readWindowState();
 
@@ -111,12 +187,13 @@ function createMainWindow() {
 
 function createOverlayWindow() {
   const persisted = readWindowState();
+  const initialBounds = getInitialOverlayBounds(persisted);
 
   overlayWindow = new BrowserWindow({
-    width: persisted.overlayBounds?.width ?? 450,
-    height: persisted.overlayBounds?.height ?? 360,
-    x: persisted.overlayBounds?.x,
-    y: persisted.overlayBounds?.y,
+    width: initialBounds.width,
+    height: initialBounds.height,
+    x: initialBounds.x,
+    y: initialBounds.y,
     show: false,
     transparent: true,
     frame: false,
@@ -132,10 +209,6 @@ function createOverlayWindow() {
   });
 
   loadRendererWindow(overlayWindow, "/overlay");
-
-  if (persisted.overlayClickThrough) {
-    overlayWindow.setIgnoreMouseEvents(true, { forward: true });
-  }
 
   overlayWindow.on("close", () => {
     if (overlayWindow) {
@@ -174,6 +247,7 @@ function toggleOverlayVisibility() {
     return;
   }
 
+  ensureOverlayWindowPosition();
   overlayWindow.showInactive();
 }
 
@@ -211,10 +285,13 @@ app.whenReady().then(() => {
   ipcMain.handle("overlay:set-click-through", async (_event, enabled: boolean) => {
     if (overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.setIgnoreMouseEvents(enabled, { forward: true });
-      writeWindowState({ overlayClickThrough: enabled });
     }
 
     return enabled;
+  });
+
+  ipcMain.handle("overlay:reset-position", async () => {
+    recenterOverlayWindow();
   });
 
   app.on("activate", () => {
