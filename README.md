@@ -144,7 +144,7 @@ The repository includes a Windows workflow that generates a web installer `.exe`
 
 Windows download:
 
-- [Download BuildPilot for Windows](https://github.com/Elyelx/Overlay-PoE-Build-/releases/download/windows-installer-latest/BuildPilot-PoE-Installer.exe)
+- [Download BuildPilot for Windows](https://github.com/Elyelx/Overlay-PoE-Build/releases/download/windows-installer-latest/BuildPilot-PoE-Installer.exe)
 
 Flow:
 

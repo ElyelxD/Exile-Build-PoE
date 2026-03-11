@@ -8,7 +8,7 @@
   "main": "dist-electron/main.js",
   "repository": {
     "type": "git",
-    "url": "git@github.com:Elyelx/Overlay-PoE-Build-.git"
+    "url": "git@github.com:Elyelx/Overlay-PoE-Build.git"
   },
   "scripts": {
     "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\" \"npm:dev:app\"",
@@ -73,7 +73,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "BuildPilot PoE",
       "artifactName": "BuildPilot-PoE-Installer.${ext}",
-      "appPackageUrl": "https://github.com/Elyelx/Overlay-PoE-Build-/releases/download/windows-installer-latest"
+      "appPackageUrl": "https://github.com/Elyelx/Overlay-PoE-Build/releases/download/windows-installer-latest"
     }
   }
 }
