@@ -1,10 +1,10 @@
 # BuildPilot PoE
 
-Open-source overlay for Path of Exile build progression, powered by Path of Building imports.
+Open-source Windows desktop overlay for Path of Exile build progression, powered by Path of Building imports.
 
 ## Overview
 
-BuildPilot PoE is a Windows desktop overlay designed to help players follow a Path of Building setup without constantly alt-tabbing.
+BuildPilot PoE is a Windows desktop application with an always-on-top overlay window designed to help players follow a Path of Building setup without constantly alt-tabbing.
 
 Instead of focusing on price checks, the app focuses on build execution:
 
@@ -19,9 +19,18 @@ The goal is simple:
 
 **Play your build without getting stuck in PoB.**
 
+## Current scaffold
+
+- Electron + React + TypeScript desktop structure
+- main desktop window plus transparent overlay window
+- always-on-top overlay shell
+- global hotkeys wired through the desktop runtime
+- local-only persistence for MVP
+- local PoB import flow from link, code, or file
+
 ## Features planned for MVP
 
-- Import build data from Path of Building
+- Import build data from Path of Building only
 - Transform build data into playable progression stages
 - Show next passive milestones
 - Show gem and link setup by phase
@@ -34,7 +43,7 @@ The goal is simple:
 
 Path of Building is amazing for planning, but not ideal for step-by-step execution during gameplay.
 
-This project aims to bridge that gap with a lightweight overlay experience inspired by the usability of desktop PoE tools.
+This project aims to bridge that gap with a lightweight desktop overlay experience inspired by the usability of PoE tools for Windows.
 
 ## Status
 
@@ -50,13 +59,12 @@ The first public goal is a usable MVP for Windows with:
 
 ## Tech stack
 
-Planned stack:
+Current stack:
 
-- Tauri or Electron
+- Electron
 - React
 - TypeScript
-
-Final stack may evolve as the project grows.
+- local storage for MVP state
 
 ## Roadmap
 
@@ -67,6 +75,71 @@ Final stack may evolve as the project grows.
 - [ ] Overlay UI
 - [ ] Local state persistence
 - [ ] Hotkey support
+- [ ] Real Path of Building parser
+
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+Desktop-specific scripts:
+
+```bash
+npm run build
+npm run typecheck
+npm run pack:win
+npm run dist:win
+```
+
+## Windows installer
+
+To generate the official Windows installer executable on a Windows machine:
+
+```bash
+npm install
+npm run dist:win
+```
+
+Output:
+
+- installer `.exe` in `release/`
+- expected artifact name: `BuildPilot PoE-Setup-0.1.0.exe`
+
+Optional:
+
+```bash
+npm run dist:win:portable
+```
+
+That command generates a portable Windows executable instead of the NSIS installer.
+
+Notes:
+
+- the current packaging target is `x64`
+- MVP packaging is local-only and does not require any backend
+- if you want a custom app icon, add `build/icon.ico`
+- if you try to generate the Windows installer from Linux, `wine` is required by Electron Builder
+
+## GitHub Actions installer
+
+The repository now includes a Windows workflow that generates the installer `.exe` and uploads it as a GitHub Actions artifact.
+
+Flow:
+
+1. Run the `Windows Installer` workflow in GitHub Actions
+2. Download the artifact `BuildPilot-PoE-installer-x64`
+3. GitHub will deliver that artifact as a zip download
+4. Extract it
+5. Run `BuildPilot PoE-Setup-0.1.0.exe`
+6. Install the app on Windows
+
+Important:
+
+- this is now the recommended distribution path
+- `release/` is build output and should not be committed
+- users no longer need the `win-unpacked` folder for normal installs
 
 ### Post-MVP
 - [ ] Multiple saved builds
