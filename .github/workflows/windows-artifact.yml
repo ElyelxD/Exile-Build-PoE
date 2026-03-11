@@ -38,17 +38,22 @@ jobs:
       - name: Prepare stable release assets
         shell: pwsh
         run: |
-          $installer = Get-ChildItem -Path release -Filter "*.exe" |
+          $webReleaseDir = Join-Path "release" "nsis-web"
+          if (-not (Test-Path $webReleaseDir)) {
+            throw "NSIS web output directory not found: $webReleaseDir"
+          }
+
+          $installer = Get-ChildItem -Path $webReleaseDir -Filter "*.exe" |
             Where-Object { $_.Name -notlike "*__uninstaller*" } |
             Select-Object -First 1
           if (-not $installer) {
-            throw "Web installer .exe not found in release/"
+            throw "Web installer .exe not found in $webReleaseDir"
           }
           Copy-Item $installer.FullName "release/BuildPilot-PoE-Installer.exe" -Force
 
-          $package = Get-ChildItem -Path release -Filter "*.nsis.7z" | Select-Object -First 1
+          $package = Get-ChildItem -Path $webReleaseDir -Filter "*.nsis.7z" | Select-Object -First 1
           if (-not $package) {
-            throw "NSIS web package not found in release/"
+            throw "NSIS web package not found in $webReleaseDir"
           }
 
           Copy-Item $package.FullName "release/BuildPilot-PoE-Web-Package-x64.nsis.7z" -Force
