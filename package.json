@@ -73,7 +73,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "BuildPilot PoE",
       "artifactName": "BuildPilot-PoE-Installer.${ext}",
-      "appPackageUrl": "https://github.com/Elyelx/Overlay-PoE-Build-/releases/download/windows-installer-latest/BuildPilot-PoE-Web-Package-x64.nsis.7z"
+      "appPackageUrl": "https://github.com/Elyelx/Overlay-PoE-Build-/releases/download/windows-installer-latest"
     }
   }
 }

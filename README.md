@@ -142,6 +142,10 @@ Notes:
 
 The repository includes a Windows workflow that generates a web installer `.exe`, uploads the build output as a GitHub Actions artifact, and publishes a stable installer asset to GitHub Releases.
 
+Windows download:
+
+- [Download BuildPilot for Windows](https://github.com/Elyelx/Overlay-PoE-Build-/releases/download/windows-installer-latest/BuildPilot-PoE-Installer.exe)
+
 Flow:
 
 1. Push code to `main`
@@ -159,6 +163,7 @@ Important:
 - the stable public download is the release asset `BuildPilot-PoE-Installer.exe`
 - the workflow artifact is useful for short-term validation; the GitHub Release is the better end-user download
 - the web installer requires internet during installation because it downloads the packaged app from Releases
+- the web installer expects the release asset URL to be publicly reachable; for private distribution, prefer `npm run dist:win:offline`
 - if you need a single-file local installer for testing, use `npm run dist:win:offline`
 
 ### Post-MVP
