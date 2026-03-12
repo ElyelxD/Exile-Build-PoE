@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, Tray } from "electron";
 import type { Rectangle } from "electron";
 
 type ShortcutName =
@@ -17,6 +17,7 @@ interface PersistedWindowState {
 
 let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
+let appTray: Tray | null = null;
 let isAdjustingOverlayBounds = false;
 let isQuitting = false;
 
@@ -55,6 +56,14 @@ function loadRendererWindow(window: BrowserWindow, hash = "") {
   void window.loadFile(indexPath, { hash });
 }
 
+function trayIconPath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, "tray-icon.ico");
+  }
+
+  return path.join(app.getAppPath(), "build/icon.ico");
+}
+
 function saveBounds(key: "mainBounds" | "overlayBounds", window: BrowserWindow) {
   if (window.isDestroyed()) {
     return;
@@ -81,8 +90,10 @@ interface OverlaySizeHint {
 
 function clampBoundsToPrimaryDisplay(bounds: Rectangle): Rectangle {
   const { x, y, width, height } = getPrimaryWorkArea().workArea;
-  const clampedWidth = Math.min(bounds.width, width);
-  const clampedHeight = Math.min(bounds.height, height);
+  const minimumWidth = Math.min(430, width);
+  const minimumHeight = Math.min(500, height);
+  const clampedWidth = Math.min(Math.max(bounds.width, minimumWidth), width);
+  const clampedHeight = Math.min(Math.max(bounds.height, minimumHeight), height);
 
   return {
     width: clampedWidth,
@@ -104,7 +115,7 @@ function areBoundsEqual(left: Rectangle, right: Rectangle) {
 function getCenteredOverlayBounds(size?: OverlaySizeHint): Rectangle {
   const { x, y, width, height } = getPrimaryWorkArea().workArea;
   const overlayWidth = size?.width ?? 450;
-  const overlayHeight = size?.height ?? 360;
+  const overlayHeight = size?.height ?? 540;
 
   return clampBoundsToPrimaryDisplay({
     width: overlayWidth,
@@ -192,11 +203,84 @@ function shutdownApplication() {
   isQuitting = true;
   globalShortcut.unregisterAll();
 
+  if (appTray) {
+    appTray.destroy();
+    appTray = null;
+  }
+
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.destroy();
   }
 
   app.quit();
+}
+
+function restoreMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.setSkipTaskbar(false);
+  mainWindow.show();
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+
+  mainWindow.focus();
+}
+
+function minimizeMainWindowToTray() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.setSkipTaskbar(true);
+  mainWindow.hide();
+}
+
+function createTray() {
+  if (appTray) {
+    return;
+  }
+
+  const icon = nativeImage.createFromPath(trayIconPath());
+
+  appTray = new Tray(icon);
+  appTray.setToolTip("BuildPilot PoE");
+  appTray.setContextMenu(
+    Menu.buildFromTemplate([
+      {
+        label: "Abrir BuildPilot PoE",
+        click: () => {
+          restoreMainWindow();
+        },
+      },
+      {
+        label: "Mostrar overlay",
+        click: () => {
+          if (!overlayWindow || overlayWindow.isDestroyed()) {
+            return;
+          }
+
+          ensureOverlayWindowPosition();
+          promoteOverlayWindow();
+          overlayWindow.showInactive();
+        },
+      },
+      { type: "separator" },
+      {
+        label: "Sair",
+        click: () => {
+          shutdownApplication();
+        },
+      },
+    ]),
+  );
+
+  appTray.on("click", () => {
+    restoreMainWindow();
+  });
 }
 
 function createMainWindow() {
@@ -239,7 +323,7 @@ function createMainWindow() {
       noLink: true,
       title: "Sair do BuildPilot PoE",
       message: "O que voce quer fazer com o BuildPilot PoE?",
-      detail: "Fechar encerra o app e desativa os atalhos globais. Minimizar mantem o overlay e os atalhos ativos.",
+      detail: "Fechar encerra o app e desativa os atalhos globais. Minimizar oculta a janela na bandeja do sistema e mantem o overlay ativo.",
     });
 
     if (action === 0) {
@@ -248,8 +332,17 @@ function createMainWindow() {
     }
 
     if (action === 1) {
-      mainWindow.minimize();
+      minimizeMainWindowToTray();
     }
+  });
+
+  mainWindow.on("minimize", (event: Electron.Event) => {
+    if (process.platform !== "win32" || isQuitting) {
+      return;
+    }
+
+    event.preventDefault();
+    minimizeMainWindowToTray();
   });
 
   mainWindow.on("closed", () => {
@@ -296,6 +389,8 @@ function createOverlayWindow() {
       nodeIntegration: false,
     },
   });
+
+  overlayWindow.setMinimumSize(430, 500);
 
   loadRendererWindow(overlayWindow, "/overlay");
   promoteOverlayWindow();
@@ -379,6 +474,7 @@ function registerShortcuts() {
 app.whenReady().then(() => {
   createMainWindow();
   createOverlayWindow();
+  createTray();
   registerShortcuts();
 
   screen.on("display-added", ensureOverlayWindowPosition);

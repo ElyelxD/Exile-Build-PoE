@@ -46,6 +46,12 @@
       "output": "release",
       "buildResources": "build"
     },
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "tray-icon.ico"
+      }
+    ],
     "asar": true,
     "win": {
       "icon": "build/icon.ico",

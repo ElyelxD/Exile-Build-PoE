@@ -617,7 +617,8 @@ button {
 }
 
 .overlay-panel.is-live {
-  width: min(100%, 388px);
+  width: min(100%, 402px);
+  min-height: min(500px, calc(100vh - 24px));
   max-height: calc(100vh - 24px);
   border-color: var(--overlay-live-border);
   background:
@@ -654,6 +655,8 @@ button {
 
 .overlay-panel.is-live .overlay-header {
   gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .overlay-controls {
@@ -685,6 +688,39 @@ textarea {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   background: rgba(255, 255, 255, 0.02);
+}
+
+.overlay-session-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.overlay-session-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.overlay-session-card strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--text-0);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.overlay-session-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
 }
 
 .overlay-stage-summary.is-complete {
@@ -756,6 +792,7 @@ textarea {
 
 .overlay-panel.is-live .overlay-body {
   min-height: 0;
+  flex: 1 1 auto;
 }
 
 .overlay-panel.is-live.is-expanded .overlay-body {
@@ -765,7 +802,8 @@ textarea {
 .overlay-panel.is-live.is-expanded .overlay-expanded-content {
   min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 6px;
+  padding-bottom: 4px;
   scrollbar-gutter: stable;
   -webkit-app-region: no-drag;
 }
@@ -805,14 +843,27 @@ textarea {
   line-height: 1.45;
 }
 
+.overlay-panel.is-live .overlay-stage-summary,
+.overlay-panel.is-live .overlay-session-card {
+  background: rgba(255, 255, 255, 0.028);
+}
+
 .overlay-panel.is-live .overlay-objective-main,
 .overlay-panel.is-live .checklist-main {
-  padding: 11px;
+  min-height: 92px;
+  padding: 12px;
+  align-items: flex-start;
+  text-align: left;
 }
 
 .overlay-panel.is-live .overlay-objective-main span:last-child,
 .overlay-panel.is-live .checklist-main span:last-child {
   font-size: 0.74rem;
+}
+
+.overlay-panel.is-live .overlay-objective-main strong,
+.overlay-panel.is-live .checklist-main strong {
+  line-height: 1.34;
 }
 
 .overlay-panel.is-live .tab-bar {
@@ -821,6 +872,12 @@ textarea {
   border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.02);
+}
+
+.overlay-panel.is-live.is-expanded .tab-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .overlay-panel.is-live .tab-button,
@@ -865,7 +922,9 @@ textarea {
 }
 
 .overlay-panel.is-live .overlay-footer {
-  padding-top: 2px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .overlay-route .overlay-empty {

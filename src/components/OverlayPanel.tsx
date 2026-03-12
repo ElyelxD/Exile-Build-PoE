@@ -40,7 +40,7 @@ export function OverlayPanel({
   onToggleChecklist,
   variant = "preview",
 }: OverlayPanelProps) {
-  const compactObjectives = nextObjectives.slice(0, 2);
+  const compactObjectives = nextObjectives.slice(0, variant === "live" ? 3 : 2);
   const pinnedCopy =
     pinnedItems.length === 0
       ? "Overlay leve · Ctrl + Shift + M conclui"
@@ -77,6 +77,19 @@ export function OverlayPanel({
             </span>
             <p>{currentStage.summary}</p>
           </div>
+
+          {variant === "live" ? (
+            <div className="overlay-session-strip">
+              <div className="overlay-session-card">
+                <span className="overlay-session-label">Fase</span>
+                <strong>{currentStage.title}</strong>
+              </div>
+              <div className="overlay-session-card">
+                <span className="overlay-session-label">Próximo upgrade</span>
+                <strong>{build.summary.nextUpgrade}</strong>
+              </div>
+            </div>
+          ) : null}
 
           {compactObjectives.length > 0 ? (
             <div className="overlay-objectives">
