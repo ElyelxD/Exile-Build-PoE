@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { BuildTabContent } from "@/components/BuildTabContent";
-import { BUILD_TABS, BuildSourceType, PoeAssetsState } from "@/domain/models";
+import { BUILD_TABS, BuildSourceType } from "@/domain/models";
 import { sanitizePobInlineText, splitPobParagraphs } from "@/services/pob-display";
 import {
   getActivePobItemSet,
@@ -36,8 +36,6 @@ export function MainShell() {
   const [selectedFileName, setSelectedFileName] = useState("");
   const [error, setError] = useState("");
   const [isImporting, setIsImporting] = useState(false);
-  const [poeAssetsState, setPoeAssetsState] = useState<PoeAssetsState | null>(null);
-  const [isSyncingAssets, setIsSyncingAssets] = useState(false);
 
   const build = getSelectedBuild(state);
   const progress = build ? getBuildProgress(state, build.id) : undefined;
@@ -62,24 +60,6 @@ export function MainShell() {
 
   useEffect(() => {
     document.body.dataset.view = "main";
-  }, []);
-
-  useEffect(() => {
-    if (!window.desktop?.getPoeAssetsState) {
-      return;
-    }
-
-    let isMounted = true;
-
-    void window.desktop.getPoeAssetsState().then((nextState) => {
-      if (isMounted) {
-        setPoeAssetsState(nextState);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const sourceLabel =
@@ -152,44 +132,6 @@ export function MainShell() {
     }
   };
 
-  const choosePoeInstallPath = async () => {
-    if (!window.desktop?.choosePoeInstallPath) {
-      return;
-    }
-
-    setPoeAssetsState(await window.desktop.choosePoeInstallPath());
-  };
-
-  const choosePoeExtractorPath = async () => {
-    if (!window.desktop?.choosePoeExtractorPath) {
-      return;
-    }
-
-    setPoeAssetsState(await window.desktop.choosePoeExtractorPath());
-  };
-
-  const syncPoeAssets = async () => {
-    if (!window.desktop?.syncPoeAssets) {
-      return;
-    }
-
-    try {
-      setIsSyncingAssets(true);
-      setPoeAssetsState(await window.desktop.syncPoeAssets());
-    } finally {
-      setIsSyncingAssets(false);
-    }
-  };
-
-  const poeAssetsStatusLabel = {
-    idle: "Ainda não configurado",
-    ready: "Cache local pronto",
-    "missing-install": "Pasta do PoE pendente",
-    "missing-extractor": "Extractor local pendente",
-    syncing: "Sincronizando",
-    error: "Erro de sincronização",
-  } as const;
-
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -248,69 +190,116 @@ export function MainShell() {
 
         <section className="panel">
           <div className="section-heading">
-            <h2>PoE assets</h2>
-            <span>Mining local</span>
-          </div>
-          <div className="mini-help">
-            <div className="mini-help-row">
-              <strong>Status</strong>
-              <span>{poeAssetsState ? poeAssetsStatusLabel[poeAssetsState.status] : "Carregando..."}</span>
-            </div>
-            <div className="mini-help-row">
-              <strong>Pasta do PoE</strong>
-              <span>{poeAssetsState?.installPath ?? "Não definida"}</span>
-            </div>
-            <div className="mini-help-row">
-              <strong>Biblioteca</strong>
-              <span>{poeAssetsState?.extractorPath ?? "Python env / não definida"}</span>
-            </div>
-            {poeAssetsState?.lastError && (
-              <div className="mini-help-row">
-                <strong>Último erro</strong>
-                <span>{poeAssetsState.lastError}</span>
-              </div>
-            )}
-          </div>
-          <p className="subtle">
-            Esse fluxo mantém os assets no cache local do usuário. Nada é commitado no repositório.
-          </p>
-          <div className="section-stack">
-            <button className="ghost-button" onClick={choosePoeInstallPath} type="button">
-              Escolher pasta do PoE
-            </button>
-            <button className="ghost-button" onClick={choosePoeExtractorPath} type="button">
-              Escolher pasta da biblioteca
-            </button>
-            <button className="primary-button" disabled={isSyncingAssets} onClick={syncPoeAssets} type="button">
-              {isSyncingAssets ? "Sincronizando assets..." : "Sincronizar assets locais"}
-            </button>
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="section-heading">
             <h2>Builds locais</h2>
             <span>{state.builds.length}</span>
           </div>
-          <div className="build-list">
-            {state.builds.length === 0 ? (
-              <p className="subtle">Nenhum Path of Building importado ainda.</p>
-            ) : (
-              state.builds.map((entry) => (
-                <button
-                  className={`build-row ${entry.id === state.selectedBuildId ? "is-active" : ""}`}
-                  key={entry.id}
-                  onClick={() => actions.selectBuild(entry.id)}
-                  type="button"
-                >
-                  <strong>{entry.name}</strong>
-                  <span>
-                    {entry.className} · {entry.ascendancy}
-                  </span>
-                </button>
-              ))
-            )}
+          {state.builds.length === 0 ? (
+            <p className="subtle">Nenhum Path of Building importado ainda.</p>
+          ) : (
+            <label className="field pob-spec-field">
+              <span className="field-label">Build ativa no app</span>
+              <select
+                className="pob-spec-select"
+                onChange={(event) => actions.selectBuild(event.target.value)}
+                value={state.selectedBuildId ?? state.builds[0]?.id ?? ""}
+              >
+                {state.builds.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.name} · {entry.className} · {entry.ascendancy}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </section>
+
+        <section className="panel is-import-summary">
+          <div className="section-heading">
+            <h2>{pob ? "Snapshot do PoB" : "Import legado"}</h2>
+            <span>{pob ? "Import exato" : "Reimporte"}</span>
           </div>
+          {pob ? (
+            <>
+              <div className="metric-stack">
+                <div>
+                  <span>Skill principal</span>
+                  <strong>{pob.mainSkill ?? "Sem label principal"}</strong>
+                </div>
+                <div>
+                  <span>Tree ativa</span>
+                  <strong>{activeTreeSpec?.title ?? "Sem spec ativa"}</strong>
+                </div>
+                <div>
+                  <span>Item set ativo</span>
+                  <strong>{activeItemSet?.title ?? "Sem set ativo"}</strong>
+                </div>
+                <div>
+                  <span>Itens no set</span>
+                  <strong>{activePobItems.length}</strong>
+                </div>
+              </div>
+              {pob.treeSpecs.length > 1 && (
+                <div className="pob-spec-switcher">
+                  <span className="mini-help-title">Trees do PoB</span>
+                  <label className="field pob-spec-field">
+                    <span className="field-label">Tree ativa no app</span>
+                    <select
+                      className="pob-spec-select"
+                      onChange={(event) => actions.setPobTreeSpec(build.id, event.target.value)}
+                      value={activeTreeSpec?.id ?? ""}
+                    >
+                      {pob.treeSpecs.map((spec) => (
+                        <option key={spec.id} value={spec.id}>
+                          {spec.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+              <div className="mini-help">
+                <span className="mini-help-title">Conteúdo importado</span>
+                <div className="mini-help-row">
+                  <strong>{pob.treeSpecs.length} tree spec{pob.treeSpecs.length === 1 ? "" : "s"}</strong>
+                  <span>do Path of Building</span>
+                </div>
+                <div className="mini-help-row">
+                  <strong>{pob.skillGroups.length} grupo{pob.skillGroups.length === 1 ? "" : "s"} de skill</strong>
+                  <span>importados exatamente</span>
+                </div>
+                <div className="mini-help-row">
+                  <strong>{pob.bandit ?? "Sem bandit no XML"}</strong>
+                  <span>
+                    {[pob.pantheonMajor, pob.pantheonMinor].filter(Boolean).join(" · ") ||
+                      "Pantheon não informado"}
+                  </span>
+                </div>
+                {pobNotePreview && (
+                  <div className="mini-help-row">
+                    <strong>Notas</strong>
+                    <span>{pobNotePreview}</span>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="lead-copy">
+                Essa build veio do parser antigo e não tem snapshot exato do Path of Building.
+              </p>
+              <div className="mini-help">
+                <span className="mini-help-title">Próximo passo</span>
+                <div className="mini-help-row">
+                  <strong>Reimporte esse PoB</strong>
+                  <span>para carregar tree specs, skill groups e gear reais.</span>
+                </div>
+                <div className="mini-help-row">
+                  <strong>Sem perda de uso</strong>
+                  <span>o overlay continua funcionando, mas os dados não batem 1:1 com o PoB.</span>
+                </div>
+              </div>
+            </>
+          )}
         </section>
 
         <section className="panel">
@@ -370,19 +359,12 @@ export function MainShell() {
                 </button>
               </div>
 
-              <div className="inline-actions">
+              <div className="inline-actions overlay-session-actions">
                 <button className="ghost-button" onClick={toggleOverlay} type="button">
-                  Toggle overlay
+                  Mostrar overlay
                 </button>
                 <button className="ghost-button" onClick={resetOverlayPosition} type="button">
                   Recentrar
-                </button>
-                <button
-                  className="ghost-button"
-                  onClick={actions.toggleOverlayMode}
-                  type="button"
-                >
-                  {state.overlayMode === "compact" ? "Modo expandido" : "Modo compacto"}
                 </button>
               </div>
             </div>
@@ -477,136 +459,32 @@ export function MainShell() {
                 <div className="checklist">
                   {nextObjectives.map((item) => (
                     <div className="checklist-item" key={item.id}>
-                      <button
-                        className="checklist-main"
-                        onClick={() => actions.toggleChecklist(build.id, item.id)}
-                        type="button"
-                      >
+                      <div className="checklist-main">
                         <span className="check-badge">Now</span>
                         <strong>{item.text}</strong>
                         <span>{item.stageTitle}</span>
-                      </button>
+                      </div>
                       <button
-                        className="icon-button"
-                        onClick={() => actions.togglePin(build.id, item.id)}
+                        aria-label={`Marcar ${item.text} como concluído`}
+                        className="check-toggle-button"
+                        onClick={() => actions.toggleChecklist(build.id, item.id)}
                         type="button"
                       >
-                        Pin
+                        ✓
                       </button>
                     </div>
                   ))}
                 </div>
                 <div className="mini-help">
-                  {pinnedItems.length > 0 ? (
-                    <>
-                      <span className="mini-help-title">Pinados</span>
-                      {pinnedItems.slice(0, 2).map((item) => (
-                        <div className="mini-help-row" key={item.id}>
-                          <strong>{item.text}</strong>
-                          <span>{item.stageTitle}</span>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <>
-                      <span className="mini-help-title">Hotkeys úteis</span>
-                      {quickHotkeys.map((item) => (
-                        <div className="mini-help-row" key={item}>
-                          <span>{item}</span>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
-              </section>
-
-              <section className="hero-card is-import-summary">
-                <div className="section-heading">
-                  <h2>{pob ? "Snapshot do PoB" : "Import legado"}</h2>
-                  <span>{pob ? "Import exato" : "Reimporte"}</span>
-                </div>
-                {pob ? (
                   <>
-                    <div className="metric-stack">
-                      <div>
-                        <span>Skill principal</span>
-                        <strong>{pob.mainSkill ?? "Sem label principal"}</strong>
+                    <span className="mini-help-title">Hotkeys úteis</span>
+                    {quickHotkeys.map((item) => (
+                      <div className="mini-help-row" key={item}>
+                        <span>{item}</span>
                       </div>
-                      <div>
-                        <span>Tree ativa</span>
-                        <strong>{activeTreeSpec?.title ?? "Sem spec ativa"}</strong>
-                      </div>
-                      <div>
-                        <span>Item set ativo</span>
-                        <strong>{activeItemSet?.title ?? "Sem set ativo"}</strong>
-                      </div>
-                      <div>
-                        <span>Itens no set</span>
-                        <strong>{activePobItems.length}</strong>
-                      </div>
-                    </div>
-                    {pob.treeSpecs.length > 1 && (
-                      <div className="pob-spec-switcher">
-                        <span className="mini-help-title">Trees do PoB</span>
-                        <label className="field pob-spec-field">
-                          <span className="field-label">Tree ativa no app</span>
-                          <select
-                            className="pob-spec-select"
-                            onChange={(event) => actions.setPobTreeSpec(build.id, event.target.value)}
-                            value={activeTreeSpec?.id ?? ""}
-                          >
-                            {pob.treeSpecs.map((spec) => (
-                              <option key={spec.id} value={spec.id}>
-                                {spec.title}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      </div>
-                    )}
-                    <div className="mini-help">
-                      <span className="mini-help-title">Conteúdo importado</span>
-                      <div className="mini-help-row">
-                        <strong>{pob.treeSpecs.length} tree spec{pob.treeSpecs.length === 1 ? "" : "s"}</strong>
-                        <span>do Path of Building</span>
-                      </div>
-                      <div className="mini-help-row">
-                        <strong>{pob.skillGroups.length} grupo{pob.skillGroups.length === 1 ? "" : "s"} de skill</strong>
-                        <span>importados exatamente</span>
-                      </div>
-                      <div className="mini-help-row">
-                        <strong>{pob.bandit ?? "Sem bandit no XML"}</strong>
-                        <span>
-                          {[pob.pantheonMajor, pob.pantheonMinor].filter(Boolean).join(" · ") ||
-                            "Pantheon não informado"}
-                        </span>
-                      </div>
-                      {pobNotePreview && (
-                        <div className="mini-help-row">
-                          <strong>Notas</strong>
-                          <span>{pobNotePreview}</span>
-                        </div>
-                      )}
-                    </div>
+                    ))}
                   </>
-                ) : (
-                  <>
-                    <p className="lead-copy">
-                      Essa build veio do parser antigo e não tem snapshot exato do Path of Building.
-                    </p>
-                    <div className="mini-help">
-                      <span className="mini-help-title">Próximo passo</span>
-                      <div className="mini-help-row">
-                        <strong>Reimporte esse PoB</strong>
-                        <span>para carregar tree specs, skill groups e gear reais.</span>
-                      </div>
-                      <div className="mini-help-row">
-                        <strong>Sem perda de uso</strong>
-                        <span>o overlay continua funcionando, mas os dados não batem 1:1 com o PoB.</span>
-                      </div>
-                    </div>
-                  </>
-                )}
+                </div>
               </section>
             </div>
 

@@ -41,7 +41,16 @@ export function parsePobItemDisplay(rawText: string): ParsedPobItemDisplay {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
-    .filter((line) => !/^Unique ID:/i.test(line) && !/^Implicits:\s*\d+/i.test(line));
+    .filter(
+      (line) =>
+        !/^Unique ID:/i.test(line) &&
+        !/^Implicits:\s*\d+/i.test(line) &&
+        !/^[0-9a-f]{24,}$/i.test(line) &&
+        !/BasePercentile/i.test(line) &&
+        !/^crafted:\s*true$/i.test(line) &&
+        !/^Prefix:\s*/i.test(line) &&
+        !/^Suffix:\s*/i.test(line),
+    );
 
   const visibleLines = /^Rarity:/i.test(cleanedLines[0] ?? "") ? cleanedLines.slice(1) : cleanedLines;
   let contentStartIndex = 0;

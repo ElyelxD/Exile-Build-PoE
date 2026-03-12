@@ -17,7 +17,7 @@ import {
   PobTreeSpec,
   UserProgress,
 } from "@/domain/models";
-import { sanitizePobNotes } from "@/services/pob-display";
+import { sanitizePobInlineText, sanitizePobNotes } from "@/services/pob-display";
 
 const classIdToName: Record<string, string> = {
   "0": "Scion",
@@ -139,11 +139,155 @@ function extractLevelHint(title: string) {
   return Number.isFinite(level) ? level : undefined;
 }
 
-function firstMeaningfulLine(value: string) {
-  return value
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find(Boolean);
+const NOTE_LINK_ONLY_PATTERN = /^(?:https?:\/\/|www\.)\S+$/i;
+const NOTE_PROMO_PATTERN =
+  /(discord|twitch|youtube|subscribe|like the video|channel|more content|questions|hit me on|build made by|guide by|follow me)/i;
+
+function splitNoteSections(value: string) {
+  return sanitizePobNotes(value)
+    .split(/\n{2,}/)
+    .map((section) =>
+      section
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+    )
+    .filter((section) => section.length > 0);
+}
+
+function cleanNoteLine(value: string) {
+  return sanitizePobInlineText(
+    value
+      .replace(/^[\s\-_=|~:•*]+/, "")
+      .replace(/[\s\-_=|~:•*]+$/, ""),
+  );
+}
+
+function inferActionType(text: string): ChecklistItem["type"] {
+  const normalized = text.toLowerCase();
+
+  if (/(lab|ascend)/.test(normalized)) {
+    return "lab";
+  }
+
+  if (/(gem|skill|aura|support|link|socket)/.test(normalized)) {
+    return "gem";
+  }
+
+  if (/(gear|item|weapon|helmet|helm|body|armour|gloves|boots|ring|belt|amulet|flask)/.test(normalized)) {
+    return "gear";
+  }
+
+  if (/(nota|note|review|revisar|conferir)/.test(normalized)) {
+    return "note";
+  }
+
+  return "quest";
+}
+
+type SnapshotAction = {
+  text: string;
+  type: ChecklistItem["type"];
+  required?: boolean;
+};
+
+function createActionFromNoteSection(lines: string[]): SnapshotAction | undefined {
+  const cleanedLines = lines
+    .map((line) => cleanNoteLine(line))
+    .filter(Boolean)
+    .filter((line) => !NOTE_LINK_ONLY_PATTERN.test(line));
+
+  if (cleanedLines.length === 0) {
+    return undefined;
+  }
+
+  const joined = cleanedLines.join(" ");
+  const lead = cleanedLines[0];
+
+  if (NOTE_PROMO_PATTERN.test(joined) || /^(discord|twitch|youtube)$/i.test(lead)) {
+    return undefined;
+  }
+
+  const banditMatch = lead.match(/^bandits?\s*[-:]\s*(.+)$/i);
+  if (banditMatch) {
+    return { text: `Escolher bandit: ${cleanNoteLine(banditMatch[1])}`, type: "quest" };
+  }
+
+  const majorGodMatch = lead.match(/^major god\s*[-:]\s*(.+)$/i);
+  if (majorGodMatch) {
+    return { text: `Pantheon major: ${cleanNoteLine(majorGodMatch[1])}`, type: "quest" };
+  }
+
+  const minorGodMatch = lead.match(/^minor god\s*[-:]\s*(.+)$/i);
+  if (minorGodMatch) {
+    return { text: `Pantheon minor: ${cleanNoteLine(minorGodMatch[1])}`, type: "quest" };
+  }
+
+  const labMatch = lead.match(/^(lab|ascendancy)\s*[-:]\s*(.+)$/i);
+  if (labMatch) {
+    return { text: `Fazer ${cleanNoteLine(labMatch[2])}`, type: "lab" };
+  }
+
+  const detailLine = cleanedLines.find((line, index) => index > 0 && !NOTE_PROMO_PATTERN.test(line));
+  if (detailLine && detailLine.length <= 120) {
+    return { text: detailLine, type: inferActionType(detailLine) };
+  }
+
+  if (lead.length > 120 || /^tips?$/i.test(lead)) {
+    return undefined;
+  }
+
+  if (/^(?:a\d|act\b|level\b|lvl\b|early maps|yellow maps|red maps|endgame)/i.test(lead)) {
+    return { text: `Seguir setup ${lead}`, type: "quest" };
+  }
+
+  return { text: lead, type: inferActionType(lead) };
+}
+
+function dedupeSnapshotActions(actions: SnapshotAction[]) {
+  const seen = new Set<string>();
+
+  return actions.filter((action) => {
+    const key = sanitizePobInlineText(action.text).toLowerCase();
+
+    if (!key || seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function createSnapshotActions(pob: PobData) {
+  const activeSpec = pob.treeSpecs.find((spec) => spec.id === pob.activeTreeSpecId) ?? pob.treeSpecs[0];
+  const activeItemSet = pob.itemSets.find((itemSet) => itemSet.id === pob.activeItemSetId) ?? pob.itemSets[0];
+  const noteActions = splitNoteSections(pob.notes)
+    .map((section) => createActionFromNoteSection(section))
+    .filter((action): action is SnapshotAction => Boolean(action));
+  const fallbackActions: SnapshotAction[] = [
+    ...(pob.bandit ? [{ text: `Escolher bandit: ${sanitizePobInlineText(pob.bandit)}`, type: "quest" as const }] : []),
+    ...(pob.pantheonMajor
+      ? [{ text: `Pantheon major: ${sanitizePobInlineText(pob.pantheonMajor)}`, type: "quest" as const }]
+      : []),
+    ...(pob.pantheonMinor
+      ? [{ text: `Pantheon minor: ${sanitizePobInlineText(pob.pantheonMinor)}`, type: "quest" as const }]
+      : []),
+    ...(activeSpec
+      ? [{ text: `Seguir a tree ${sanitizePobInlineText(activeSpec.title)}`, type: "quest" as const }]
+      : [{ text: "Conferir a tree importada do PoB", type: "quest" as const }]),
+    ...(pob.mainSkill
+      ? [{ text: `Montar setup principal de ${sanitizePobInlineText(pob.mainSkill)}`, type: "gem" as const }]
+      : [{ text: "Conferir o skill set ativo do PoB", type: "gem" as const }]),
+    ...(activeItemSet
+      ? [{ text: `Revisar gear do set ${sanitizePobInlineText(activeItemSet.title)}`, type: "gear" as const }]
+      : [{ text: "Conferir a gear importada do PoB", type: "gear" as const }]),
+    ...(pob.notes
+      ? [{ text: "Abrir as notas exatas do PoB para revisar a fase", type: "note" as const, required: false }]
+      : []),
+  ];
+
+  return dedupeSnapshotActions([...noteActions, ...fallbackActions]);
 }
 
 function parseItemHeader(rawText: string) {
@@ -480,14 +624,18 @@ function parsePobData(xml: string): {
 
 function createSummary(pob: PobData): BuildSummary {
   const activeItemSet = pob.itemSets.find((itemSet) => itemSet.isActive);
-  const firstNote = firstMeaningfulLine(pob.notes);
+  const firstAction = createSnapshotActions(pob)[0]?.text;
 
   return {
     tagline: `Import exato do PoB com ${pob.treeSpecs.length} tree spec${pob.treeSpecs.length === 1 ? "" : "s"}, ${pob.skillGroups.length} grupo${pob.skillGroups.length === 1 ? "" : "s"} de skill e ${pob.items.length} item${pob.items.length === 1 ? "" : "s"} no snapshot.`,
-    playstyle: pob.mainSkill ? `Skill principal: ${pob.mainSkill}` : "Import exato do Path of Building.",
+    playstyle: pob.mainSkill
+      ? `Skill principal: ${sanitizePobInlineText(pob.mainSkill)}`
+      : "Import exato do Path of Building.",
     nextUpgrade:
-      firstNote ||
-      (activeItemSet ? `Item set ativo: ${activeItemSet.title}` : "Revisar as notas do PoB."),
+      firstAction ||
+      (activeItemSet
+        ? `Revisar gear do set ${sanitizePobInlineText(activeItemSet.title)}`
+        : "Revisar as notas do PoB."),
     warningCards: [],
   };
 }
@@ -497,6 +645,7 @@ function createSnapshotStage(buildId: string, name: string, pob: PobData): Build
   const activeItemSet = pob.itemSets.find((itemSet) => itemSet.isActive) ?? pob.itemSets[0];
   const activeSkillGroups = pob.skillGroups.filter((group) => group.isSelected);
   const displaySkillGroups = activeSkillGroups.length > 0 ? activeSkillGroups : pob.skillGroups;
+  const snapshotActions = createSnapshotActions(pob);
   const snapshotNotes =
     pob.notes
       .split(/\r?\n/)
@@ -512,8 +661,10 @@ function createSnapshotStage(buildId: string, name: string, pob: PobData): Build
     label: "PoB Snapshot",
     levelMin: 1,
     levelMax: 100,
-    title: activeSpec?.title || "Snapshot importado",
-    summary: `Snapshot exato do Path of Building${pob.mainSkill ? ` · ${pob.mainSkill}` : ""}${activeItemSet ? ` · ${activeItemSet.title}` : ""}.`,
+    title: sanitizePobInlineText(activeSpec?.title || "Snapshot importado"),
+    summary:
+      snapshotActions[0]?.text ||
+      `Snapshot exato do Path of Building${pob.mainSkill ? ` · ${sanitizePobInlineText(pob.mainSkill)}` : ""}${activeItemSet ? ` · ${sanitizePobInlineText(activeItemSet.title)}` : ""}.`,
     passives:
       pob.treeSpecs.length > 0
         ? pob.treeSpecs.map((spec, index) =>
@@ -551,32 +702,15 @@ function createSnapshotStage(buildId: string, name: string, pob: PobData): Build
         item.rawText || `${item.title}${item.baseType ? ` · ${item.baseType}` : ""}`,
       ),
     ),
-    checklist: [
+    checklist: snapshotActions.map((action, index) =>
       stageChecklist(
         stageId,
-        1,
-        activeSpec ? `Tree ativa: ${activeSpec.title}` : "Conferir tree importada do PoB",
-        "quest",
-        true,
+        index + 1,
+        action.text,
+        action.type,
+        action.required ?? true,
       ),
-      stageChecklist(
-        stageId,
-        2,
-        pob.mainSkill ? `Skill principal: ${pob.mainSkill}` : "Conferir skill set ativo",
-        "gem",
-        true,
-      ),
-      stageChecklist(
-        stageId,
-        3,
-        activeItemSet ? `Item set ativo: ${activeItemSet.title}` : "Conferir gear do PoB",
-        "gear",
-        true,
-      ),
-      ...(pob.notes
-        ? [stageChecklist(stageId, 4, "Revisar notas exatas do PoB", "note", false)]
-        : []),
-    ],
+    ),
     notes:
       snapshotNotes.length > 0
         ? snapshotNotes
@@ -635,6 +769,20 @@ export async function createImportedBuild(sourceType: BuildSourceType, sourceVal
     stages: [createSnapshotStage(id, name, pob)],
     labs: createCharacterCards(id, ascendancy, pob),
     pob,
+  };
+}
+
+export function rehydrateImportedBuild(build: Build): Build {
+  if (!build.pob) {
+    return build;
+  }
+
+  return {
+    ...build,
+    notes: sanitizePobNotes(build.pob.notes || build.notes),
+    summary: createSummary(build.pob),
+    stages: [createSnapshotStage(build.id, build.name, build.pob)],
+    labs: createCharacterCards(build.id, build.ascendancy, build.pob),
   };
 }
 

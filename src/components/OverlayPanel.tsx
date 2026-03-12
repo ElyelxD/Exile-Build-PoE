@@ -46,22 +46,18 @@ export function OverlayPanel({
   onToggleChecklist,
   variant = "preview",
 }: OverlayPanelProps) {
+  const effectiveMode = variant === "live" ? "expanded" : overlayMode;
   const compactObjectives = nextObjectives.slice(0, variant === "live" ? 3 : 2);
   const nextUpgradeLabel = sanitizePobInlineText(build.summary.nextUpgrade);
   const activeTreeSpec = getActivePobTreeSpec(build.pob);
   const displayStageTitle = activeTreeSpec?.title ?? currentStage.title;
   const isTreeDrivenBuild = Boolean(build.pob && build.pob.treeSpecs.length > 1);
   const nextTreeSpec = getNextPobTreeSpecForLevel(build.pob, progress.playerLevel);
-  const pinnedCopy =
-    pinnedItems.length === 0
-      ? "Overlay leve · Ctrl + Shift + M conclui"
-      : `${pinnedItems.length} lembrete${pinnedItems.length === 1 ? "" : "s"} pinado${
-          pinnedItems.length === 1 ? "" : "s"
-        } · Ctrl + Shift + M conclui`;
+  const footerCopy = "Ctrl + Shift + M conclui o próximo objetivo";
 
   return (
     <section
-      className={`overlay-panel ${overlayMode === "compact" ? "is-compact" : "is-expanded"} ${
+      className={`overlay-panel ${effectiveMode === "compact" ? "is-compact" : "is-expanded"} ${
         variant === "live" ? "is-live" : "is-preview"
       }`}
     >
@@ -73,14 +69,9 @@ export function OverlayPanel({
             Lvl {progress.playerLevel} · {displayStageTitle}
           </p>
         </div>
-        <div className="overlay-controls">
-          <button className="icon-button" onClick={onToggleMode} type="button">
-            {overlayMode === "compact" ? "Detalhes" : "Resumo"}
-          </button>
-        </div>
       </header>
 
-      {overlayMode === "compact" ? (
+      {effectiveMode === "compact" ? (
         <div className="overlay-body">
           <div className="overlay-stage-summary">
             <span className="pill">
@@ -144,23 +135,20 @@ export function OverlayPanel({
                   className={`overlay-objective ${index === 0 ? "is-primary" : "is-secondary"}`}
                   key={item.id}
                 >
-                  <button
-                    className="overlay-objective-main"
-                    onClick={() => onToggleChecklist?.(item.id)}
-                    type="button"
-                  >
+                  <div className="overlay-objective-main">
                     <span className="overlay-objective-kicker">
                       {index === 0 ? "Agora" : "Em seguida"}
                     </span>
                     <strong>{item.text}</strong>
                     <span>{item.stageTitle}</span>
-                  </button>
+                  </div>
                   <button
-                    className="icon-button"
-                    onClick={() => onTogglePin?.(item.id)}
+                    aria-label={`Marcar ${item.text} como concluído`}
+                    className="check-toggle-button"
+                    onClick={() => onToggleChecklist?.(item.id)}
                     type="button"
                   >
-                    Pin
+                    ✓
                   </button>
                 </div>
               ))}
@@ -173,7 +161,7 @@ export function OverlayPanel({
           )}
 
           <footer className="overlay-footer">
-            <span>{pinnedCopy}</span>
+            <span>{footerCopy}</span>
             <button className="primary-button is-small" onClick={onMarkObjective} type="button">
               Concluir
             </button>

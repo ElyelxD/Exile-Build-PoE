@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   Build,
   BuildStage,
@@ -37,6 +38,8 @@ interface BuildTabContentProps {
   onToggleChecklist?: (itemId: string) => void;
   onTogglePin?: (itemId: string) => void;
 }
+
+const NOTE_LINK_PATTERN = /((?:https?:\/\/|www\.)[^\s<]+)/gi;
 
 const gearLayout = [
   { key: "weapon1", label: "Weapon 1" },
@@ -120,26 +123,81 @@ function NoteSections({
   }
 
   return (
-    <div className="pob-notes">
-      {displaySections.map((section, index) => {
-        const [leadLine, ...restLines] = section.split("\n");
-
-        return (
-          <article className="pob-note-card" key={`${index}-${leadLine}`}>
-            <span className="pob-note-label">Trecho {index + 1}</span>
-            <strong>{leadLine}</strong>
-            {restLines.length > 0 && (
-              <div className="pob-note-lines">
-                {restLines.map((line) => (
-                  <p key={line}>{line}</p>
-                ))}
-              </div>
-            )}
-          </article>
-        );
-      })}
-    </div>
+    <article className="note-block pob-note-document">
+      {displaySections.map((section, index) => (
+        <p className="pob-note-paragraph" key={`${index}-${section.slice(0, 24)}`}>
+          {renderNoteParagraph(section, index)}
+        </p>
+      ))}
+    </article>
   );
+}
+
+function normalizeNoteUrl(value: string) {
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+function splitNoteUrlSuffix(value: string) {
+  const match = value.match(/[),.;!?]+$/);
+
+  if (!match) {
+    return { urlText: value, trailing: "" };
+  }
+
+  return {
+    urlText: value.slice(0, -match[0].length),
+    trailing: match[0],
+  };
+}
+
+function renderNoteLine(line: string, paragraphIndex: number, lineIndex: number) {
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (const match of line.matchAll(NOTE_LINK_PATTERN)) {
+    const rawMatch = match[0];
+    const matchIndex = match.index ?? 0;
+
+    if (matchIndex > lastIndex) {
+      parts.push(line.slice(lastIndex, matchIndex));
+    }
+
+    const { urlText, trailing } = splitNoteUrlSuffix(rawMatch);
+
+    parts.push(
+      <a
+        className="pob-note-link"
+        href={normalizeNoteUrl(urlText)}
+        key={`link-${paragraphIndex}-${lineIndex}-${matchIndex}`}
+        rel="noreferrer"
+        target="_blank"
+      >
+        {urlText}
+      </a>,
+    );
+
+    if (trailing) {
+      parts.push(trailing);
+    }
+
+    lastIndex = matchIndex + rawMatch.length;
+  }
+
+  if (lastIndex < line.length) {
+    parts.push(line.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : line;
+}
+
+function renderNoteParagraph(section: string, paragraphIndex: number) {
+  const lines = section.split("\n");
+
+  return lines.map((line, index) => (
+    <span className="pob-note-line" key={`${paragraphIndex}-${index}-${line.slice(0, 24)}`}>
+      {renderNoteLine(line, paragraphIndex, index)}
+    </span>
+  ));
 }
 
 function normalizeItemSlot(slot?: string) {
@@ -626,10 +684,10 @@ export function BuildTabContent({
           <div className="content-stack">
             <section className="panel">
               <div className="section-heading">
-                <h3>Tree specs</h3>
-                <span>{pob.treeSpecs.length}</span>
+                <h3>{condensed ? "Tree ativa" : "Timeline de trees"}</h3>
+                <span>{condensed ? activeTreeSpec?.title ?? "Sem tree ativa" : pob.treeSpecs.length}</span>
               </div>
-              {pob.treeSpecs.length > 1 && (
+              {condensed && pob.treeSpecs.length > 1 && (
                 <div className="pob-spec-switcher">
                   <span className="mini-help-title">Tree ativa no app</span>
                   <label className="field pob-spec-field">
@@ -648,10 +706,10 @@ export function BuildTabContent({
                   </label>
                 </div>
               )}
-              <div className="stage-list">
+              <div className="card-grid tree-spec-grid">
                 {visibleTreeSpecs.map((spec) => (
                   <article
-                    className={`stage-card is-small ${activeTreeSpec?.id === spec.id ? "is-selected" : ""}`}
+                    className={`detail-card tree-spec-card ${activeTreeSpec?.id === spec.id ? "is-selected" : ""}`}
                     key={spec.id}
                   >
                     <div className="stage-card-header">
@@ -663,23 +721,11 @@ export function BuildTabContent({
                         {spec.levelHint ? `Lvl ${spec.levelHint}` : "PoB"}
                       </span>
                     </div>
-                    <p>
+                    <span className="detail-meta">
                       {spec.treeVersion
                         ? `Passive tree ${spec.treeVersion}`
                         : "Tree spec importada exatamente do PoB."}
-                    </p>
-                    {pob.treeSpecs.length > 1 && activeTreeSpec?.id !== spec.id && (
-                      <div className="inline-actions">
-                        <button
-                          className="ghost-button"
-                          onClick={() => onSetPobTreeSpec?.(spec.id)}
-                          type="button"
-                        >
-                          Usar esta tree
-                        </button>
-                      </div>
-                    )}
-                    {spec.url && <div className="note-block">{spec.url}</div>}
+                    </span>
                   </article>
                 ))}
               </div>

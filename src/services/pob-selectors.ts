@@ -33,6 +33,66 @@ function countSharedTokens(left: string, right: string) {
   return count;
 }
 
+function scoreTitleAgainstTree(
+  treeTitle: string,
+  candidateTitle: string,
+  preferredId: string | undefined,
+  candidateId: string,
+) {
+  const normalizedTreeTitle = normalizePobTitle(treeTitle);
+  const normalizedCandidateTitle = normalizePobTitle(candidateTitle);
+  const treeLevelHint = extractLevelHint(treeTitle);
+  const candidateLevelHint = extractLevelHint(candidateTitle);
+  let score = 0;
+
+  if (normalizedCandidateTitle === normalizedTreeTitle) {
+    score += 100;
+  } else if (
+    normalizedCandidateTitle.includes(normalizedTreeTitle) ||
+    normalizedTreeTitle.includes(normalizedCandidateTitle)
+  ) {
+    score += 60;
+  }
+
+  score += countSharedTokens(normalizedTreeTitle, normalizedCandidateTitle) * 8;
+
+  if (
+    typeof treeLevelHint === "number" &&
+    typeof candidateLevelHint === "number"
+  ) {
+    if (treeLevelHint === candidateLevelHint) {
+      score += 24;
+    } else if (Math.abs(treeLevelHint - candidateLevelHint) <= 3) {
+      score += 10;
+    }
+  }
+
+  if (candidateId === preferredId) {
+    score += 4;
+  }
+
+  return score;
+}
+
+function pickBestTreeMatchedId(
+  treeTitle: string | undefined,
+  candidates: Array<{ id: string; title: string }>,
+  preferredId: string | undefined,
+) {
+  if (!treeTitle || candidates.length <= 1) {
+    return preferredId;
+  }
+
+  const bestMatch = candidates
+    .map((candidate) => ({
+      ...candidate,
+      score: scoreTitleAgainstTree(treeTitle, candidate.title, preferredId, candidate.id),
+    }))
+    .sort((left, right) => right.score - left.score)[0];
+
+  return bestMatch && bestMatch.score > 0 ? bestMatch.id : preferredId;
+}
+
 function getOrderedTreeSpecsByLevel(pob?: PobData) {
   if (!pob) {
     return [];
@@ -93,7 +153,18 @@ export function getActivePobItemSet(pob?: PobData) {
     return undefined;
   }
 
+  const activeTreeSpec = getActivePobTreeSpec(pob);
+  const matchedItemSetId = pickBestTreeMatchedId(
+    activeTreeSpec?.title,
+    pob.itemSets.map((itemSet) => ({
+      id: itemSet.id,
+      title: itemSet.title,
+    })),
+    pob.activeItemSetId,
+  );
+
   return (
+    pob.itemSets.find((itemSet) => itemSet.id === matchedItemSetId) ??
     pob.itemSets.find((itemSet) => itemSet.id === pob.activeItemSetId) ??
     pob.itemSets.find((itemSet) => itemSet.isActive) ??
     pob.itemSets[0]
@@ -121,50 +192,7 @@ export function getActivePobSkillGroups(pob?: PobData) {
   let activeSetId = pob.activeSkillSetId;
 
   if (activeTreeSpec && skillSets.length > 1) {
-    const normalizedTreeTitle = normalizePobTitle(activeTreeSpec.title);
-    const treeLevelHint = extractLevelHint(activeTreeSpec.title);
-    const scoredSets = skillSets.map((set) => {
-      const normalizedSetTitle = normalizePobTitle(set.title);
-      const setLevelHint = extractLevelHint(set.title);
-      let score = 0;
-
-      if (normalizedSetTitle === normalizedTreeTitle) {
-        score += 100;
-      } else if (
-        normalizedSetTitle.includes(normalizedTreeTitle) ||
-        normalizedTreeTitle.includes(normalizedSetTitle)
-      ) {
-        score += 60;
-      }
-
-      score += countSharedTokens(normalizedTreeTitle, normalizedSetTitle) * 8;
-
-      if (
-        typeof treeLevelHint === "number" &&
-        typeof setLevelHint === "number"
-      ) {
-        if (treeLevelHint === setLevelHint) {
-          score += 24;
-        } else if (Math.abs(treeLevelHint - setLevelHint) <= 3) {
-          score += 10;
-        }
-      }
-
-      if (set.id === pob.activeSkillSetId) {
-        score += 4;
-      }
-
-      return {
-        ...set,
-        score,
-      };
-    });
-
-    const bestMatch = scoredSets.sort((left, right) => right.score - left.score)[0];
-
-    if (bestMatch && bestMatch.score > 0) {
-      activeSetId = bestMatch.id;
-    }
+    activeSetId = pickBestTreeMatchedId(activeTreeSpec.title, skillSets, pob.activeSkillSetId);
   }
 
   const selectedGroups =

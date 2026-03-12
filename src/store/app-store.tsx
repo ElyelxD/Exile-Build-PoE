@@ -6,7 +6,7 @@ import {
   useReducer,
 } from "react";
 import { AppState, Build, BUILD_TABS, BuildSourceType, BuildTab, UserProgress } from "@/domain/models";
-import { createImportedBuild, createInitialProgress } from "@/services/importer";
+import { createImportedBuild, createInitialProgress, rehydrateImportedBuild } from "@/services/importer";
 import { getSuggestedPobTreeSpecForLevel } from "@/services/pob-selectors";
 import { findStageForLevel, getCurrentStage, getNextObjectives } from "@/store/selectors";
 
@@ -58,13 +58,16 @@ const defaultState: AppState = {
 const AppStoreContext = createContext<AppStoreValue | null>(null);
 
 function normalizeState(candidate: Partial<AppState>): AppState {
+  const builds = (candidate.builds ?? []).map((build) => rehydrateImportedBuild(build));
   const selectedBuildId =
-    candidate.selectedBuildId ??
-    candidate.builds?.[0]?.id ??
+    (candidate.selectedBuildId && builds.some((build) => build.id === candidate.selectedBuildId)
+      ? candidate.selectedBuildId
+      : null) ??
+    builds[0]?.id ??
     null;
 
   return {
-    builds: candidate.builds ?? [],
+    builds,
     selectedBuildId,
     progressByBuildId: candidate.progressByBuildId ?? {},
     activeTab: candidate.activeTab ?? "overview",

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { gunzipSync, inflateRawSync, inflateSync } from "node:zlib";
-import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, Tray } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
 import type { Rectangle } from "electron";
 
 type ShortcutName =
@@ -43,6 +43,7 @@ let overlayWindow: BrowserWindow | null = null;
 let appTray: Tray | null = null;
 let isAdjustingOverlayBounds = false;
 let isQuitting = false;
+let poeAssetsSyncPromise: Promise<PoeAssetsState> | null = null;
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
 
@@ -172,6 +173,26 @@ function ensurePoeAssetsState() {
   });
 }
 
+function hasReadyPoeAssetManifest(state: PoeAssetsState) {
+  return Boolean(state.manifestPath && fs.existsSync(state.manifestPath));
+}
+
+function shouldAutoSyncPoeAssets(state: PoeAssetsState) {
+  if (!state.installPath || !looksLikePoeInstallDirectory(state.installPath)) {
+    return false;
+  }
+
+  if (state.status === "syncing") {
+    return false;
+  }
+
+  if (state.status === "ready" && hasReadyPoeAssetManifest(state)) {
+    return false;
+  }
+
+  return true;
+}
+
 function miningScriptPath() {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, "scripts", "mine_poe_assets.py");
@@ -274,6 +295,24 @@ async function runPoeAssetMining(state: PoeAssetsState) {
   });
 }
 
+function queueAutomaticPoeAssetSync(force = false) {
+  const state = ensurePoeAssetsState();
+
+  if (!force && !shouldAutoSyncPoeAssets(state)) {
+    return poeAssetsSyncPromise ?? Promise.resolve(state);
+  }
+
+  if (poeAssetsSyncPromise) {
+    return poeAssetsSyncPromise;
+  }
+
+  poeAssetsSyncPromise = runPoeAssetMining(state).finally(() => {
+    poeAssetsSyncPromise = null;
+  });
+
+  return poeAssetsSyncPromise;
+}
+
 function loadRendererWindow(window: BrowserWindow, hash = "") {
   if (!app.isPackaged) {
     const url = hash ? `${devServerUrl}/#${hash}` : devServerUrl;
@@ -291,6 +330,29 @@ function trayIconPath() {
   }
 
   return path.join(app.getAppPath(), "build/icon.ico");
+}
+
+function isExternalHttpUrl(value: string) {
+  return /^https?:\/\//i.test(value);
+}
+
+function attachExternalLinkHandlers(window: BrowserWindow) {
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (isExternalHttpUrl(url)) {
+      void shell.openExternal(url);
+    }
+
+    return { action: "deny" };
+  });
+
+  window.webContents.on("will-navigate", (event, url) => {
+    if (!isExternalHttpUrl(url)) {
+      return;
+    }
+
+    event.preventDefault();
+    void shell.openExternal(url);
+  });
 }
 
 function isPobXml(value: string) {
@@ -692,6 +754,7 @@ function createMainWindow() {
     },
   });
 
+  attachExternalLinkHandlers(mainWindow);
   loadRendererWindow(mainWindow);
 
   mainWindow.on("close", (event) => {
@@ -782,6 +845,7 @@ function createOverlayWindow() {
 
   overlayWindow.setMinimumSize(430, 500);
 
+  attachExternalLinkHandlers(overlayWindow);
   loadRendererWindow(overlayWindow, "/overlay");
   promoteOverlayWindow();
 
@@ -867,6 +931,7 @@ app.whenReady().then(() => {
   createTray();
   registerShortcuts();
   ensurePoeAssetsState();
+  void queueAutomaticPoeAssetSync();
 
   screen.on("display-added", ensureOverlayWindowPosition);
   screen.on("display-removed", ensureOverlayWindowPosition);
@@ -882,59 +947,6 @@ app.whenReady().then(() => {
 
   ipcMain.handle("pob:resolve-source", async (_event, sourceType: ImportSourceType, sourceValue: string) => {
     return resolvePobSource(sourceType, sourceValue);
-  });
-
-  ipcMain.handle("poe-assets:get-state", async () => {
-    return ensurePoeAssetsState();
-  });
-
-  ipcMain.handle("poe-assets:choose-install-path", async () => {
-    const dialogOptions = {
-      properties: ["openDirectory"],
-      title: "Escolher pasta do Path of Exile",
-    } satisfies Electron.OpenDialogOptions;
-    const selected =
-      mainWindow && !mainWindow.isDestroyed()
-        ? await dialog.showOpenDialog(mainWindow, dialogOptions)
-        : await dialog.showOpenDialog(dialogOptions);
-
-    if (selected.canceled || selected.filePaths.length === 0) {
-      return ensurePoeAssetsState();
-    }
-
-    const installPath = selected.filePaths[0];
-
-    return writePoeAssetsState({
-      installPath,
-      status: looksLikePoeInstallDirectory(installPath) ? "missing-extractor" : "missing-install",
-      lastError: looksLikePoeInstallDirectory(installPath)
-        ? undefined
-        : "A pasta escolhida não parece ser uma instalação válida do Path of Exile.",
-    });
-  });
-
-  ipcMain.handle("poe-assets:choose-extractor-path", async () => {
-    const dialogOptions = {
-      properties: ["openDirectory"],
-      title: "Escolher pasta da biblioteca de extração",
-    } satisfies Electron.OpenDialogOptions;
-    const selected =
-      mainWindow && !mainWindow.isDestroyed()
-        ? await dialog.showOpenDialog(mainWindow, dialogOptions)
-        : await dialog.showOpenDialog(dialogOptions);
-
-    if (selected.canceled || selected.filePaths.length === 0) {
-      return ensurePoeAssetsState();
-    }
-
-    return writePoeAssetsState({
-      extractorPath: selected.filePaths[0],
-      lastError: undefined,
-    });
-  });
-
-  ipcMain.handle("poe-assets:sync", async () => {
-    return runPoeAssetMining(ensurePoeAssetsState());
   });
 
   app.on("activate", () => {

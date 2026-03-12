@@ -1,7 +1,7 @@
 {
   "name": "overlay-poe-build",
   "productName": "Exile Build PoE",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "author": "Exile Build PoE contributors",
   "description": "Windows desktop MVP scaffold for a Path of Exile build overlay app.",
@@ -60,6 +60,7 @@
     "asar": true,
     "win": {
       "icon": "build/icon.ico",
+      "executableName": "Exile Build PoE",
       "target": [
         {
           "target": "nsis",
@@ -75,7 +76,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "Exile Build PoE"
+      "shortcutName": "Exile Build PoE",
+      "uninstallDisplayName": "Exile Build PoE"
     },
     "nsisWeb": {
       "oneClick": false,
@@ -83,6 +85,7 @@
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "Exile Build PoE",
+      "uninstallDisplayName": "Exile Build PoE",
       "artifactName": "Exile-Build-PoE-Web-Installer.${ext}",
       "appPackageUrl": "https://github.com/Elyelx/Overlay-PoE-Build/releases/download/windows-installer-latest"
     }

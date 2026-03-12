@@ -1,5 +1,4 @@
 /// <reference types="vite/client" />
-import type { PoeAssetsState } from "@/domain/models";
 
 type ShortcutEventName =
   | "next-tab"
@@ -16,10 +15,6 @@ declare global {
       toggleOverlay: () => Promise<void>;
       resetOverlayPosition: () => Promise<void>;
       resolvePobSource: (sourceType: ImportSourceType, sourceValue: string) => Promise<string>;
-      getPoeAssetsState: () => Promise<PoeAssetsState>;
-      choosePoeInstallPath: () => Promise<PoeAssetsState>;
-      choosePoeExtractorPath: () => Promise<PoeAssetsState>;
-      syncPoeAssets: () => Promise<PoeAssetsState>;
       onShortcut: (handler: (name: ShortcutEventName) => void) => () => void;
     };
   }
