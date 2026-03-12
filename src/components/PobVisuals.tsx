@@ -213,13 +213,32 @@ function SlotGlyph({ icon }: { icon: SlotIconKey }) {
 export function GemIcon({
   name,
   rawName,
+  iconUrl,
   isPrimary = false,
 }: {
   name: string;
   rawName: string;
+  iconUrl?: string;
   isPrimary?: boolean;
 }) {
   const tone = classifyGemTone(name, rawName);
+
+  if (iconUrl) {
+    return (
+      <span
+        aria-hidden="true"
+        className={`gem-icon ${isPrimary ? "is-primary" : ""}`}
+      >
+        <img
+          alt=""
+          className="gem-icon-img"
+          src={iconUrl}
+          loading="lazy"
+          draggable={false}
+        />
+      </span>
+    );
+  }
 
   return (
     <span
@@ -239,14 +258,33 @@ export function GemIcon({
 export function GearSlotIcon({
   slot,
   rarity,
+  iconUrl,
   compact = false,
 }: {
   slot?: string;
   rarity?: string;
+  iconUrl?: string;
   compact?: boolean;
 }) {
   const icon = normalizeSlotIconKey(slot);
   const rarityClass = (rarity ?? "normal").toLowerCase();
+
+  if (iconUrl) {
+    return (
+      <span
+        aria-hidden="true"
+        className={`gear-slot-icon gear-slot-icon--${rarityClass} ${compact ? "is-compact" : ""}`}
+      >
+        <img
+          alt=""
+          className="gear-slot-img"
+          src={iconUrl}
+          loading="lazy"
+          draggable={false}
+        />
+      </span>
+    );
+  }
 
   return (
     <span

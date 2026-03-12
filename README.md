@@ -188,8 +188,10 @@ You can support through GitHub Sponsors if enabled for this repository.
 This project is licensed under the Apache License 2.0.
 See the [LICENSE](./LICENSE) file for details.
 
-## Disclaimer
+## Legal & Attribution
 
 This is a community-made tool and is not affiliated with or endorsed by Grinding Gear Games.
 
 Path of Exile is a trademark of Grinding Gear Games.
+
+Game images and item icons are © Grinding Gear Games and used in compliance with the [Path of Exile Fan Creation Policy](https://www.pathofexile.com/legal/fan-content-policy). Icon data sourced from the official Path of Exile CDN (`web.poecdn.com`).

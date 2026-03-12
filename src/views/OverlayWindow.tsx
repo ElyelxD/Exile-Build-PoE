@@ -8,9 +8,11 @@ import {
   getPinnedItems,
   getSelectedBuild,
 } from "@/store/selectors";
+import { useI18n } from "@/i18n";
 
 export function OverlayWindow() {
   const { state, actions } = useAppStore();
+  const { t } = useI18n();
   const build = getSelectedBuild(state);
   const progress = build ? getBuildProgress(state, build.id) : undefined;
   const currentStage = build && progress ? getCurrentStage(build, progress) : undefined;
@@ -25,9 +27,9 @@ export function OverlayWindow() {
     return (
       <div className="overlay-route">
         <section className="overlay-empty">
-          <span className="eyebrow">Exile Build PoE</span>
-          <h2>Nenhum PoB ativo</h2>
-          <p>Importe um Path of Building na janela principal e use `Ctrl + Shift + O`.</p>
+          <span className="eyebrow">{t("header.appName")}</span>
+          <h2>{t("overlay.noActivePoB")}</h2>
+          <p>{t("overlay.importPrompt")}</p>
         </section>
       </div>
     );

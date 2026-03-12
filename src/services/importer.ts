@@ -18,6 +18,8 @@ import {
   UserProgress,
 } from "@/domain/models";
 import { sanitizePobInlineText, sanitizePobNotes } from "@/services/pob-display";
+import { resolveGemIcons, resolveItemIcons } from "@/services/poe-icons";
+import { t } from "@/i18n";
 
 const classIdToName: Record<string, string> = {
   "0": "Scion",
@@ -41,7 +43,7 @@ const ascendancyByClassId: Record<string, Record<string, string>> = {
 
 function getDesktopBridge() {
   if (!window.desktop?.resolvePobSource) {
-    throw new Error("A importação exata de Path of Building precisa do app desktop.");
+    throw new Error(t("importer.desktopRequired"));
   }
 
   return window.desktop;
@@ -51,7 +53,7 @@ function parseXmlDocument(xml: string) {
   const document = new DOMParser().parseFromString(xml, "text/xml");
 
   if (document.getElementsByTagName("parsererror").length > 0) {
-    throw new Error("O XML do Path of Building está inválido.");
+    throw new Error(t("importer.invalidXml"));
   }
 
   return document;
@@ -118,6 +120,10 @@ function buildGemName(skillId: string, nameSpec: string) {
   const baseName = skillId ? formatIdentifier(skillId) : "";
 
   if (nameSpec && baseName) {
+    // Avoid redundant "Name (Name)" when both resolve to the same string
+    if (baseName.toLowerCase() === nameSpec.toLowerCase()) {
+      return nameSpec;
+    }
     return `${baseName} (${nameSpec})`;
   }
 
@@ -125,7 +131,7 @@ function buildGemName(skillId: string, nameSpec: string) {
     return nameSpec;
   }
 
-  return baseName || "Gem importada";
+  return baseName || t("importer.importedGem");
 }
 
 function extractLevelHint(title: string) {
@@ -210,22 +216,22 @@ function createActionFromNoteSection(lines: string[]): SnapshotAction | undefine
 
   const banditMatch = lead.match(/^bandits?\s*[-:]\s*(.+)$/i);
   if (banditMatch) {
-    return { text: `Escolher bandit: ${cleanNoteLine(banditMatch[1])}`, type: "quest" };
+    return { text: t("importer.chooseBandit", { name: cleanNoteLine(banditMatch[1]) }), type: "quest" };
   }
 
   const majorGodMatch = lead.match(/^major god\s*[-:]\s*(.+)$/i);
   if (majorGodMatch) {
-    return { text: `Pantheon major: ${cleanNoteLine(majorGodMatch[1])}`, type: "quest" };
+    return { text: t("importer.pantheonMajor", { name: cleanNoteLine(majorGodMatch[1]) }), type: "quest" };
   }
 
   const minorGodMatch = lead.match(/^minor god\s*[-:]\s*(.+)$/i);
   if (minorGodMatch) {
-    return { text: `Pantheon minor: ${cleanNoteLine(minorGodMatch[1])}`, type: "quest" };
+    return { text: t("importer.pantheonMinor", { name: cleanNoteLine(minorGodMatch[1]) }), type: "quest" };
   }
 
   const labMatch = lead.match(/^(lab|ascendancy)\s*[-:]\s*(.+)$/i);
   if (labMatch) {
-    return { text: `Fazer ${cleanNoteLine(labMatch[2])}`, type: "lab" };
+    return { text: t("importer.doLab", { name: cleanNoteLine(labMatch[2]) }), type: "lab" };
   }
 
   const detailLine = cleanedLines.find((line, index) => index > 0 && !NOTE_PROMO_PATTERN.test(line));
@@ -238,7 +244,7 @@ function createActionFromNoteSection(lines: string[]): SnapshotAction | undefine
   }
 
   if (/^(?:a\d|act\b|level\b|lvl\b|early maps|yellow maps|red maps|endgame)/i.test(lead)) {
-    return { text: `Seguir setup ${lead}`, type: "quest" };
+    return { text: t("importer.followSetup", { name: lead }), type: "quest" };
   }
 
   return { text: lead, type: inferActionType(lead) };
@@ -266,28 +272,52 @@ function createSnapshotActions(pob: PobData) {
     .map((section) => createActionFromNoteSection(section))
     .filter((action): action is SnapshotAction => Boolean(action));
   const fallbackActions: SnapshotAction[] = [
-    ...(pob.bandit ? [{ text: `Escolher bandit: ${sanitizePobInlineText(pob.bandit)}`, type: "quest" as const }] : []),
+    ...(pob.bandit ? [{ text: t("importer.chooseBandit", { name: sanitizePobInlineText(pob.bandit) }), type: "quest" as const }] : []),
     ...(pob.pantheonMajor
-      ? [{ text: `Pantheon major: ${sanitizePobInlineText(pob.pantheonMajor)}`, type: "quest" as const }]
+      ? [{ text: t("importer.pantheonMajor", { name: sanitizePobInlineText(pob.pantheonMajor) }), type: "quest" as const }]
       : []),
     ...(pob.pantheonMinor
-      ? [{ text: `Pantheon minor: ${sanitizePobInlineText(pob.pantheonMinor)}`, type: "quest" as const }]
+      ? [{ text: t("importer.pantheonMinor", { name: sanitizePobInlineText(pob.pantheonMinor) }), type: "quest" as const }]
       : []),
     ...(activeSpec
-      ? [{ text: `Seguir a tree ${sanitizePobInlineText(activeSpec.title)}`, type: "quest" as const }]
-      : [{ text: "Conferir a tree importada do PoB", type: "quest" as const }]),
+      ? [{ text: t("importer.followTree", { name: sanitizePobInlineText(activeSpec.title) }), type: "quest" as const }]
+      : [{ text: t("importer.checkImportedTree"), type: "quest" as const }]),
     ...(pob.mainSkill
-      ? [{ text: `Montar setup principal de ${sanitizePobInlineText(pob.mainSkill)}`, type: "gem" as const }]
-      : [{ text: "Conferir o skill set ativo do PoB", type: "gem" as const }]),
+      ? [{ text: t("importer.setupMainSkill", { name: sanitizePobInlineText(pob.mainSkill) }), type: "gem" as const }]
+      : [{ text: t("importer.checkActiveSkillSet"), type: "gem" as const }]),
     ...(activeItemSet
-      ? [{ text: `Revisar gear do set ${sanitizePobInlineText(activeItemSet.title)}`, type: "gear" as const }]
-      : [{ text: "Conferir a gear importada do PoB", type: "gear" as const }]),
+      ? [{ text: t("importer.reviewGear", { name: sanitizePobInlineText(activeItemSet.title) }), type: "gear" as const }]
+      : [{ text: t("importer.checkImportedGear"), type: "gear" as const }]),
     ...(pob.notes
-      ? [{ text: "Abrir as notas exatas do PoB para revisar a fase", type: "note" as const, required: false }]
+      ? [{ text: t("importer.openPobNotes"), type: "note" as const, required: false }]
       : []),
   ];
 
   return dedupeSnapshotActions([...noteActions, ...fallbackActions]);
+}
+
+function isMetadataLine(line: string) {
+  return (
+    /^Rarity:/i.test(line) ||
+    /^Unique ID:/i.test(line) ||
+    /^[0-9a-f]{24,}$/i.test(line) ||
+    /^Implicits:\s*\d+/i.test(line) ||
+    /BasePercentile/i.test(line) ||
+    /^crafted:\s*true$/i.test(line) ||
+    /^Prefix:\s*/i.test(line) ||
+    /^Suffix:\s*/i.test(line) ||
+    /^Selected Variant:/i.test(line) ||
+    /^Selected Alt Variant:/i.test(line) ||
+    /^Has Alt Variant:/i.test(line) ||
+    /^Variant:/i.test(line) ||
+    /^Quality:\s*\d+/i.test(line) ||
+    /^Sockets:/i.test(line) ||
+    /^Item Level:/i.test(line) ||
+    /^LevelReq:/i.test(line) ||
+    /^Catalyst/i.test(line) ||
+    /^(Searing Exarch|Eater of Worlds|Shaper|Elder|Crusader|Hunter|Redeemer|Warlord) Item$/i.test(line) ||
+    line === "--------"
+  );
 }
 
 function parseItemHeader(rawText: string) {
@@ -298,26 +328,33 @@ function parseItemHeader(rawText: string) {
     .filter(Boolean);
 
   const rarity = lines[0]?.startsWith("Rarity:") ? lines[0].replace("Rarity:", "").trim() : undefined;
+  const contentLines = rarity ? lines.slice(1) : lines;
 
-  if (!rarity) {
-    return {
-      title: lines[0] ?? "Item importado",
-      baseType: lines[1],
-      rarity: undefined,
-    };
+  // Separate header names from metadata/stats — stop at first metadata/stat/separator line
+  const headerLines: string[] = [];
+  for (const line of contentLines) {
+    // Strip PoB tags before checking
+    const clean = line.replace(/\{[^}]+\}/g, "").replace(/\^(?:x[0-9a-fA-F]{6}|[0-9])/g, "").trim();
+    if (!clean) continue;
+    if (isMetadataLine(clean) || clean === "--------") break;
+    // Lines with ":" are usually stats/metadata (e.g. "Physical Damage: 10-20")
+    // Exception: item names can have ":" but those are the first 1-2 lines max
+    if (headerLines.length >= 2) break;
+    if (clean.includes(":") && headerLines.length > 0) break;
+    headerLines.push(clean);
   }
 
-  if ((rarity === "Rare" || rarity === "Unique") && lines.length >= 3) {
+  if ((rarity === "Rare" || rarity === "Unique") && headerLines.length >= 2) {
     return {
-      title: lines[1],
-      baseType: lines[2],
+      title: headerLines[0],
+      baseType: headerLines[1],
       rarity,
     };
   }
 
   return {
-    title: lines[1] ?? "Item importado",
-    baseType: lines[2],
+    title: headerLines[0] ?? t("importer.importedItem"),
+    baseType: headerLines[1],
     rarity,
   };
 }
@@ -330,7 +367,7 @@ function inferClassName(buildElement: Element | null, activeTreeSpec: Element | 
   }
 
   const classId = attribute(activeTreeSpec, "classId");
-  return classIdToName[classId] ?? "Classe desconhecida";
+  return classIdToName[classId] ?? t("importer.unknownClass");
 }
 
 function inferAscendancy(buildElement: Element | null, activeTreeSpec: Element | null, className: string) {
@@ -344,7 +381,7 @@ function inferAscendancy(buildElement: Element | null, activeTreeSpec: Element |
   const ascendClassId = attribute(activeTreeSpec, "ascendClassId");
   const inferred = ascendancyByClassId[classId]?.[ascendClassId];
 
-  return inferred ?? (className === "Scion" ? "Ascendant" : "Ascendancy desconhecida");
+  return inferred ?? (className === "Scion" ? "Ascendant" : t("importer.unknownAscendancy"));
 }
 
 function resolveBuildName(buildElement: Element | null, className: string, ascendancy: string, mainSkill?: string) {
@@ -520,7 +557,7 @@ function parsePobData(xml: string): {
         attribute(skill, "label") ||
         gems.find((gem) => !gem.rawName.toLowerCase().includes("support"))?.name ||
         gems[0]?.name ||
-        `Grupo ${groupIndex + 1}`;
+        t("importer.group", { index: groupIndex + 1 });
 
       skillGroups.push({
         id: `${setId}-${groupIndex + 1}`,
@@ -588,6 +625,11 @@ function parsePobData(xml: string): {
 
   const notes = sanitizePobNotes(notesElement?.textContent ?? "");
 
+  // Resolve icon URLs from poe-icons.json
+  const allGems = skillGroups.flatMap((g) => g.gems);
+  resolveGemIcons(allGems);
+  resolveItemIcons(items);
+
   const pob: PobData = {
     version: attribute(root, "version") || undefined,
     level: attributeNumber(buildElement, "level") ?? 1,
@@ -627,15 +669,19 @@ function createSummary(pob: PobData): BuildSummary {
   const firstAction = createSnapshotActions(pob)[0]?.text;
 
   return {
-    tagline: `Import exato do PoB com ${pob.treeSpecs.length} tree spec${pob.treeSpecs.length === 1 ? "" : "s"}, ${pob.skillGroups.length} grupo${pob.skillGroups.length === 1 ? "" : "s"} de skill e ${pob.items.length} item${pob.items.length === 1 ? "" : "s"} no snapshot.`,
+    tagline: t("importer.tagline", {
+      treeSpecs: pob.treeSpecs.length,
+      skillGroups: pob.skillGroups.length,
+      items: pob.items.length,
+    }),
     playstyle: pob.mainSkill
-      ? `Skill principal: ${sanitizePobInlineText(pob.mainSkill)}`
-      : "Import exato do Path of Building.",
+      ? t("importer.mainSkillPlaystyle", { name: sanitizePobInlineText(pob.mainSkill) })
+      : t("importer.exactImport"),
     nextUpgrade:
       firstAction ||
       (activeItemSet
-        ? `Revisar gear do set ${sanitizePobInlineText(activeItemSet.title)}`
-        : "Revisar as notas do PoB."),
+        ? t("importer.reviewGearSet", { name: sanitizePobInlineText(activeItemSet.title) })
+        : t("importer.reviewPobNotes")),
     warningCards: [],
   };
 }
@@ -661,10 +707,13 @@ function createSnapshotStage(buildId: string, name: string, pob: PobData): Build
     label: "PoB Snapshot",
     levelMin: 1,
     levelMax: 100,
-    title: sanitizePobInlineText(activeSpec?.title || "Snapshot importado"),
+    title: sanitizePobInlineText(activeSpec?.title || t("importer.snapshotImported")),
     summary:
       snapshotActions[0]?.text ||
-      `Snapshot exato do Path of Building${pob.mainSkill ? ` · ${sanitizePobInlineText(pob.mainSkill)}` : ""}${activeItemSet ? ` · ${sanitizePobInlineText(activeItemSet.title)}` : ""}.`,
+      t("importer.snapshotSummary", {
+        mainSkill: pob.mainSkill ? ` · ${sanitizePobInlineText(pob.mainSkill)}` : "",
+        itemSet: activeItemSet ? ` · ${sanitizePobInlineText(activeItemSet.title)}` : "",
+      }),
     passives:
       pob.treeSpecs.length > 0
         ? pob.treeSpecs.map((spec, index) =>
@@ -673,10 +722,10 @@ function createSnapshotStage(buildId: string, name: string, pob: PobData): Build
               index + 1,
               spec.title,
               spec.levelHint ?? 0,
-              spec.url ? `Tree URL: ${spec.url}` : "Tree spec importada exatamente do PoB.",
+              spec.url ? t("importer.treeUrl", { url: spec.url }) : t("importer.treeSpecImported"),
             ),
           )
-        : [stagePassive(stageId, 1, name, pob.level, "Build importada exatamente do Path of Building.")],
+        : [stagePassive(stageId, 1, name, pob.level, t("importer.buildImported"))],
     gems: displaySkillGroups.slice(0, 4).map((group, index) => {
       const gems = group.gems.filter((gem) => gem.enabled);
       const primaryGem = gems[0]?.name || group.label;
@@ -714,30 +763,30 @@ function createSnapshotStage(buildId: string, name: string, pob: PobData): Build
     notes:
       snapshotNotes.length > 0
         ? snapshotNotes
-        : ["Snapshot gerado exatamente a partir do Path of Building importado."],
+        : [t("importer.snapshotGenerated")],
   };
 }
 
 function createCharacterCards(buildId: string, ascendancy: string, pob: PobData): LabStep[] {
   const cards: Array<[string, string, string]> = [];
 
-  cards.push(["Ascendancy", ascendancy, "Classe e ascendancy importadas exatamente do PoB."]);
+  cards.push(["Ascendancy", ascendancy, t("importer.ascendancyImported")]);
 
   if (pob.bandit) {
-    cards.push(["Bandit", pob.bandit, "Escolha de bandit importada do PoB."]);
+    cards.push(["Bandit", pob.bandit, t("importer.banditImported")]);
   }
 
   if (pob.pantheonMajor || pob.pantheonMinor) {
     cards.push([
       "Pantheon",
       [pob.pantheonMajor, pob.pantheonMinor].filter(Boolean).join(" · "),
-      "Pantheon major/minor importado do PoB.",
+      t("importer.pantheonImported"),
     ]);
   }
 
   const activeItemSet = pob.itemSets.find((itemSet) => itemSet.isActive);
   if (activeItemSet) {
-    cards.push(["Item Set", activeItemSet.title, "Conjunto ativo importado do PoB."]);
+    cards.push(["Item Set", activeItemSet.title, t("importer.activeSetImported")]);
   }
 
   return cards.map(([title, ascendancyChoice, notes], index) => ({
@@ -776,6 +825,11 @@ export function rehydrateImportedBuild(build: Build): Build {
   if (!build.pob) {
     return build;
   }
+
+  // Re-resolve icon URLs for existing builds (covers builds imported before icon support)
+  const allGems = build.pob.skillGroups.flatMap((g) => g.gems);
+  resolveGemIcons(allGems);
+  resolveItemIcons(build.pob.items);
 
   return {
     ...build,

@@ -15,6 +15,7 @@ declare global {
       toggleOverlay: () => Promise<void>;
       resetOverlayPosition: () => Promise<void>;
       resolvePobSource: (sourceType: ImportSourceType, sourceValue: string) => Promise<string>;
+      setLocale: (locale: string) => Promise<void>;
       onShortcut: (handler: (name: ShortcutEventName) => void) => () => void;
     };
   }

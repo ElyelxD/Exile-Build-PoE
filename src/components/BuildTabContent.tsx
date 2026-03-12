@@ -9,15 +9,18 @@ import {
 } from "@/domain/models";
 import { GearSlotIcon, GemIcon } from "@/components/PobVisuals";
 import {
-  parsePobItemDisplay,
+  isMetaLine,
+  parsePobItemDetailed,
   sanitizePobInlineText,
   splitPobParagraphs,
 } from "@/services/pob-display";
+import type { PobItemMod } from "@/services/pob-display";
 import {
   getActivePobItemSet,
   getActivePobSkillGroups,
   getActivePobTreeSpec,
 } from "@/services/pob-selectors";
+import { useI18n } from "@/i18n";
 
 type DecoratedChecklistItem = {
   id: string;
@@ -65,13 +68,14 @@ function ChecklistBlock({
   onToggleChecklist?: (itemId: string) => void;
   onTogglePin?: (itemId: string) => void;
 }) {
+  const { t } = useI18n();
   const completed = new Set(completedChecklistIds);
 
   return (
     <div className="list-block">
       <div className="section-heading">
-        <h3>Checklist operacional</h3>
-        <span>{currentStage.checklist.length} itens</span>
+        <h3>{t("checklist.heading")}</h3>
+        <span>{t("checklist.itemCount", { count: currentStage.checklist.length })}</span>
       </div>
       <div className="checklist">
         {currentStage.checklist.map((item) => {
@@ -108,18 +112,20 @@ function ChecklistBlock({
 
 function NoteSections({
   text,
-  emptyCopy = "Nenhuma nota importada do Path of Building.",
+  emptyCopy,
   limit,
 }: {
   text: string;
   emptyCopy?: string;
   limit?: number;
 }) {
+  const { t } = useI18n();
+  const fallbackEmpty = emptyCopy ?? t("notes.empty");
   const sections = splitPobParagraphs(text);
   const displaySections = typeof limit === "number" ? sections.slice(0, limit) : sections;
 
   if (displaySections.length === 0) {
-    return <p className="subtle">{emptyCopy}</p>;
+    return <p className="subtle">{fallbackEmpty}</p>;
   }
 
   return (
@@ -276,13 +282,30 @@ function itemToneClass(rarity?: string) {
   return "is-normal";
 }
 
-function itemPreviewLines(item: PobItem, limit = 3) {
-  const parsed = parsePobItemDisplay(item.rawText);
+/** Sanitize a display field — returns empty string if it looks like PoB metadata. */
+function sanitizeDisplayField(value: string | undefined) {
+  const clean = sanitizePobInlineText(value ?? "");
+  if (!clean) return "";
+  // Check each segment (baseType could be multi-line from old import)
+  if (clean.split(/\s+/).every((w) => /^[0-9a-f]+$/i.test(w) && w.length >= 8)) return "";
+  if (isMetaLine(clean)) return "";
+  return clean;
+}
 
-  return [...parsed.propertyLines, ...parsed.modifierLines]
+function itemDetailedMods(item: PobItem) {
+  const parsed = parsePobItemDetailed(item.rawText);
+
+  const baseStats = parsed.propertyLines
     .map((line) => sanitizePobInlineText(line))
     .filter(Boolean)
-    .slice(0, limit);
+    .filter((line) => !isMetaLine(line));
+
+  const mods: PobItemMod[] = parsed.mods
+    .filter((m) => sanitizePobInlineText(m.text))
+    .map((m) => ({ ...m, text: sanitizePobInlineText(m.text) }))
+    .filter((m) => !isMetaLine(m.text));
+
+  return { baseStats, mods };
 }
 
 function SkillBoard({
@@ -290,6 +313,8 @@ function SkillBoard({
 }: {
   groups: PobSkillGroup[];
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="skill-board">
       {groups.map((group) => {
@@ -311,7 +336,9 @@ function SkillBoard({
                 <h4>{sanitizePobInlineText(group.label)}</h4>
               </div>
               <span className="pill">
-                {displayGems.length > 1 ? `${displayGems.length}-link` : `${displayGems.length} gema`}
+                {displayGems.length > 1
+                  ? t("gems.linkCount", { count: displayGems.length })
+                  : t("gems.gemCount", { count: displayGems.length })}
               </span>
             </div>
 
@@ -331,13 +358,14 @@ function SkillBoard({
                   >
                     {index < displayGems.length - 1 && <span className="skill-link" />}
                     <GemIcon
+                      iconUrl={gem.iconUrl}
                       isPrimary={index === 0}
                       name={sanitizePobInlineText(gem.name)}
                       rawName={gem.rawName}
                     />
                     <div className="skill-copy">
                       <strong>{sanitizePobInlineText(gem.name)}</strong>
-                      <span>{meta || (index === 0 ? "Gema principal" : "Link ativo")}</span>
+                      <span>{meta || (index === 0 ? t("gems.primaryGem") : t("gems.activeLink"))}</span>
                     </div>
                   </div>
                 );
@@ -346,7 +374,7 @@ function SkillBoard({
 
             {disabledGems.length > 0 && (
               <div className="skill-bench">
-                <span className="skill-bench-label">Banco do grupo</span>
+                <span className="skill-bench-label">{t("gems.groupBench")}</span>
                 <div className="skill-bench-row">
                   {disabledGems.map((gem) => (
                     <span className="skill-bench-chip" key={gem.id}>
@@ -363,13 +391,78 @@ function SkillBoard({
   );
 }
 
+function ItemModBlock({ item, showTiers = true }: { item: PobItem; showTiers?: boolean }) {
+  const detail = itemDetailedMods(item);
+  const implicits = detail.mods.filter((m) => m.source === "implicit");
+  const explicits = detail.mods.filter((m) => m.source !== "implicit");
+
+  return (
+    <>
+      {detail.baseStats.length > 0 && (
+        <div className="gear-props">
+          {detail.baseStats.map((stat) => (
+            <span key={stat}>{stat}</span>
+          ))}
+        </div>
+      )}
+
+      {implicits.length > 0 && (
+        <ul className="gear-mods gear-mods--implicit">
+          {implicits.map((mod) => (
+            <li key={mod.text}>{mod.text}</li>
+          ))}
+        </ul>
+      )}
+
+      {explicits.length > 0 && (
+        <ul className="gear-mods">
+          {explicits.map((mod) => (
+            <li className={`gear-mods__mod--${mod.source}`} key={mod.text}>
+              {showTiers && (mod.source === "prefix" || mod.source === "suffix") && mod.tier != null && mod.tier > 0 && (
+                <span className="gear-mods__tier">T{mod.tier}</span>
+              )}
+              {mod.text}
+              {mod.source === "crafted" && <span className="gear-mods__crafted">crafted</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function FlaskExtraCard({ item, condensed }: { item: PobItem; condensed: boolean }) {
+  const displayTitle = sanitizeDisplayField(item.title);
+  const displayBase = sanitizeDisplayField(item.baseType);
+  const isGenericTitle = !displayTitle || displayTitle === "New Item";
+
+  return (
+    <article className={`gear-mini-card ${itemToneClass(item.rarity)}`}>
+      <div className="gear-item-row">
+        <GearSlotIcon compact iconUrl={item.iconUrl} rarity={item.rarity} slot={item.slot ?? "Extra"} />
+        <div className="gear-item-info">
+          <span className="gear-mini-slot">{sanitizePobInlineText(item.slot ?? "")}</span>
+          <strong>{isGenericTitle && displayBase ? displayBase : displayTitle}</strong>
+          {!isGenericTitle && displayBase && (
+            <span className="gear-item-base">{displayBase}</span>
+          )}
+        </div>
+      </div>
+      {!condensed && <ItemModBlock item={item} showTiers={false} />}
+    </article>
+  );
+}
+
 function GearBoard({
   itemSetTitle,
   items,
+  condensed = false,
 }: {
   itemSetTitle: string;
   items: PobItem[];
+  condensed?: boolean;
 }) {
+  const { t } = useI18n();
   const boardItems = new Map<string, PobItem>();
   const flaskItems: PobItem[] = [];
   const extraItems: PobItem[] = [];
@@ -398,40 +491,40 @@ function GearBoard({
   return (
     <section className="panel">
       <div className="section-heading">
-        <h3>Gear exata do PoB</h3>
+        <h3>{t("gear.exactGear")}</h3>
         <span>{sanitizePobInlineText(itemSetTitle)}</span>
       </div>
 
       <div className="gear-layout">
         {gearLayout.map((slot) => {
           const item = boardItems.get(slot.key);
-          const previewLines = item ? itemPreviewLines(item) : [];
+          const displayTitle = sanitizeDisplayField(item?.title);
+          const displayBase = sanitizeDisplayField(item?.baseType);
+          const isGenericTitle = !displayTitle || displayTitle === "New Item";
 
           return (
             <article
               className={`gear-slot gear-slot--${slot.key} ${item ? "has-item" : "is-empty"}`}
               key={slot.key}
             >
-              <div className="gear-slot-head">
-                <span className="gear-slot-label">{slot.label}</span>
-                <GearSlotIcon rarity={item?.rarity} slot={item?.slot ?? slot.label} />
-              </div>
+              <span className="gear-slot-label">{slot.label}</span>
               {item ? (
                 <div className={`gear-item-card ${itemToneClass(item.rarity)}`}>
-                  <strong>{sanitizePobInlineText(item.title)}</strong>
-                  {item.baseType && <span className="gear-item-base">{sanitizePobInlineText(item.baseType)}</span>}
-                  {previewLines.length > 0 && (
-                    <div className="gear-line-list">
-                      {previewLines.map((line) => (
-                        <span key={line}>{line}</span>
-                      ))}
+                  <div className="gear-item-row">
+                    <GearSlotIcon iconUrl={item.iconUrl} rarity={item.rarity} slot={item.slot ?? slot.label} />
+                    <div className="gear-item-info">
+                      <strong>{isGenericTitle && displayBase ? displayBase : displayTitle}</strong>
+                      {!isGenericTitle && displayBase && (
+                        <span className="gear-item-base">{displayBase}</span>
+                      )}
                     </div>
-                  )}
+                  </div>
+                  {!condensed && <ItemModBlock item={item} />}
                 </div>
               ) : (
                 <div className="gear-empty">
                   <GearSlotIcon compact slot={slot.label} />
-                  <span>Sem item</span>
+                  <span>{t("gear.noItem")}</span>
                 </div>
               )}
             </article>
@@ -441,17 +534,10 @@ function GearBoard({
 
       {flaskItems.length > 0 && (
         <div className="gear-subsection">
-          <span className="mini-help-title">Frascos</span>
+          <span className="mini-help-title">{t("gear.flasks")}</span>
           <div className="gear-strip">
             {flaskItems.map((item) => (
-              <article className={`gear-mini-card ${itemToneClass(item.rarity)}`} key={item.id}>
-                <div className="gear-mini-head">
-                  <span className="gear-mini-slot">{sanitizePobInlineText(item.slot ?? "Flask")}</span>
-                  <GearSlotIcon compact rarity={item.rarity} slot={item.slot ?? "Flask"} />
-                </div>
-                <strong>{sanitizePobInlineText(item.title)}</strong>
-                <span>{sanitizePobInlineText(item.baseType ?? item.rarity ?? "Frasco importado")}</span>
-              </article>
+              <FlaskExtraCard item={item} condensed={condensed} key={item.id} />
             ))}
           </div>
         </div>
@@ -459,23 +545,11 @@ function GearBoard({
 
       {extraItems.length > 0 && (
         <div className="gear-subsection">
-          <span className="mini-help-title">Swap e sockets extras</span>
+          <span className="mini-help-title">{t("gear.swapAndExtra")}</span>
           <div className="gear-extra-grid">
-            {extraItems.map((item) => {
-              const preview = itemPreviewLines(item, 2);
-
-              return (
-                <article className={`gear-mini-card ${itemToneClass(item.rarity)}`} key={item.id}>
-                  <div className="gear-mini-head">
-                    <span className="gear-mini-slot">{sanitizePobInlineText(item.slot ?? "Extra")}</span>
-                    <GearSlotIcon compact rarity={item.rarity} slot={item.slot ?? "Extra"} />
-                  </div>
-                  <strong>{sanitizePobInlineText(item.title)}</strong>
-                  <span>{sanitizePobInlineText(item.baseType ?? item.rarity ?? "Importado")}</span>
-                  {preview.length > 0 && <p>{preview.join(" · ")}</p>}
-                </article>
-              );
-            })}
+            {extraItems.map((item) => (
+              <FlaskExtraCard item={item} condensed={condensed} key={item.id} />
+            ))}
           </div>
         </div>
       )}
@@ -494,6 +568,7 @@ export function BuildTabContent({
   onToggleChecklist,
   onTogglePin,
 }: BuildTabContentProps) {
+  const { t } = useI18n();
   const pob = build.pob;
   const stageSubset = condensed ? [currentStage] : build.stages;
   const activeTreeSpec = getActivePobTreeSpec(pob);
@@ -518,7 +593,7 @@ export function BuildTabContent({
             <div className="card-grid two-up">
               <section className="panel">
                 <div className="section-heading">
-                  <h3>PoB agora</h3>
+                  <h3>{t("overview.pobNow")}</h3>
                   <span>
                     Lvl {pob.level} · {build.className} {build.ascendancy}
                   </span>
@@ -526,40 +601,40 @@ export function BuildTabContent({
                 <p className="lead-copy">{displayTagline}</p>
                 <div className="metric-stack">
                   <div>
-                    <span>Skill principal</span>
-                    <strong>{pob.mainSkill ?? "Sem label principal no PoB"}</strong>
+                    <span>{t("overview.mainSkill")}</span>
+                    <strong>{pob.mainSkill ?? t("overview.noMainSkill")}</strong>
                   </div>
                   <div>
-                    <span>Tree ativa</span>
-                    <strong>{activeTreeSpec?.title ?? "Sem tree spec ativa"}</strong>
+                    <span>{t("overview.activeTree")}</span>
+                    <strong>{activeTreeSpec?.title ?? t("overview.noActiveTree")}</strong>
                   </div>
                   <div>
-                    <span>Item set ativo</span>
-                    <strong>{activeItemSet?.title ?? "Sem item set ativo"}</strong>
+                    <span>{t("overview.activeItemSet")}</span>
+                    <strong>{activeItemSet?.title ?? t("overview.noActiveItemSet")}</strong>
                   </div>
                   <div>
-                    <span>Próximo upgrade</span>
-                    <strong>{displayNextUpgrade || "Revisar notas importadas"}</strong>
+                    <span>{t("overview.nextUpgrade")}</span>
+                    <strong>{displayNextUpgrade || t("overview.reviewNotes")}</strong>
                   </div>
                 </div>
               </section>
 
               <section className="panel">
                 <div className="section-heading">
-                  <h3>Import exato</h3>
-                  <span>PoB real</span>
+                  <h3>{t("overview.exactImport")}</h3>
+                  <span>{t("overview.realPoB")}</span>
                 </div>
                 <div className="metric-stack">
                   <div>
-                    <span>Tree specs</span>
+                    <span>{t("overview.treeSpecs")}</span>
                     <strong>{pob.treeSpecs.length}</strong>
                   </div>
                   <div>
-                    <span>Grupos de skill</span>
+                    <span>{t("overview.skillGroups")}</span>
                     <strong>{pob.skillGroups.length}</strong>
                   </div>
                   <div>
-                    <span>Itens no set ativo</span>
+                    <span>{t("overview.itemsInActiveSet")}</span>
                     <strong>{activePobItems.length}</strong>
                   </div>
                   {pob.bandit && (
@@ -588,8 +663,8 @@ export function BuildTabContent({
             {build.notes && (
               <section className="panel">
                 <div className="section-heading">
-                  <h3>Notas do PoB</h3>
-                  <span>Formatadas para leitura</span>
+                  <h3>{t("overview.pobNotes")}</h3>
+                  <span>{t("overview.formattedForReading")}</span>
                 </div>
                 <NoteSections text={build.notes} limit={condensed ? 1 : 2} />
               </section>
@@ -603,7 +678,7 @@ export function BuildTabContent({
           <div className="card-grid two-up">
             <section className="panel">
               <div className="section-heading">
-                <h3>Build agora</h3>
+                <h3>{t("overview.buildNow")}</h3>
                 <span>
                   Lvl {progress.playerLevel} · {build.className} {build.ascendancy}
                 </span>
@@ -611,15 +686,15 @@ export function BuildTabContent({
               <p className="lead-copy">{displayTagline}</p>
               <div className="metric-stack">
                 <div>
-                  <span>Playstyle</span>
+                  <span>{t("overview.playstyle")}</span>
                   <strong>{displayPlaystyle}</strong>
                 </div>
                 <div>
-                  <span>Próximo upgrade</span>
+                  <span>{t("overview.nextUpgrade")}</span>
                   <strong>{displayNextUpgrade}</strong>
                 </div>
                 <div>
-                  <span>Stage atual</span>
+                  <span>{t("overview.currentStage")}</span>
                   <strong>{currentStage.title}</strong>
                 </div>
               </div>
@@ -627,8 +702,8 @@ export function BuildTabContent({
 
             <section className="panel">
               <div className="section-heading">
-                <h3>Warnings</h3>
-                <span>Antes de jogar</span>
+                <h3>{t("overview.warnings")}</h3>
+                <span>{t("overview.beforePlaying")}</span>
               </div>
               <div className="warning-list">
                 {[...build.warnings, ...build.summary.warningCards].map((warning) => (
@@ -684,14 +759,14 @@ export function BuildTabContent({
           <div className="content-stack">
             <section className="panel">
               <div className="section-heading">
-                <h3>{condensed ? "Tree ativa" : "Timeline de trees"}</h3>
-                <span>{condensed ? activeTreeSpec?.title ?? "Sem tree ativa" : pob.treeSpecs.length}</span>
+                <h3>{condensed ? t("tree.activeTree") : t("tree.treeTimeline")}</h3>
+                <span>{condensed ? activeTreeSpec?.title ?? t("tree.noActiveTree") : pob.treeSpecs.length}</span>
               </div>
               {condensed && pob.treeSpecs.length > 1 && (
                 <div className="pob-spec-switcher">
-                  <span className="mini-help-title">Tree ativa no app</span>
+                  <span className="mini-help-title">{t("tree.activeTreeInApp")}</span>
                   <label className="field pob-spec-field">
-                    <span className="field-label">Selecionar tree</span>
+                    <span className="field-label">{t("tree.selectTree")}</span>
                     <select
                       className="pob-spec-select"
                       onChange={(event) => onSetPobTreeSpec?.(event.target.value)}
@@ -714,7 +789,7 @@ export function BuildTabContent({
                   >
                     <div className="stage-card-header">
                       <div>
-                        <span className="eyebrow">{activeTreeSpec?.id === spec.id ? "Ativa no app" : "PoB"}</span>
+                        <span className="eyebrow">{activeTreeSpec?.id === spec.id ? t("tree.activeInApp") : "PoB"}</span>
                         <h3>{spec.title}</h3>
                       </div>
                       <span className="pill">
@@ -723,8 +798,8 @@ export function BuildTabContent({
                     </div>
                     <span className="detail-meta">
                       {spec.treeVersion
-                        ? `Passive tree ${spec.treeVersion}`
-                        : "Tree spec importada exatamente do PoB."}
+                        ? t("tree.passiveTree", { version: spec.treeVersion })
+                        : t("tree.treeSpecImported")}
                     </span>
                   </article>
                 ))}
@@ -738,7 +813,7 @@ export function BuildTabContent({
         <div className="content-stack">
           <section className="panel">
             <div className="section-heading">
-              <h3>Passive milestones</h3>
+              <h3>{t("tree.passiveMilestones")}</h3>
               <span>{currentStage.title}</span>
             </div>
             <div className="card-grid">
@@ -748,7 +823,7 @@ export function BuildTabContent({
                     <span className="eyebrow">{stage.label}</span>
                     <h4>{passive.targetName}</h4>
                     <p>{passive.instructions}</p>
-                    <span className="detail-meta">{passive.pointsRequired} pontos</span>
+                    <span className="detail-meta">{t("tree.pointCount", { count: passive.pointsRequired })}</span>
                   </article>
                 )),
               )}
@@ -758,8 +833,8 @@ export function BuildTabContent({
           {!condensed && (
             <section className="panel">
               <div className="section-heading">
-                <h3>Roadmap completo</h3>
-                <span>Ordem de progressão</span>
+                <h3>{t("tree.fullRoadmap")}</h3>
+                <span>{t("tree.progressionOrder")}</span>
               </div>
               <div className="stage-list">
                 {build.stages.map((stage) => (
@@ -785,13 +860,13 @@ export function BuildTabContent({
           ? activeSkillGroups.slice(0, 4)
           : activeSkillGroups;
         const visibleGroups = displayGroups.length > 0 ? displayGroups : pob.skillGroups;
-        const activeSkillSetTitle = visibleGroups[0]?.setTitle ?? "Skill set ativa";
+        const activeSkillSetTitle = visibleGroups[0]?.setTitle ?? t("gems.activeSkillSet");
 
         return (
           <div className="content-stack">
             <section className="panel">
               <div className="section-heading">
-                <h3>Links e gemas</h3>
+                <h3>{t("gems.linksAndGems")}</h3>
                 <span>{activeSkillSetTitle}</span>
               </div>
               <SkillBoard groups={visibleGroups} />
@@ -839,8 +914,9 @@ export function BuildTabContent({
         return (
           <div className="content-stack">
             <GearBoard
-              itemSetTitle={activeItemSet?.title ?? "Todos os sets"}
+              itemSetTitle={activeItemSet?.title ?? t("gear.exactGear")}
               items={condensed ? activePobItems.slice(0, 12) : activePobItems}
+              condensed={condensed}
             />
           </div>
         );
@@ -870,7 +946,7 @@ export function BuildTabContent({
                     ))}
                   </div>
                   {gear.uniqueSuggestion && (
-                    <span className="detail-meta">Unique hint: {gear.uniqueSuggestion}</span>
+                    <span className="detail-meta">{t("gear.uniqueHint", { suggestion: gear.uniqueSuggestion })}</span>
                   )}
                 </article>
               )),
@@ -905,8 +981,8 @@ export function BuildTabContent({
         <div className="content-stack">
           <section className="panel">
             <div className="section-heading">
-              <h3>Notas da build</h3>
-              <span>Import + MVP</span>
+              <h3>{t("notes.buildNotes")}</h3>
+              <span>{t("notes.importMvp")}</span>
             </div>
             <NoteSections text={build.notes} />
           </section>
@@ -914,7 +990,7 @@ export function BuildTabContent({
           {stageNotes.length > 0 && (
             <section className="panel">
               <div className="section-heading">
-                <h3>Snapshot atual</h3>
+                <h3>{t("notes.currentSnapshot")}</h3>
                 <span>{currentStage.title}</span>
               </div>
               <div className="chip-row">
@@ -929,11 +1005,11 @@ export function BuildTabContent({
 
           <section className="panel">
             <div className="section-heading">
-              <h3>Itens pinados</h3>
-              <span>{pinnedItems.length} ativos</span>
+              <h3>{t("notes.pinnedItems")}</h3>
+              <span>{t("notes.pinnedActive", { count: pinnedItems.length })}</span>
             </div>
             {pinnedItems.length === 0 ? (
-              <p className="subtle">Nenhum item pinado ainda.</p>
+              <p className="subtle">{t("notes.noPinnedItems")}</p>
             ) : (
               <div className="checklist">
                 {pinnedItems.map((item) => (

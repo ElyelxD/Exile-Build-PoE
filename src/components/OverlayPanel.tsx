@@ -2,6 +2,7 @@ import { BUILD_TABS, Build, BuildStage, BuildTab, OverlayMode, UserProgress } fr
 import { BuildTabContent } from "@/components/BuildTabContent";
 import { sanitizePobInlineText } from "@/services/pob-display";
 import { getActivePobTreeSpec, getNextPobTreeSpecForLevel } from "@/services/pob-selectors";
+import { useI18n } from "@/i18n";
 
 type DecoratedChecklistItem = {
   id: string;
@@ -46,6 +47,7 @@ export function OverlayPanel({
   onToggleChecklist,
   variant = "preview",
 }: OverlayPanelProps) {
+  const { t } = useI18n();
   const effectiveMode = variant === "live" ? "expanded" : overlayMode;
   const compactObjectives = nextObjectives.slice(0, variant === "live" ? 3 : 2);
   const nextUpgradeLabel = sanitizePobInlineText(build.summary.nextUpgrade);
@@ -53,7 +55,7 @@ export function OverlayPanel({
   const displayStageTitle = activeTreeSpec?.title ?? currentStage.title;
   const isTreeDrivenBuild = Boolean(build.pob && build.pob.treeSpecs.length > 1);
   const nextTreeSpec = getNextPobTreeSpecForLevel(build.pob, progress.playerLevel);
-  const footerCopy = "Ctrl + Shift + M conclui o próximo objetivo";
+  const footerCopy = t("overlay.footerCopy");
 
   return (
     <section
@@ -83,19 +85,21 @@ export function OverlayPanel({
           {variant === "live" ? (
             <div className="overlay-session-strip">
               <div className="overlay-session-card">
-                <span className="overlay-session-label">{isTreeDrivenBuild ? "Tree ativa" : "Fase"}</span>
+                <span className="overlay-session-label">
+                  {isTreeDrivenBuild ? t("session.activeTree") : t("overlay.phase")}
+                </span>
                 <strong>{displayStageTitle}</strong>
               </div>
               <div className="overlay-session-card">
-                <span className="overlay-session-label">Próximo upgrade</span>
-                <strong>{nextUpgradeLabel || "Revisar snapshot do PoB"}</strong>
+                <span className="overlay-session-label">{t("overlay.nextUpgrade")}</span>
+                <strong>{nextUpgradeLabel || t("overlay.reviewSnapshot")}</strong>
               </div>
             </div>
           ) : null}
 
           {variant === "live" ? (
             <div className="overlay-level-strip">
-              <span className="overlay-session-label">Nível atual</span>
+              <span className="overlay-session-label">{t("overlay.currentLevel")}</span>
               <div className="overlay-level-controls">
                 <button
                   className="icon-button"
@@ -122,8 +126,8 @@ export function OverlayPanel({
               </div>
               <span className="overlay-level-help">
                 {isTreeDrivenBuild && nextTreeSpec
-                  ? `Ao subir o nível, a próxima tree será ${nextTreeSpec.title}.`
-                  : "Ajustar o nível aqui atualiza o stage ativo no overlay."}
+                  ? t("overlay.levelHelpTree", { title: nextTreeSpec.title })
+                  : t("overlay.levelHelpStage")}
               </span>
             </div>
           ) : null}
@@ -137,13 +141,13 @@ export function OverlayPanel({
                 >
                   <div className="overlay-objective-main">
                     <span className="overlay-objective-kicker">
-                      {index === 0 ? "Agora" : "Em seguida"}
+                      {index === 0 ? t("overlay.now") : t("overlay.next")}
                     </span>
                     <strong>{item.text}</strong>
                     <span>{item.stageTitle}</span>
                   </div>
                   <button
-                    aria-label={`Marcar ${item.text} como concluído`}
+                    aria-label={t("hero.markAsCompleted", { text: item.text })}
                     className="check-toggle-button"
                     onClick={() => onToggleChecklist?.(item.id)}
                     type="button"
@@ -155,15 +159,15 @@ export function OverlayPanel({
             </div>
           ) : (
             <div className="overlay-stage-summary is-complete">
-              <span className="pill">Checklist em dia</span>
-              <p>Sem pendencias imediatas. Abra os detalhes para revisar a build com calma.</p>
+              <span className="pill">{t("overlay.checklistUpToDate")}</span>
+              <p>{t("overlay.noPendingItems")}</p>
             </div>
           )}
 
           <footer className="overlay-footer">
             <span>{footerCopy}</span>
             <button className="primary-button is-small" onClick={onMarkObjective} type="button">
-              Concluir
+              {t("overlay.complete")}
             </button>
           </footer>
         </div>

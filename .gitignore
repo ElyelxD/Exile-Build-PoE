@@ -5,3 +5,4 @@ release
 *.log
 __pycache__/
 *.pyc
+docs

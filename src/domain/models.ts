@@ -78,6 +78,7 @@ export interface PobGem {
   level?: number;
   quality?: number;
   enabled: boolean;
+  iconUrl?: string;
 }
 
 export interface PobSkillGroup {
@@ -112,6 +113,7 @@ export interface PobItem {
   baseType?: string;
   rarity?: string;
   rawText: string;
+  iconUrl?: string;
 }
 
 export interface PobData {

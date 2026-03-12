@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { AppStoreProvider, useAppStore } from "@/store/app-store";
+import { I18nProvider } from "@/i18n";
 import { MainShell } from "@/views/MainShell";
 import { OverlayWindow } from "@/views/OverlayWindow";
 
@@ -53,10 +54,11 @@ function RoutedApp() {
 
 export default function App() {
   return (
-    <AppStoreProvider>
-      <ShortcutBridge />
-      <RoutedApp />
-    </AppStoreProvider>
+    <I18nProvider>
+      <AppStoreProvider>
+        <ShortcutBridge />
+        <RoutedApp />
+      </AppStoreProvider>
+    </I18nProvider>
   );
 }
-

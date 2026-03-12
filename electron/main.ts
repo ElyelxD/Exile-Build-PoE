@@ -4,6 +4,8 @@ import { execFile } from "node:child_process";
 import { gunzipSync, inflateRawSync, inflateSync } from "node:zlib";
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
 import type { Rectangle } from "electron";
+import { loadLocale, saveLocale, t } from "./i18n";
+import type { Locale } from "./i18n";
 
 type ShortcutName =
   | "next-tab"
@@ -219,7 +221,7 @@ async function runPoeAssetMining(state: PoeAssetsState) {
   if (!state.installPath || !looksLikePoeInstallDirectory(state.installPath)) {
     return writePoeAssetsState({
       status: "missing-install",
-      lastError: "Defina a pasta do Path of Exile antes de sincronizar os assets.",
+      lastError: t("electron.setPoeFolder"),
     });
   }
 
@@ -228,7 +230,7 @@ async function runPoeAssetMining(state: PoeAssetsState) {
   if (!fs.existsSync(scriptPath)) {
     return writePoeAssetsState({
       status: "error",
-      lastError: "Script de mining local não encontrado.",
+      lastError: t("electron.miningScriptNotFound"),
     });
   }
 
@@ -271,7 +273,7 @@ async function runPoeAssetMining(state: PoeAssetsState) {
         } catch {
           result = {
             status: "error",
-            lastError: output || error?.message || "Falha ao executar o mining local dos assets.",
+            lastError: output || error?.message || t("electron.miningFailed"),
           };
         }
 
@@ -363,7 +365,7 @@ function assertPobXml(value: string) {
   const normalized = value.trim();
 
   if (!isPobXml(normalized)) {
-    throw new Error("O conteúdo importado não parece ser um Path of Building válido.");
+    throw new Error(t("electron.invalidPobContent"));
   }
 
   return normalized;
@@ -373,7 +375,7 @@ function decodePobCodeToXml(code: string) {
   const cleaned = code.replace(/\s+/g, "").trim();
 
   if (!cleaned) {
-    throw new Error("O código do Path of Building está vazio.");
+    throw new Error(t("electron.emptyPobCode"));
   }
 
   const normalizedBase64 = cleaned.replace(/-/g, "+").replace(/_/g, "/");
@@ -384,7 +386,7 @@ function decodePobCodeToXml(code: string) {
   const compressed = Buffer.from(paddedBase64, "base64");
 
   if (compressed.length === 0) {
-    throw new Error("Não foi possível decodificar o código do Path of Building.");
+    throw new Error(t("electron.decodeFailed"));
   }
 
   const attempts = [inflateRawSync, inflateSync, gunzipSync];
@@ -401,7 +403,7 @@ function decodePobCodeToXml(code: string) {
     }
   }
 
-  throw new Error("Não foi possível descompactar o código do Path of Building.");
+  throw new Error(t("electron.decompressFailed"));
 }
 
 function normalizePobLink(rawLink: string) {
@@ -427,7 +429,7 @@ function normalizePobLink(rawLink: string) {
     const pasteId = url.pathname.split("/").filter(Boolean).at(-1);
 
     if (!pasteId) {
-      throw new Error("Link do Pastebin inválido.");
+      throw new Error(t("electron.invalidPastebinLink"));
     }
 
     return `https://pastebin.com/raw/${pasteId}`;
@@ -440,7 +442,7 @@ async function resolvePobSource(sourceType: ImportSourceType, sourceValue: strin
   const trimmed = sourceValue.trim();
 
   if (!trimmed) {
-    throw new Error("Informe um link, código ou arquivo do Path of Building.");
+    throw new Error(t("electron.emptyImport"));
   }
 
   if (sourceType === "file") {
@@ -454,7 +456,7 @@ async function resolvePobSource(sourceType: ImportSourceType, sourceValue: strin
   const response = await fetch(normalizePobLink(trimmed), { redirect: "follow" });
 
   if (!response.ok) {
-    throw new Error(`Falha ao baixar o Path of Building (${response.status}).`);
+    throw new Error(t("electron.downloadFailed", { status: response.status }));
   }
 
   const downloaded = (await response.text()).trim();
@@ -703,13 +705,13 @@ function createTray() {
   appTray.setContextMenu(
     Menu.buildFromTemplate([
       {
-        label: "Abrir Exile Build PoE",
+        label: t("electron.trayOpen"),
         click: () => {
           restoreMainWindow();
         },
       },
       {
-        label: "Mostrar overlay",
+        label: t("electron.trayShowOverlay"),
         click: () => {
           if (!overlayWindow || overlayWindow.isDestroyed()) {
             return;
@@ -722,7 +724,7 @@ function createTray() {
       },
       { type: "separator" },
       {
-        label: "Sair",
+        label: t("electron.trayQuit"),
         click: () => {
           shutdownApplication();
         },
@@ -733,6 +735,42 @@ function createTray() {
   appTray.on("click", () => {
     restoreMainWindow();
   });
+}
+
+function rebuildTrayMenu() {
+  if (!appTray) {
+    return;
+  }
+
+  appTray.setContextMenu(
+    Menu.buildFromTemplate([
+      {
+        label: t("electron.trayOpen"),
+        click: () => {
+          restoreMainWindow();
+        },
+      },
+      {
+        label: t("electron.trayShowOverlay"),
+        click: () => {
+          if (!overlayWindow || overlayWindow.isDestroyed()) {
+            return;
+          }
+
+          ensureOverlayWindowPosition();
+          promoteOverlayWindow();
+          overlayWindow.showInactive();
+        },
+      },
+      { type: "separator" },
+      {
+        label: t("electron.trayQuit"),
+        click: () => {
+          shutdownApplication();
+        },
+      },
+    ]),
+  );
 }
 
 function createMainWindow() {
@@ -770,13 +808,13 @@ function createMainWindow() {
 
     const action = dialog.showMessageBoxSync(mainWindow, {
       type: "question",
-      buttons: ["Fechar app", "Minimizar", "Cancelar"],
+      buttons: [t("electron.dialogClose"), t("electron.dialogMinimize"), t("electron.dialogCancel")],
       defaultId: 1,
       cancelId: 2,
       noLink: true,
-      title: "Sair do Exile Build PoE",
-      message: "O que voce quer fazer com o Exile Build PoE?",
-      detail: "Fechar encerra o app e desativa os atalhos globais. Minimizar oculta a janela na bandeja do sistema e mantem o overlay ativo.",
+      title: t("electron.dialogTitle"),
+      message: t("electron.dialogMessage"),
+      detail: t("electron.dialogDetail"),
     });
 
     if (action === 0) {
@@ -926,6 +964,7 @@ function registerShortcuts() {
 }
 
 app.whenReady().then(() => {
+  loadLocale();
   createMainWindow();
   createOverlayWindow();
   createTray();
@@ -947,6 +986,13 @@ app.whenReady().then(() => {
 
   ipcMain.handle("pob:resolve-source", async (_event, sourceType: ImportSourceType, sourceValue: string) => {
     return resolvePobSource(sourceType, sourceValue);
+  });
+
+  ipcMain.handle("app:set-locale", async (_event, locale: string) => {
+    if (locale === "en" || locale === "pt-BR") {
+      saveLocale(locale as Locale);
+      rebuildTrayMenu();
+    }
   });
 
   app.on("activate", () => {

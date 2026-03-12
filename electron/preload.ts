@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("desktop", {
   resetOverlayPosition: () => ipcRenderer.invoke("overlay:reset-position"),
   resolvePobSource: (sourceType: ImportSourceType, sourceValue: string) =>
     ipcRenderer.invoke("pob:resolve-source", sourceType, sourceValue),
+  setLocale: (locale: string) => ipcRenderer.invoke("app:set-locale", locale),
   onShortcut: (handler: (name: ShortcutName) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, name: ShortcutName) => {
       handler(name);
