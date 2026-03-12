@@ -1,10 +1,10 @@
-# BuildPilot PoE
+# Exile Build PoE
 
 Open-source Windows desktop overlay for Path of Exile build progression, powered by Path of Building imports.
 
 ## Overview
 
-BuildPilot PoE is a Windows desktop application with an always-on-top overlay window designed to help players follow a Path of Building setup without constantly alt-tabbing.
+Exile Build PoE is a Windows desktop application with an always-on-top overlay window designed to help players follow a Path of Building setup without constantly alt-tabbing.
 
 Instead of focusing on price checks, the app focuses on build execution:
 
@@ -105,7 +105,7 @@ npm run dist:win
 Output:
 
 - installer `.exe` in `release/`
-- expected artifact name: `BuildPilot PoE-Setup-0.1.0.exe`
+- expected artifact name: `Exile Build PoE-Setup-0.1.0.exe`
 
 Optional:
 
@@ -136,22 +136,22 @@ The repository includes a Windows workflow that generates an offline Windows ins
 
 Windows download:
 
-- [Download BuildPilot for Windows](https://github.com/Elyelx/Overlay-PoE-Build/releases/latest/download/BuildPilot-PoE-Setup.exe)
+- [Download Exile Build PoE for Windows](https://github.com/Elyelx/Overlay-PoE-Build/releases/latest/download/Exile-Build-PoE-Setup.exe)
 
 Flow:
 
 1. Push code to `main`
 2. The `Windows Installer` workflow runs on GitHub Actions
 3. It builds the Windows offline installer
-4. It uploads `BuildPilot-PoE-Setup.exe` as a workflow artifact
+4. It uploads `Exile-Build-PoE-Setup.exe` as a workflow artifact
 5. It publishes a new GitHub Release for that build and marks it as latest
-6. End users download `BuildPilot-PoE-Setup.exe` from the latest release and run it on Windows
+6. End users download `Exile-Build-PoE-Setup.exe` from the latest release and run it on Windows
 
 Important:
 
 - GitHub rejects files larger than 100 MB in the repository, so installer binaries must not be committed into git
 - `release/` is still build output and should not be committed manually
-- the stable public download is the release asset `BuildPilot-PoE-Setup.exe`
+- the stable public download is the release asset `Exile-Build-PoE-Setup.exe`
 - the workflow artifact is useful for short-term validation; the GitHub Release is the better end-user download
 - the default installer is offline, so it does not depend on extra GitHub downloads during installation
 - if you explicitly need a small web installer for a public release flow, use `npm run dist:win:web`

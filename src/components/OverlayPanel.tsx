@@ -1,5 +1,7 @@
 import { BUILD_TABS, Build, BuildStage, BuildTab, OverlayMode, UserProgress } from "@/domain/models";
 import { BuildTabContent } from "@/components/BuildTabContent";
+import { sanitizePobInlineText } from "@/services/pob-display";
+import { getActivePobTreeSpec, getNextPobTreeSpecForLevel } from "@/services/pob-selectors";
 
 type DecoratedChecklistItem = {
   id: string;
@@ -18,6 +20,8 @@ interface OverlayPanelProps {
   nextObjectives: DecoratedChecklistItem[];
   pinnedItems: DecoratedChecklistItem[];
   onSetTab?: (tab: BuildTab) => void;
+  onSetPobTreeSpec?: (specId: string) => void;
+  onSetPlayerLevel?: (level: number) => void;
   onToggleMode?: () => void;
   onMarkObjective?: () => void;
   onTogglePin?: (itemId: string) => void;
@@ -34,6 +38,8 @@ export function OverlayPanel({
   nextObjectives,
   pinnedItems,
   onSetTab,
+  onSetPobTreeSpec,
+  onSetPlayerLevel,
   onToggleMode,
   onMarkObjective,
   onTogglePin,
@@ -41,6 +47,11 @@ export function OverlayPanel({
   variant = "preview",
 }: OverlayPanelProps) {
   const compactObjectives = nextObjectives.slice(0, variant === "live" ? 3 : 2);
+  const nextUpgradeLabel = sanitizePobInlineText(build.summary.nextUpgrade);
+  const activeTreeSpec = getActivePobTreeSpec(build.pob);
+  const displayStageTitle = activeTreeSpec?.title ?? currentStage.title;
+  const isTreeDrivenBuild = Boolean(build.pob && build.pob.treeSpecs.length > 1);
+  const nextTreeSpec = getNextPobTreeSpecForLevel(build.pob, progress.playerLevel);
   const pinnedCopy =
     pinnedItems.length === 0
       ? "Overlay leve · Ctrl + Shift + M conclui"
@@ -59,7 +70,7 @@ export function OverlayPanel({
           <span className="eyebrow">{build.className + " · " + build.ascendancy}</span>
           <h2>{build.name}</h2>
           <p>
-            Lvl {progress.playerLevel} · {currentStage.title}
+            Lvl {progress.playerLevel} · {displayStageTitle}
           </p>
         </div>
         <div className="overlay-controls">
@@ -81,13 +92,48 @@ export function OverlayPanel({
           {variant === "live" ? (
             <div className="overlay-session-strip">
               <div className="overlay-session-card">
-                <span className="overlay-session-label">Fase</span>
-                <strong>{currentStage.title}</strong>
+                <span className="overlay-session-label">{isTreeDrivenBuild ? "Tree ativa" : "Fase"}</span>
+                <strong>{displayStageTitle}</strong>
               </div>
               <div className="overlay-session-card">
                 <span className="overlay-session-label">Próximo upgrade</span>
-                <strong>{build.summary.nextUpgrade}</strong>
+                <strong>{nextUpgradeLabel || "Revisar snapshot do PoB"}</strong>
               </div>
+            </div>
+          ) : null}
+
+          {variant === "live" ? (
+            <div className="overlay-level-strip">
+              <span className="overlay-session-label">Nível atual</span>
+              <div className="overlay-level-controls">
+                <button
+                  className="icon-button"
+                  onClick={() => onSetPlayerLevel?.(progress.playerLevel - 1)}
+                  type="button"
+                >
+                  -
+                </button>
+                <input
+                  className="level-input overlay-level-input"
+                  max={100}
+                  min={1}
+                  onChange={(event) => onSetPlayerLevel?.(Number(event.target.value) || 1)}
+                  type="number"
+                  value={progress.playerLevel}
+                />
+                <button
+                  className="icon-button"
+                  onClick={() => onSetPlayerLevel?.(progress.playerLevel + 1)}
+                  type="button"
+                >
+                  +
+                </button>
+              </div>
+              <span className="overlay-level-help">
+                {isTreeDrivenBuild && nextTreeSpec
+                  ? `Ao subir o nível, a próxima tree será ${nextTreeSpec.title}.`
+                  : "Ajustar o nível aqui atualiza o stage ativo no overlay."}
+              </span>
             </div>
           ) : null}
 
@@ -154,6 +200,7 @@ export function OverlayPanel({
               build={build}
               progress={progress}
               currentStage={currentStage}
+              onSetPobTreeSpec={onSetPobTreeSpec}
               pinnedItems={pinnedItems}
               condensed
               onToggleChecklist={onToggleChecklist}

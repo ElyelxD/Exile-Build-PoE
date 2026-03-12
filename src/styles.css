@@ -54,6 +54,10 @@ body[data-view="overlay"] {
   overflow: hidden;
 }
 
+body[data-view="overlay"] #root {
+  background: transparent;
+}
+
 button,
 input,
 textarea {
@@ -559,6 +563,11 @@ button {
   padding: 14px;
 }
 
+.stage-card.is-selected {
+  border-color: rgba(242, 169, 91, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(242, 169, 91, 0.08);
+}
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -590,18 +599,489 @@ button {
   padding-bottom: 12px;
 }
 
-.overlay-preview-shell {
+.hero-card.is-import-summary {
+  justify-content: space-between;
+}
+
+.hero-card.is-import-summary .metric-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pob-spec-switcher {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
+}
+
+.pob-spec-field {
+  gap: 8px;
+}
+
+.pob-spec-select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-input);
+  color: var(--text-0);
+  appearance: none;
+}
+
+.pob-spec-select:focus {
+  outline: 1px solid rgba(242, 169, 91, 0.22);
+  border-color: var(--border-strong);
+}
+
+.pob-notes,
+.skill-board,
+.gear-extra-grid,
+.gear-strip {
+  display: grid;
+  gap: 12px;
+}
+
+.pob-notes {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.pob-note-card,
+.skill-group-card,
+.gear-slot,
+.gear-mini-card {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 100%),
+    var(--bg-panel-alt);
+}
+
+.pob-note-card,
+.skill-group-card,
+.gear-mini-card {
+  padding: 16px;
+}
+
+.pob-note-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pob-note-label,
+.skill-bench-label,
+.gear-slot-label,
+.gear-mini-slot {
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pob-note-card strong,
+.skill-group-header h4,
+.gear-item-card strong,
+.gear-mini-card strong {
+  margin: 0;
+  font-family: "Rockwell", "Georgia", serif;
+  font-weight: 700;
+}
+
+.pob-note-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pob-note-lines p,
+.gear-mini-card p {
+  margin: 0;
+  color: var(--text-1);
+  line-height: 1.5;
+}
+
+.skill-board {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.skill-group-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.skill-group-card.is-selected {
+  border-color: rgba(242, 169, 91, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(242, 169, 91, 0.08);
+}
+
+.skill-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.skill-group-header h4 {
+  margin-top: 6px;
+  font-size: 1.05rem;
+}
+
+.skill-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skill-node {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+  min-height: 48px;
+}
+
+.skill-link {
+  position: absolute;
+  top: 26px;
+  bottom: -12px;
+  left: 13px;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(242, 169, 91, 0.24), rgba(255, 255, 255, 0.08));
+  content: "";
+}
+
+.gem-icon {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gem-icon svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.gem-icon .gem-icon-shell,
+.gem-icon .gem-icon-core,
+.gem-icon .gem-icon-facet {
+  stroke: rgba(255, 255, 255, 0.12);
+  stroke-width: 1.2;
+}
+
+.gem-icon .gem-icon-shell {
+  fill: rgba(10, 12, 18, 0.9);
+}
+
+.gem-icon .gem-icon-core {
+  fill: rgba(70, 62, 54, 0.9);
+}
+
+.gem-icon .gem-icon-glow {
+  fill: rgba(255, 255, 255, 0.18);
+}
+
+.gem-icon .gem-icon-facet {
+  fill: rgba(255, 255, 255, 0.28);
+}
+
+.gem-icon--strength .gem-icon-core {
+  fill: rgba(160, 41, 38, 0.95);
+}
+
+.gem-icon--strength .gem-icon-glow {
+  fill: rgba(255, 124, 97, 0.34);
+}
+
+.gem-icon--dexterity .gem-icon-core {
+  fill: rgba(35, 126, 82, 0.95);
+}
+
+.gem-icon--dexterity .gem-icon-glow {
+  fill: rgba(119, 224, 167, 0.28);
+}
+
+.gem-icon--intelligence .gem-icon-core {
+  fill: rgba(53, 92, 168, 0.95);
+}
+
+.gem-icon--intelligence .gem-icon-glow {
+  fill: rgba(140, 182, 255, 0.3);
+}
+
+.gem-icon--hybrid .gem-icon-core {
+  fill: rgba(160, 122, 54, 0.95);
+}
+
+.gem-icon--hybrid .gem-icon-glow {
+  fill: rgba(255, 211, 131, 0.28);
+}
+
+.gem-icon.is-primary {
+  filter: drop-shadow(0 0 10px rgba(242, 169, 91, 0.18));
+}
+
+.skill-copy {
+  min-width: 0;
+}
+
+.skill-copy strong {
+  display: block;
+  font-size: 0.96rem;
+  line-height: 1.35;
+}
+
+.skill-copy span,
+.gear-item-base,
+.gear-mini-card span:last-child {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.skill-bench {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.skill-bench-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skill-bench-chip {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-1);
+  font-size: 0.78rem;
+}
+
+.gear-layout {
+  display: grid;
+  grid-template-columns: 1.05fr 1.2fr 1.05fr 0.95fr;
+  grid-template-areas:
+    "weapon1 helmet weapon2 amulet"
+    "weapon1 body weapon2 ring1"
+    "gloves body boots ring2"
+    ". belt belt .";
+  gap: 12px;
+}
+
+.gear-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 150px;
+  padding: 12px;
+}
+
+.gear-slot--weapon1 {
+  grid-area: weapon1;
+}
+
+.gear-slot--helmet {
+  grid-area: helmet;
+}
+
+.gear-slot--weapon2 {
+  grid-area: weapon2;
+}
+
+.gear-slot--amulet {
+  grid-area: amulet;
+}
+
+.gear-slot--body {
+  grid-area: body;
+}
+
+.gear-slot--gloves {
+  grid-area: gloves;
+}
+
+.gear-slot--boots {
+  grid-area: boots;
+}
+
+.gear-slot--ring1 {
+  grid-area: ring1;
+}
+
+.gear-slot--ring2 {
+  grid-area: ring2;
+}
+
+.gear-slot--belt {
+  grid-area: belt;
+}
+
+.gear-slot-head,
+.gear-mini-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gear-slot.has-item {
+  border-color: rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top center, rgba(26, 41, 70, 0.32), transparent 60%),
+    var(--bg-panel-alt);
+}
+
+.gear-slot.is-empty {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.gear-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 100%;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top center, rgba(10, 30, 58, 0.4), transparent 64%),
+    rgba(7, 13, 24, 0.88);
+}
+
+.gear-slot-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(6, 11, 20, 0.76);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.gear-slot-icon.is-compact {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.gear-slot-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gear-slot-icon--magic {
+  color: #94b9ff;
+}
+
+.gear-slot-icon--rare {
+  color: #f3d97c;
+}
+
+.gear-slot-icon--unique {
+  color: #dfad6e;
+}
+
+.gear-item-card strong,
+.gear-mini-card strong {
+  font-size: 0.97rem;
+  line-height: 1.3;
+}
+
+.gear-item-card.is-normal strong,
+.gear-mini-card.is-normal strong {
+  color: var(--text-0);
+}
+
+.gear-item-card.is-magic strong,
+.gear-mini-card.is-magic strong {
+  color: #94b9ff;
+}
+
+.gear-item-card.is-rare strong,
+.gear-mini-card.is-rare strong {
+  color: #f3d97c;
+}
+
+.gear-item-card.is-unique strong,
+.gear-mini-card.is-unique strong {
+  color: #dfad6e;
+}
+
+.gear-line-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.gear-line-list span {
+  color: var(--text-1);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.gear-empty {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  color: var(--text-2);
+  font-size: 0.82rem;
+}
+
+.gear-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gear-strip {
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+}
+
+.gear-extra-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.gear-mini-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .overlay-route {
   min-height: 100vh;
   height: 100vh;
-  padding: 12px;
+  padding: 6px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
   overflow: hidden;
+  background: transparent;
+  -webkit-app-region: drag;
 }
 
 .overlay-panel {
@@ -617,9 +1097,9 @@ button {
 }
 
 .overlay-panel.is-live {
-  width: min(100%, 402px);
-  min-height: min(500px, calc(100vh - 24px));
-  max-height: calc(100vh - 24px);
+  width: 100%;
+  min-height: min(500px, calc(100vh - 12px));
+  max-height: calc(100vh - 12px);
   border-color: var(--overlay-live-border);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 34%),
@@ -694,6 +1174,35 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.overlay-level-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  -webkit-app-region: no-drag;
+}
+
+.overlay-level-controls {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.overlay-level-input {
+  width: 100%;
+  text-align: center;
+}
+
+.overlay-level-help {
+  color: var(--text-2);
+  font-size: 0.74rem;
+  line-height: 1.4;
 }
 
 .overlay-session-card {
@@ -806,6 +1315,142 @@ textarea {
   padding-bottom: 4px;
   scrollbar-gutter: stable;
   -webkit-app-region: no-drag;
+}
+
+.overlay-panel.is-live.is-expanded .content-stack,
+.overlay-panel.is-live.is-expanded .section-stack {
+  gap: 10px;
+}
+
+.overlay-panel.is-live.is-expanded .panel,
+.overlay-panel.is-live.is-expanded .list-block,
+.overlay-panel.is-live.is-expanded .stage-card,
+.overlay-panel.is-live.is-expanded .detail-card,
+.overlay-panel.is-live.is-expanded .note-block,
+.overlay-panel.is-live.is-expanded .pob-note-card,
+.overlay-panel.is-live.is-expanded .skill-group-card,
+.overlay-panel.is-live.is-expanded .gear-slot,
+.overlay-panel.is-live.is-expanded .gear-mini-card {
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.overlay-panel.is-live.is-expanded .section-heading h2,
+.overlay-panel.is-live.is-expanded .section-heading h3,
+.overlay-panel.is-live.is-expanded .stage-card h3,
+.overlay-panel.is-live.is-expanded .detail-card h4,
+.overlay-panel.is-live.is-expanded .skill-group-header h4,
+.overlay-panel.is-live.is-expanded .pob-note-card strong,
+.overlay-panel.is-live.is-expanded .gear-item-card strong,
+.overlay-panel.is-live.is-expanded .gear-mini-card strong {
+  font-size: 0.94rem;
+  line-height: 1.25;
+}
+
+.overlay-panel.is-live.is-expanded .lead-copy,
+.overlay-panel.is-live.is-expanded .stage-card p,
+.overlay-panel.is-live.is-expanded .detail-card p,
+.overlay-panel.is-live.is-expanded .note-block,
+.overlay-panel.is-live.is-expanded .pob-note-lines p,
+.overlay-panel.is-live.is-expanded .gear-line-list span,
+.overlay-panel.is-live.is-expanded .gear-mini-card p,
+.overlay-panel.is-live.is-expanded .skill-copy span {
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.overlay-panel.is-live.is-expanded .metric-stack {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.overlay-panel.is-live.is-expanded .metric-stack > div {
+  padding: 10px;
+}
+
+.overlay-panel.is-live.is-expanded .metric-stack strong {
+  font-size: 0.88rem;
+}
+
+.overlay-panel.is-live.is-expanded .section-heading span,
+.overlay-panel.is-live.is-expanded .detail-meta,
+.overlay-panel.is-live.is-expanded .field-label,
+.overlay-panel.is-live.is-expanded .mini-help-title,
+.overlay-panel.is-live.is-expanded .pob-note-label,
+.overlay-panel.is-live.is-expanded .skill-bench-label,
+.overlay-panel.is-live.is-expanded .gear-slot-label,
+.overlay-panel.is-live.is-expanded .gear-mini-slot,
+.overlay-panel.is-live.is-expanded .overlay-session-label {
+  font-size: 0.66rem;
+}
+
+.overlay-panel.is-live.is-expanded .card-grid,
+.overlay-panel.is-live.is-expanded .card-grid.two-up,
+.overlay-panel.is-live.is-expanded .pob-notes,
+.overlay-panel.is-live.is-expanded .skill-board,
+.overlay-panel.is-live.is-expanded .gear-strip,
+.overlay-panel.is-live.is-expanded .gear-extra-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.overlay-panel.is-live.is-expanded .gear-layout {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "weapon1"
+    "weapon2"
+    "helmet"
+    "body"
+    "gloves"
+    "boots"
+    "amulet"
+    "ring1"
+    "ring2"
+    "belt";
+  gap: 8px;
+}
+
+.overlay-panel.is-live.is-expanded .gear-slot {
+  min-height: 110px;
+}
+
+.overlay-panel.is-live.is-expanded .skill-node {
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 40px;
+}
+
+.overlay-panel.is-live.is-expanded .skill-link {
+  left: 11px;
+  top: 22px;
+}
+
+.overlay-panel.is-live.is-expanded .gem-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.overlay-panel.is-live.is-expanded .pob-spec-select,
+.overlay-panel.is-live.is-expanded .text-area,
+.overlay-panel.is-live.is-expanded .level-input,
+.overlay-panel.is-live.is-expanded .file-drop {
+  padding: 10px 12px;
+  font-size: 0.8rem;
+}
+
+.overlay-panel.is-live.is-expanded .pob-spec-field,
+.overlay-panel.is-live.is-expanded .inline-actions,
+.overlay-panel.is-live.is-expanded .chip-row,
+.overlay-panel.is-live.is-expanded .token-row {
+  gap: 8px;
+}
+
+.overlay-panel.is-live.is-expanded .ghost-button,
+.overlay-panel.is-live.is-expanded .primary-button,
+.overlay-panel.is-live.is-expanded .icon-button,
+.overlay-panel.is-live.is-expanded .toggle-chip {
+  padding: 6px 9px;
+  font-size: 0.74rem;
 }
 
 .overlay-panel.is-live .pill,
@@ -939,8 +1584,21 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .overlay-preview-shell {
+  .hero-card.is-import-summary {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1080px) {
+  .gear-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "weapon1 weapon2"
+      "helmet amulet"
+      "body body"
+      "gloves boots"
+      "ring1 ring2"
+      "belt belt";
   }
 }
 
@@ -961,8 +1619,27 @@ textarea {
   }
 
   .card-grid.two-up,
-  .hero-grid {
+  .hero-grid,
+  .pob-notes,
+  .skill-board,
+  .gear-extra-grid,
+  .gear-strip {
     grid-template-columns: 1fr;
+  }
+
+  .gear-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "weapon1"
+      "weapon2"
+      "helmet"
+      "body"
+      "gloves"
+      "boots"
+      "amulet"
+      "ring1"
+      "ring2"
+      "belt";
   }
 
   .checklist-item,

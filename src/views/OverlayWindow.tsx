@@ -25,7 +25,7 @@ export function OverlayWindow() {
     return (
       <div className="overlay-route">
         <section className="overlay-empty">
-          <span className="eyebrow">BuildPilot PoE</span>
+          <span className="eyebrow">Exile Build PoE</span>
           <h2>Nenhum PoB ativo</h2>
           <p>Importe um Path of Building na janela principal e use `Ctrl + Shift + O`.</p>
         </section>
@@ -41,6 +41,8 @@ export function OverlayWindow() {
         currentStage={currentStage}
         nextObjectives={nextObjectives}
         onMarkObjective={() => actions.markNextObjective(build.id)}
+        onSetPobTreeSpec={(specId) => actions.setPobTreeSpec(build.id, specId)}
+        onSetPlayerLevel={(level) => actions.setPlayerLevel(build.id, level)}
         onSetTab={actions.setActiveTab}
         onToggleChecklist={(itemId) => actions.toggleChecklist(build.id, itemId)}
         onToggleMode={actions.toggleOverlayMode}

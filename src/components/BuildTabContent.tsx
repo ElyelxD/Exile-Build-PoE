@@ -1,4 +1,22 @@
-import { Build, BuildStage, BuildTab, UserProgress } from "@/domain/models";
+import {
+  Build,
+  BuildStage,
+  BuildTab,
+  PobItem,
+  PobSkillGroup,
+  UserProgress,
+} from "@/domain/models";
+import { GearSlotIcon, GemIcon } from "@/components/PobVisuals";
+import {
+  parsePobItemDisplay,
+  sanitizePobInlineText,
+  splitPobParagraphs,
+} from "@/services/pob-display";
+import {
+  getActivePobItemSet,
+  getActivePobSkillGroups,
+  getActivePobTreeSpec,
+} from "@/services/pob-selectors";
 
 type DecoratedChecklistItem = {
   id: string;
@@ -15,9 +33,23 @@ interface BuildTabContentProps {
   currentStage: BuildStage;
   pinnedItems: DecoratedChecklistItem[];
   condensed?: boolean;
+  onSetPobTreeSpec?: (specId: string) => void;
   onToggleChecklist?: (itemId: string) => void;
   onTogglePin?: (itemId: string) => void;
 }
+
+const gearLayout = [
+  { key: "weapon1", label: "Weapon 1" },
+  { key: "helmet", label: "Helmet" },
+  { key: "weapon2", label: "Weapon 2" },
+  { key: "amulet", label: "Amulet" },
+  { key: "body", label: "Body Armour" },
+  { key: "ring1", label: "Ring 1" },
+  { key: "gloves", label: "Gloves" },
+  { key: "boots", label: "Boots" },
+  { key: "ring2", label: "Ring 2" },
+  { key: "belt", label: "Belt" },
+] as const;
 
 function ChecklistBlock({
   currentStage,
@@ -71,6 +103,328 @@ function ChecklistBlock({
   );
 }
 
+function NoteSections({
+  text,
+  emptyCopy = "Nenhuma nota importada do Path of Building.",
+  limit,
+}: {
+  text: string;
+  emptyCopy?: string;
+  limit?: number;
+}) {
+  const sections = splitPobParagraphs(text);
+  const displaySections = typeof limit === "number" ? sections.slice(0, limit) : sections;
+
+  if (displaySections.length === 0) {
+    return <p className="subtle">{emptyCopy}</p>;
+  }
+
+  return (
+    <div className="pob-notes">
+      {displaySections.map((section, index) => {
+        const [leadLine, ...restLines] = section.split("\n");
+
+        return (
+          <article className="pob-note-card" key={`${index}-${leadLine}`}>
+            <span className="pob-note-label">Trecho {index + 1}</span>
+            <strong>{leadLine}</strong>
+            {restLines.length > 0 && (
+              <div className="pob-note-lines">
+                {restLines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
+            )}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function normalizeItemSlot(slot?: string) {
+  return (slot ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function mapItemArea(slot?: string) {
+  const normalized = normalizeItemSlot(slot);
+
+  if (!normalized) {
+    return "extra";
+  }
+
+  if (normalized.startsWith("weapon 1") && !normalized.includes("swap")) {
+    return "weapon1";
+  }
+
+  if (normalized.startsWith("weapon 2") && !normalized.includes("swap")) {
+    return "weapon2";
+  }
+
+  if (normalized.includes("helmet")) {
+    return "helmet";
+  }
+
+  if (normalized.includes("body armour")) {
+    return "body";
+  }
+
+  if (normalized.includes("gloves")) {
+    return "gloves";
+  }
+
+  if (normalized.includes("boots")) {
+    return "boots";
+  }
+
+  if (normalized.includes("amulet")) {
+    return "amulet";
+  }
+
+  if (normalized.includes("ring 1")) {
+    return "ring1";
+  }
+
+  if (normalized.includes("ring 2")) {
+    return "ring2";
+  }
+
+  if (normalized === "belt") {
+    return "belt";
+  }
+
+  if (normalized.includes("flask")) {
+    return "flask";
+  }
+
+  return "extra";
+}
+
+function itemToneClass(rarity?: string) {
+  const normalized = (rarity ?? "").toLowerCase();
+
+  if (normalized === "unique") {
+    return "is-unique";
+  }
+
+  if (normalized === "rare") {
+    return "is-rare";
+  }
+
+  if (normalized === "magic") {
+    return "is-magic";
+  }
+
+  return "is-normal";
+}
+
+function itemPreviewLines(item: PobItem, limit = 3) {
+  const parsed = parsePobItemDisplay(item.rawText);
+
+  return [...parsed.propertyLines, ...parsed.modifierLines]
+    .map((line) => sanitizePobInlineText(line))
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function SkillBoard({
+  groups,
+}: {
+  groups: PobSkillGroup[];
+}) {
+  return (
+    <div className="skill-board">
+      {groups.map((group) => {
+        const enabledGems = group.gems.filter((gem) => gem.enabled);
+        const disabledGems = group.gems.filter((gem) => !gem.enabled);
+        const displayGems = enabledGems.length > 0 ? enabledGems : group.gems;
+
+        return (
+          <article
+            className={`skill-group-card ${group.isSelected ? "is-selected" : ""}`}
+            key={group.id}
+          >
+            <div className="skill-group-header">
+              <div>
+                <span className="eyebrow">
+                  {sanitizePobInlineText(group.setTitle)}
+                  {group.slot ? ` · ${sanitizePobInlineText(group.slot)}` : ""}
+                </span>
+                <h4>{sanitizePobInlineText(group.label)}</h4>
+              </div>
+              <span className="pill">
+                {displayGems.length > 1 ? `${displayGems.length}-link` : `${displayGems.length} gema`}
+              </span>
+            </div>
+
+            <div className="skill-chain">
+              {displayGems.map((gem, index) => {
+                const meta = [
+                  gem.level ? `Lvl ${gem.level}` : null,
+                  typeof gem.quality === "number" ? `Q${gem.quality}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+
+                return (
+                  <div
+                    className={`skill-node ${index === 0 ? "is-primary" : ""}`}
+                    key={gem.id}
+                  >
+                    {index < displayGems.length - 1 && <span className="skill-link" />}
+                    <GemIcon
+                      isPrimary={index === 0}
+                      name={sanitizePobInlineText(gem.name)}
+                      rawName={gem.rawName}
+                    />
+                    <div className="skill-copy">
+                      <strong>{sanitizePobInlineText(gem.name)}</strong>
+                      <span>{meta || (index === 0 ? "Gema principal" : "Link ativo")}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {disabledGems.length > 0 && (
+              <div className="skill-bench">
+                <span className="skill-bench-label">Banco do grupo</span>
+                <div className="skill-bench-row">
+                  {disabledGems.map((gem) => (
+                    <span className="skill-bench-chip" key={gem.id}>
+                      {sanitizePobInlineText(gem.name)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function GearBoard({
+  itemSetTitle,
+  items,
+}: {
+  itemSetTitle: string;
+  items: PobItem[];
+}) {
+  const boardItems = new Map<string, PobItem>();
+  const flaskItems: PobItem[] = [];
+  const extraItems: PobItem[] = [];
+
+  items.forEach((item) => {
+    const area = mapItemArea(item.slot);
+
+    if (area === "flask") {
+      flaskItems.push(item);
+      return;
+    }
+
+    if (area === "extra") {
+      extraItems.push(item);
+      return;
+    }
+
+    if (!boardItems.has(area)) {
+      boardItems.set(area, item);
+      return;
+    }
+
+    extraItems.push(item);
+  });
+
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <h3>Gear exata do PoB</h3>
+        <span>{sanitizePobInlineText(itemSetTitle)}</span>
+      </div>
+
+      <div className="gear-layout">
+        {gearLayout.map((slot) => {
+          const item = boardItems.get(slot.key);
+          const previewLines = item ? itemPreviewLines(item) : [];
+
+          return (
+            <article
+              className={`gear-slot gear-slot--${slot.key} ${item ? "has-item" : "is-empty"}`}
+              key={slot.key}
+            >
+              <div className="gear-slot-head">
+                <span className="gear-slot-label">{slot.label}</span>
+                <GearSlotIcon rarity={item?.rarity} slot={item?.slot ?? slot.label} />
+              </div>
+              {item ? (
+                <div className={`gear-item-card ${itemToneClass(item.rarity)}`}>
+                  <strong>{sanitizePobInlineText(item.title)}</strong>
+                  {item.baseType && <span className="gear-item-base">{sanitizePobInlineText(item.baseType)}</span>}
+                  {previewLines.length > 0 && (
+                    <div className="gear-line-list">
+                      {previewLines.map((line) => (
+                        <span key={line}>{line}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="gear-empty">
+                  <GearSlotIcon compact slot={slot.label} />
+                  <span>Sem item</span>
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+
+      {flaskItems.length > 0 && (
+        <div className="gear-subsection">
+          <span className="mini-help-title">Frascos</span>
+          <div className="gear-strip">
+            {flaskItems.map((item) => (
+              <article className={`gear-mini-card ${itemToneClass(item.rarity)}`} key={item.id}>
+                <div className="gear-mini-head">
+                  <span className="gear-mini-slot">{sanitizePobInlineText(item.slot ?? "Flask")}</span>
+                  <GearSlotIcon compact rarity={item.rarity} slot={item.slot ?? "Flask"} />
+                </div>
+                <strong>{sanitizePobInlineText(item.title)}</strong>
+                <span>{sanitizePobInlineText(item.baseType ?? item.rarity ?? "Frasco importado")}</span>
+              </article>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {extraItems.length > 0 && (
+        <div className="gear-subsection">
+          <span className="mini-help-title">Swap e sockets extras</span>
+          <div className="gear-extra-grid">
+            {extraItems.map((item) => {
+              const preview = itemPreviewLines(item, 2);
+
+              return (
+                <article className={`gear-mini-card ${itemToneClass(item.rarity)}`} key={item.id}>
+                  <div className="gear-mini-head">
+                    <span className="gear-mini-slot">{sanitizePobInlineText(item.slot ?? "Extra")}</span>
+                    <GearSlotIcon compact rarity={item.rarity} slot={item.slot ?? "Extra"} />
+                  </div>
+                  <strong>{sanitizePobInlineText(item.title)}</strong>
+                  <span>{sanitizePobInlineText(item.baseType ?? item.rarity ?? "Importado")}</span>
+                  {preview.length > 0 && <p>{preview.join(" · ")}</p>}
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function BuildTabContent({
   activeTab,
   build,
@@ -78,13 +432,114 @@ export function BuildTabContent({
   currentStage,
   pinnedItems,
   condensed = false,
+  onSetPobTreeSpec,
   onToggleChecklist,
   onTogglePin,
 }: BuildTabContentProps) {
+  const pob = build.pob;
   const stageSubset = condensed ? [currentStage] : build.stages;
+  const activeTreeSpec = getActivePobTreeSpec(pob);
+  const activeItemSet = getActivePobItemSet(pob);
+  const activeSkillGroups = getActivePobSkillGroups(pob);
+  const activePobItems =
+    pob && activeItemSet
+      ? pob.items.filter((item) => item.setId === activeItemSet.id)
+      : pob?.items ?? [];
+  const displayTagline = sanitizePobInlineText(build.summary.tagline);
+  const displayPlaystyle = sanitizePobInlineText(build.summary.playstyle);
+  const displayNextUpgrade = sanitizePobInlineText(build.summary.nextUpgrade);
+  const stageNotes = currentStage.notes
+    .map((note) => sanitizePobInlineText(note))
+    .filter(Boolean);
 
   switch (activeTab) {
     case "overview":
+      if (pob) {
+        return (
+          <div className="content-stack">
+            <div className="card-grid two-up">
+              <section className="panel">
+                <div className="section-heading">
+                  <h3>PoB agora</h3>
+                  <span>
+                    Lvl {pob.level} · {build.className} {build.ascendancy}
+                  </span>
+                </div>
+                <p className="lead-copy">{displayTagline}</p>
+                <div className="metric-stack">
+                  <div>
+                    <span>Skill principal</span>
+                    <strong>{pob.mainSkill ?? "Sem label principal no PoB"}</strong>
+                  </div>
+                  <div>
+                    <span>Tree ativa</span>
+                    <strong>{activeTreeSpec?.title ?? "Sem tree spec ativa"}</strong>
+                  </div>
+                  <div>
+                    <span>Item set ativo</span>
+                    <strong>{activeItemSet?.title ?? "Sem item set ativo"}</strong>
+                  </div>
+                  <div>
+                    <span>Próximo upgrade</span>
+                    <strong>{displayNextUpgrade || "Revisar notas importadas"}</strong>
+                  </div>
+                </div>
+              </section>
+
+              <section className="panel">
+                <div className="section-heading">
+                  <h3>Import exato</h3>
+                  <span>PoB real</span>
+                </div>
+                <div className="metric-stack">
+                  <div>
+                    <span>Tree specs</span>
+                    <strong>{pob.treeSpecs.length}</strong>
+                  </div>
+                  <div>
+                    <span>Grupos de skill</span>
+                    <strong>{pob.skillGroups.length}</strong>
+                  </div>
+                  <div>
+                    <span>Itens no set ativo</span>
+                    <strong>{activePobItems.length}</strong>
+                  </div>
+                  {pob.bandit && (
+                    <div>
+                      <span>Bandit</span>
+                      <strong>{pob.bandit}</strong>
+                    </div>
+                  )}
+                  {(pob.pantheonMajor || pob.pantheonMinor) && (
+                    <div>
+                      <span>Pantheon</span>
+                      <strong>{[pob.pantheonMajor, pob.pantheonMinor].filter(Boolean).join(" · ")}</strong>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </div>
+
+            <ChecklistBlock
+              currentStage={currentStage}
+              completedChecklistIds={progress.completedChecklistIds}
+              onToggleChecklist={onToggleChecklist}
+              onTogglePin={onTogglePin}
+            />
+
+            {build.notes && (
+              <section className="panel">
+                <div className="section-heading">
+                  <h3>Notas do PoB</h3>
+                  <span>Formatadas para leitura</span>
+                </div>
+                <NoteSections text={build.notes} limit={condensed ? 1 : 2} />
+              </section>
+            )}
+          </div>
+        );
+      }
+
       return (
         <div className="content-stack">
           <div className="card-grid two-up">
@@ -95,15 +550,15 @@ export function BuildTabContent({
                   Lvl {progress.playerLevel} · {build.className} {build.ascendancy}
                 </span>
               </div>
-              <p className="lead-copy">{build.summary.tagline}</p>
+              <p className="lead-copy">{displayTagline}</p>
               <div className="metric-stack">
                 <div>
                   <span>Playstyle</span>
-                  <strong>{build.summary.playstyle}</strong>
+                  <strong>{displayPlaystyle}</strong>
                 </div>
                 <div>
                   <span>Próximo upgrade</span>
-                  <strong>{build.summary.nextUpgrade}</strong>
+                  <strong>{displayNextUpgrade}</strong>
                 </div>
                 <div>
                   <span>Stage atual</span>
@@ -160,7 +615,79 @@ export function BuildTabContent({
           </div>
         </div>
       );
+
     case "tree":
+      if (pob) {
+        const visibleTreeSpecs = condensed
+          ? pob.treeSpecs.filter((spec) => spec.id === activeTreeSpec?.id)
+          : pob.treeSpecs;
+
+        return (
+          <div className="content-stack">
+            <section className="panel">
+              <div className="section-heading">
+                <h3>Tree specs</h3>
+                <span>{pob.treeSpecs.length}</span>
+              </div>
+              {pob.treeSpecs.length > 1 && (
+                <div className="pob-spec-switcher">
+                  <span className="mini-help-title">Tree ativa no app</span>
+                  <label className="field pob-spec-field">
+                    <span className="field-label">Selecionar tree</span>
+                    <select
+                      className="pob-spec-select"
+                      onChange={(event) => onSetPobTreeSpec?.(event.target.value)}
+                      value={activeTreeSpec?.id ?? ""}
+                    >
+                      {pob.treeSpecs.map((spec) => (
+                        <option key={spec.id} value={spec.id}>
+                          {spec.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+              <div className="stage-list">
+                {visibleTreeSpecs.map((spec) => (
+                  <article
+                    className={`stage-card is-small ${activeTreeSpec?.id === spec.id ? "is-selected" : ""}`}
+                    key={spec.id}
+                  >
+                    <div className="stage-card-header">
+                      <div>
+                        <span className="eyebrow">{activeTreeSpec?.id === spec.id ? "Ativa no app" : "PoB"}</span>
+                        <h3>{spec.title}</h3>
+                      </div>
+                      <span className="pill">
+                        {spec.levelHint ? `Lvl ${spec.levelHint}` : "PoB"}
+                      </span>
+                    </div>
+                    <p>
+                      {spec.treeVersion
+                        ? `Passive tree ${spec.treeVersion}`
+                        : "Tree spec importada exatamente do PoB."}
+                    </p>
+                    {pob.treeSpecs.length > 1 && activeTreeSpec?.id !== spec.id && (
+                      <div className="inline-actions">
+                        <button
+                          className="ghost-button"
+                          onClick={() => onSetPobTreeSpec?.(spec.id)}
+                          type="button"
+                        >
+                          Usar esta tree
+                        </button>
+                      </div>
+                    )}
+                    {spec.url && <div className="note-block">{spec.url}</div>}
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
+        );
+      }
+
       return (
         <div className="content-stack">
           <section className="panel">
@@ -205,7 +732,28 @@ export function BuildTabContent({
           )}
         </div>
       );
+
     case "gems":
+      if (pob) {
+        const displayGroups = condensed
+          ? activeSkillGroups.slice(0, 4)
+          : activeSkillGroups;
+        const visibleGroups = displayGroups.length > 0 ? displayGroups : pob.skillGroups;
+        const activeSkillSetTitle = visibleGroups[0]?.setTitle ?? "Skill set ativa";
+
+        return (
+          <div className="content-stack">
+            <section className="panel">
+              <div className="section-heading">
+                <h3>Links e gemas</h3>
+                <span>{activeSkillSetTitle}</span>
+              </div>
+              <SkillBoard groups={visibleGroups} />
+            </section>
+          </div>
+        );
+      }
+
       return (
         <div className="content-stack">
           <div className="card-grid">
@@ -239,7 +787,19 @@ export function BuildTabContent({
           </div>
         </div>
       );
+
     case "gear":
+      if (pob) {
+        return (
+          <div className="content-stack">
+            <GearBoard
+              itemSetTitle={activeItemSet?.title ?? "Todos os sets"}
+              items={condensed ? activePobItems.slice(0, 12) : activePobItems}
+            />
+          </div>
+        );
+      }
+
       return (
         <div className="content-stack">
           <div className="card-grid">
@@ -272,6 +832,7 @@ export function BuildTabContent({
           </div>
         </div>
       );
+
     case "labs":
       return (
         <div className="content-stack">
@@ -286,12 +847,13 @@ export function BuildTabContent({
                   <span className="pill">{lab.levelHint}</span>
                 </div>
                 <p>{lab.ascendancyChoice}</p>
-                <span className="detail-meta">{lab.notes}</span>
+                <span className="detail-meta">{sanitizePobInlineText(lab.notes)}</span>
               </article>
             ))}
           </div>
         </div>
       );
+
     case "notes":
       return (
         <div className="content-stack">
@@ -300,9 +862,24 @@ export function BuildTabContent({
               <h3>Notas da build</h3>
               <span>Import + MVP</span>
             </div>
-            <div className="note-block">{build.notes}</div>
-            <div className="note-block">{currentStage.notes.join(" ")}</div>
+            <NoteSections text={build.notes} />
           </section>
+
+          {stageNotes.length > 0 && (
+            <section className="panel">
+              <div className="section-heading">
+                <h3>Snapshot atual</h3>
+                <span>{currentStage.title}</span>
+              </div>
+              <div className="chip-row">
+                {stageNotes.map((note) => (
+                  <span className="chip" key={note}>
+                    {note}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="panel">
             <div className="section-heading">
@@ -331,6 +908,7 @@ export function BuildTabContent({
           </section>
         </div>
       );
+
     default:
       return null;
   }

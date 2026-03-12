@@ -1,9 +1,9 @@
 {
   "name": "overlay-poe-build",
-  "productName": "BuildPilot PoE",
+  "productName": "Exile Build PoE",
   "version": "0.1.0",
   "private": true,
-  "author": "BuildPilot PoE contributors",
+  "author": "Exile Build PoE contributors",
   "description": "Windows desktop MVP scaffold for a Path of Exile build overlay app.",
   "main": "dist-electron/main.js",
   "repository": {
@@ -17,6 +17,7 @@
     "dev:app": "wait-on tcp:5173 file:dist-electron/main.js && electron .",
     "build": "tsc -p tsconfig.electron.json && vite build",
     "build:icon": "python3 scripts/generate_icon.py",
+    "mine:poe-assets": "python3 scripts/mine_poe_assets.py",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "pack:win": "npm run build && electron-builder --publish never --win --dir",
     "dist:win": "npm run build && electron-builder --publish never --win nsis --x64",
@@ -41,7 +42,7 @@
   },
   "build": {
     "appId": "com.buildpilotpoe.desktop",
-    "productName": "BuildPilot PoE",
+    "productName": "Exile Build PoE",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -50,6 +51,10 @@
       {
         "from": "build/icon.ico",
         "to": "tray-icon.ico"
+      },
+      {
+        "from": "scripts/mine_poe_assets.py",
+        "to": "scripts/mine_poe_assets.py"
       }
     ],
     "asar": true,
@@ -70,15 +75,15 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "BuildPilot PoE"
+      "shortcutName": "Exile Build PoE"
     },
     "nsisWeb": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "BuildPilot PoE",
-      "artifactName": "BuildPilot-PoE-Web-Installer.${ext}",
+      "shortcutName": "Exile Build PoE",
+      "artifactName": "Exile-Build-PoE-Web-Installer.${ext}",
       "appPackageUrl": "https://github.com/Elyelx/Overlay-PoE-Build/releases/download/windows-installer-latest"
     }
   }

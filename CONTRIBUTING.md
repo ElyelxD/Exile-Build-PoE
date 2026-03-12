@@ -1,4 +1,4 @@
-# Contributing to BuildPilot PoE
+# Contributing to Exile Build PoE
 
 Thanks for your interest in contributing.
 

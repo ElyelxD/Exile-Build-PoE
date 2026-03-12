@@ -5,8 +5,9 @@ import {
   useEffect,
   useReducer,
 } from "react";
-import { AppState, BUILD_TABS, BuildSourceType, BuildTab, UserProgress } from "@/domain/models";
+import { AppState, Build, BUILD_TABS, BuildSourceType, BuildTab, UserProgress } from "@/domain/models";
 import { createImportedBuild, createInitialProgress } from "@/services/importer";
+import { getSuggestedPobTreeSpecForLevel } from "@/services/pob-selectors";
 import { findStageForLevel, getCurrentStage, getNextObjectives } from "@/store/selectors";
 
 const STORAGE_KEY = "overlay-poe-build.state.v1";
@@ -14,8 +15,9 @@ const STORAGE_KEY = "overlay-poe-build.state.v1";
 type Direction = 1 | -1;
 
 interface AppActions {
-  importBuild: (sourceType: BuildSourceType, sourceValue: string) => void;
+  importBuild: (sourceType: BuildSourceType, sourceValue: string) => Promise<void>;
   selectBuild: (buildId: string) => void;
+  setPobTreeSpec: (buildId: string, specId: string) => void;
   setActiveTab: (tab: BuildTab) => void;
   cycleTab: (direction: Direction) => void;
   toggleOverlayMode: () => void;
@@ -33,8 +35,9 @@ interface AppStoreValue {
 
 type Action =
   | { type: "hydrate"; payload: AppState }
-  | { type: "import-build"; sourceType: BuildSourceType; sourceValue: string }
+  | { type: "import-build"; build: Build }
   | { type: "select-build"; buildId: string }
+  | { type: "set-pob-tree-spec"; buildId: string; specId: string }
   | { type: "set-active-tab"; tab: BuildTab }
   | { type: "cycle-tab"; direction: Direction }
   | { type: "toggle-overlay-mode" }
@@ -97,6 +100,21 @@ function refreshProgress(buildId: string, buildState: AppState, nextProgress: Us
   };
 }
 
+function updateBuild(state: AppState, buildId: string, updater: (build: Build) => Build) {
+  let didUpdate = false;
+
+  const builds = state.builds.map((build) => {
+    if (build.id !== buildId) {
+      return build;
+    }
+
+    didUpdate = true;
+    return updater(build);
+  });
+
+  return didUpdate ? { ...state, builds } : state;
+}
+
 function updateProgress(
   state: AppState,
   buildId: string,
@@ -123,7 +141,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "hydrate":
       return normalizeState(action.payload);
     case "import-build": {
-      const build = createImportedBuild(action.sourceType, action.sourceValue);
+      const { build } = action;
       const progress = createInitialProgress(build);
 
       return {
@@ -142,6 +160,20 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         selectedBuildId: action.buildId,
       };
+    case "set-pob-tree-spec":
+      return updateBuild(state, action.buildId, (build) => {
+        if (!build.pob || !build.pob.treeSpecs.some((spec) => spec.id === action.specId)) {
+          return build;
+        }
+
+        return {
+          ...build,
+          pob: {
+            ...build.pob,
+            activeTreeSpecId: action.specId,
+          },
+        };
+      });
     case "set-active-tab":
       return {
         ...state,
@@ -162,10 +194,29 @@ function reducer(state: AppState, action: Action): AppState {
         overlayMode: state.overlayMode === "compact" ? "expanded" : "compact",
       };
     case "set-player-level":
-      return updateProgress(state, action.buildId, (progress) => ({
-        ...progress,
-        playerLevel: Math.max(1, Math.min(100, action.level)),
-      }));
+      {
+        const nextLevel = Math.max(1, Math.min(100, action.level));
+        const nextState = updateProgress(state, action.buildId, (progress) => ({
+          ...progress,
+          playerLevel: nextLevel,
+        }));
+
+        return updateBuild(nextState, action.buildId, (build) => {
+          const suggestedTreeSpec = getSuggestedPobTreeSpecForLevel(build.pob, nextLevel);
+
+          if (!build.pob || !suggestedTreeSpec || build.pob.activeTreeSpecId === suggestedTreeSpec.id) {
+            return build;
+          }
+
+          return {
+            ...build,
+            pob: {
+              ...build.pob,
+              activeTreeSpecId: suggestedTreeSpec.id,
+            },
+          };
+        });
+      }
     case "toggle-checklist":
       return updateProgress(state, action.buildId, (progress) => {
         const completed = new Set(progress.completedChecklistIds);
@@ -274,9 +325,13 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
   }, []);
 
   const actions: AppActions = {
-    importBuild: (sourceType, sourceValue) =>
-      dispatch({ type: "import-build", sourceType, sourceValue }),
+    importBuild: async (sourceType, sourceValue) => {
+      const build = await createImportedBuild(sourceType, sourceValue);
+      dispatch({ type: "import-build", build });
+    },
     selectBuild: (buildId) => dispatch({ type: "select-build", buildId }),
+    setPobTreeSpec: (buildId, specId) =>
+      dispatch({ type: "set-pob-tree-spec", buildId, specId }),
     setActiveTab: (tab) => dispatch({ type: "set-active-tab", tab }),
     cycleTab: (direction) => dispatch({ type: "cycle-tab", direction }),
     toggleOverlayMode: () => dispatch({ type: "toggle-overlay-mode" }),

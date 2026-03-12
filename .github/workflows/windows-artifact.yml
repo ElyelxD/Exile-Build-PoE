@@ -44,13 +44,13 @@ jobs:
           if (-not $installer) {
             throw "Offline installer .exe not found in release/"
           }
-          Copy-Item $installer.FullName "release/BuildPilot-PoE-Setup.exe" -Force
+          Copy-Item $installer.FullName "release/Exile-Build-PoE-Setup.exe" -Force
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BuildPilot-PoE-installer-x64
-          path: release/BuildPilot-PoE-Setup.exe
+          name: Exile-Build-PoE-installer-x64
+          path: release/Exile-Build-PoE-Setup.exe
           if-no-files-found: error
           retention-days: 14
 
@@ -68,4 +68,4 @@ jobs:
           Workflow run: https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
           "@
 
-          gh release create $tag "release/BuildPilot-PoE-Setup.exe" --title "BuildPilot PoE Windows Installer $version" --notes $notes --latest
+          gh release create $tag "release/Exile-Build-PoE-Setup.exe" --title "Exile Build PoE Windows Installer $version" --notes $notes --latest
