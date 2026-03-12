@@ -12,7 +12,6 @@ declare global {
     desktop?: {
       toggleOverlay: () => Promise<void>;
       resetOverlayPosition: () => Promise<void>;
-      setOverlayClickThrough: (enabled: boolean) => Promise<boolean>;
       onShortcut: (handler: (name: ShortcutEventName) => void) => () => void;
     };
   }

@@ -102,6 +102,4 @@ export interface AppState {
   progressByBuildId: Record<string, UserProgress>;
   activeTab: BuildTab;
   overlayMode: OverlayMode;
-  overlayClickThrough: boolean;
 }
-

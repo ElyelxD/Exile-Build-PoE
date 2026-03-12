@@ -21,18 +21,6 @@ export function OverlayWindow() {
     document.body.dataset.view = "overlay";
   }, []);
 
-  useEffect(() => {
-    if (window.desktop) {
-      void window.desktop.setOverlayClickThrough(state.overlayClickThrough);
-    }
-  }, [state.overlayClickThrough]);
-
-  const resetOverlayPosition = () => {
-    if (window.desktop) {
-      void window.desktop.resetOverlayPosition();
-    }
-  };
-
   if (!build || !progress || !currentStage) {
     return (
       <div className="overlay-route">
@@ -50,18 +38,13 @@ export function OverlayWindow() {
       <OverlayPanel
         activeTab={state.activeTab}
         build={build}
-        clickThrough={state.overlayClickThrough}
         currentStage={currentStage}
         nextObjectives={nextObjectives}
         onMarkObjective={() => actions.markNextObjective(build.id)}
         onSetTab={actions.setActiveTab}
         onToggleChecklist={(itemId) => actions.toggleChecklist(build.id, itemId)}
-        onToggleClickThrough={() =>
-          actions.setOverlayClickThrough(!state.overlayClickThrough)
-        }
         onToggleMode={actions.toggleOverlayMode}
         onTogglePin={(itemId) => actions.togglePin(build.id, itemId)}
-        onResetPosition={resetOverlayPosition}
         overlayMode={state.overlayMode}
         pinnedItems={pinnedItems}
         progress={progress}

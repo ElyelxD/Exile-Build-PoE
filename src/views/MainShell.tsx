@@ -41,12 +41,6 @@ export function MainShell() {
     document.body.dataset.view = "main";
   }, []);
 
-  useEffect(() => {
-    if (window.desktop) {
-      void window.desktop.setOverlayClickThrough(state.overlayClickThrough);
-    }
-  }, [state.overlayClickThrough]);
-
   const sourceLabel =
     sourceType === "link"
       ? "Cole um link exportado do Path of Building"
@@ -91,10 +85,6 @@ export function MainShell() {
     if (window.desktop) {
       void window.desktop.resetOverlayPosition();
     }
-  };
-
-  const toggleClickThrough = () => {
-    actions.setOverlayClickThrough(!state.overlayClickThrough);
   };
 
   return (
@@ -188,6 +178,10 @@ export function MainShell() {
             <h2>Overlay session</h2>
             <span>Always on top</span>
           </div>
+          <p className="subtle">
+            No PoE, use Janela sem borda ou Janela. Fullscreen exclusivo pode bloquear overlays
+            desktop.
+          </p>
           {build && progress && currentStage ? (
             <div className="section-stack">
               <div className="metric-stack">
@@ -243,10 +237,6 @@ export function MainShell() {
                   {state.overlayMode === "compact" ? "Modo expandido" : "Modo compacto"}
                 </button>
               </div>
-
-              <button className="ghost-button" onClick={toggleClickThrough} type="button">
-                {state.overlayClickThrough ? "Desativar click-through" : "Ativar click-through"}
-              </button>
             </div>
           ) : (
             <p className="subtle">Importe um PoB para ativar a sessão do overlay.</p>
@@ -390,16 +380,13 @@ export function MainShell() {
                 <OverlayPanel
                   activeTab={state.activeTab}
                   build={build}
-                  clickThrough={state.overlayClickThrough}
                   currentStage={currentStage}
                   nextObjectives={nextObjectives.slice(0, 2)}
                   onMarkObjective={() => actions.markNextObjective(build.id)}
                   onSetTab={actions.setActiveTab}
                   onToggleChecklist={(itemId) => actions.toggleChecklist(build.id, itemId)}
-                  onToggleClickThrough={toggleClickThrough}
                   onToggleMode={actions.toggleOverlayMode}
                   onTogglePin={(itemId) => actions.togglePin(build.id, itemId)}
-                  onResetPosition={resetOverlayPosition}
                   overlayMode="compact"
                   pinnedItems={pinnedItems}
                   progress={progress}

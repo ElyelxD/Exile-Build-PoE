@@ -19,7 +19,6 @@ interface AppActions {
   setActiveTab: (tab: BuildTab) => void;
   cycleTab: (direction: Direction) => void;
   toggleOverlayMode: () => void;
-  setOverlayClickThrough: (enabled: boolean) => void;
   setPlayerLevel: (buildId: string, level: number) => void;
   toggleChecklist: (buildId: string, itemId: string) => void;
   markNextObjective: (buildId: string) => void;
@@ -39,7 +38,6 @@ type Action =
   | { type: "set-active-tab"; tab: BuildTab }
   | { type: "cycle-tab"; direction: Direction }
   | { type: "toggle-overlay-mode" }
-  | { type: "set-overlay-click-through"; enabled: boolean }
   | { type: "set-player-level"; buildId: string; level: number }
   | { type: "toggle-checklist"; buildId: string; itemId: string }
   | { type: "mark-next-objective"; buildId: string }
@@ -52,7 +50,6 @@ const defaultState: AppState = {
   progressByBuildId: {},
   activeTab: "overview",
   overlayMode: "compact",
-  overlayClickThrough: false,
 };
 
 const AppStoreContext = createContext<AppStoreValue | null>(null);
@@ -69,7 +66,6 @@ function normalizeState(candidate: Partial<AppState>): AppState {
     progressByBuildId: candidate.progressByBuildId ?? {},
     activeTab: candidate.activeTab ?? "overview",
     overlayMode: candidate.overlayMode ?? "compact",
-    overlayClickThrough: false,
   };
 }
 
@@ -164,11 +160,6 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         overlayMode: state.overlayMode === "compact" ? "expanded" : "compact",
-      };
-    case "set-overlay-click-through":
-      return {
-        ...state,
-        overlayClickThrough: action.enabled,
       };
     case "set-player-level":
       return updateProgress(state, action.buildId, (progress) => ({
@@ -289,8 +280,6 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
     setActiveTab: (tab) => dispatch({ type: "set-active-tab", tab }),
     cycleTab: (direction) => dispatch({ type: "cycle-tab", direction }),
     toggleOverlayMode: () => dispatch({ type: "toggle-overlay-mode" }),
-    setOverlayClickThrough: (enabled) =>
-      dispatch({ type: "set-overlay-click-through", enabled }),
     setPlayerLevel: (buildId, level) => dispatch({ type: "set-player-level", buildId, level }),
     toggleChecklist: (buildId, itemId) =>
       dispatch({ type: "toggle-checklist", buildId, itemId }),

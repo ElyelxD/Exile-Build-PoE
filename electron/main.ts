@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { app, BrowserWindow, globalShortcut, ipcMain, screen } from "electron";
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, screen } from "electron";
 import type { Rectangle } from "electron";
 
 type ShortcutName =
@@ -18,6 +18,7 @@ interface PersistedWindowState {
 let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
 let isAdjustingOverlayBounds = false;
+let isQuitting = false;
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
 
@@ -166,6 +167,38 @@ function ensureOverlayWindowPosition() {
   setOverlayBounds(clampBoundsToPrimaryDisplay(overlayWindow.getBounds()));
 }
 
+function promoteOverlayWindow() {
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    return;
+  }
+
+  overlayWindow.setIgnoreMouseEvents(false);
+
+  if (process.platform === "win32") {
+    overlayWindow.setAlwaysOnTop(true, "screen-saver", 1);
+    overlayWindow.setFullScreenable(false);
+    overlayWindow.moveTop();
+    return;
+  }
+
+  overlayWindow.setAlwaysOnTop(true, "floating");
+}
+
+function shutdownApplication() {
+  if (isQuitting) {
+    return;
+  }
+
+  isQuitting = true;
+  globalShortcut.unregisterAll();
+
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.destroy();
+  }
+
+  app.quit();
+}
+
 function createMainWindow() {
   const persisted = readWindowState();
 
@@ -187,9 +220,43 @@ function createMainWindow() {
 
   loadRendererWindow(mainWindow);
 
-  mainWindow.on("close", () => {
+  mainWindow.on("close", (event) => {
     if (mainWindow) {
       saveBounds("mainBounds", mainWindow);
+    }
+
+    if (isQuitting || process.platform === "darwin" || !mainWindow) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const action = dialog.showMessageBoxSync(mainWindow, {
+      type: "question",
+      buttons: ["Fechar app", "Minimizar", "Cancelar"],
+      defaultId: 1,
+      cancelId: 2,
+      noLink: true,
+      title: "Sair do BuildPilot PoE",
+      message: "O que voce quer fazer com o BuildPilot PoE?",
+      detail: "Fechar encerra o app e desativa os atalhos globais. Minimizar mantem o overlay e os atalhos ativos.",
+    });
+
+    if (action === 0) {
+      shutdownApplication();
+      return;
+    }
+
+    if (action === 1) {
+      mainWindow.minimize();
+    }
+  });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+
+    if (process.platform !== "darwin") {
+      shutdownApplication();
     }
   });
 
@@ -220,6 +287,7 @@ function createOverlayWindow() {
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
+    fullscreenable: false,
     backgroundColor: "#00000000",
     title: "Overlay PoE Build Overlay",
     webPreferences: {
@@ -230,11 +298,21 @@ function createOverlayWindow() {
   });
 
   loadRendererWindow(overlayWindow, "/overlay");
+  promoteOverlayWindow();
+
+  overlayWindow.on("show", () => {
+    promoteOverlayWindow();
+    setTimeout(promoteOverlayWindow, 120);
+  });
 
   overlayWindow.on("close", () => {
     if (overlayWindow) {
       saveBounds("overlayBounds", overlayWindow);
     }
+  });
+
+  overlayWindow.on("closed", () => {
+    overlayWindow = null;
   });
 
   overlayWindow.on("move", () => {
@@ -271,7 +349,9 @@ function toggleOverlayVisibility() {
   }
 
   ensureOverlayWindowPosition();
+  promoteOverlayWindow();
   overlayWindow.showInactive();
+  promoteOverlayWindow();
 }
 
 function registerShortcuts() {
@@ -309,14 +389,6 @@ app.whenReady().then(() => {
     toggleOverlayVisibility();
   });
 
-  ipcMain.handle("overlay:set-click-through", async (_event, enabled: boolean) => {
-    if (overlayWindow && !overlayWindow.isDestroyed()) {
-      overlayWindow.setIgnoreMouseEvents(enabled, { forward: true });
-    }
-
-    return enabled;
-  });
-
   ipcMain.handle("overlay:reset-position", async () => {
     recenterOverlayWindow();
   });
@@ -331,8 +403,12 @@ app.whenReady().then(() => {
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    app.quit();
+    shutdownApplication();
   }
+});
+
+app.on("before-quit", () => {
+  isQuitting = true;
 });
 
 app.on("will-quit", () => {

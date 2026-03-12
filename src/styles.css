@@ -23,6 +23,9 @@
   --overlay-live-surface: rgba(255, 255, 255, 0.035);
   --overlay-live-border: rgba(255, 236, 214, 0.06);
   --overlay-live-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --scrollbar-track: rgba(255, 255, 255, 0.03);
+  --scrollbar-thumb: rgba(242, 169, 91, 0.24);
+  --scrollbar-thumb-hover: rgba(242, 169, 91, 0.36);
 }
 
 * {
@@ -48,6 +51,7 @@ body[data-view="main"] {
 
 body[data-view="overlay"] {
   background: transparent;
+  overflow: hidden;
 }
 
 button,
@@ -59,6 +63,32 @@ textarea {
 button {
   border: 0;
   cursor: pointer;
+}
+
+:where(.workspace-scroll, .overlay-panel.is-live.is-expanded .overlay-expanded-content, textarea) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+:where(.workspace-scroll, .overlay-panel.is-live.is-expanded .overlay-expanded-content, textarea)::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+:where(.workspace-scroll, .overlay-panel.is-live.is-expanded .overlay-expanded-content, textarea)::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:where(.workspace-scroll, .overlay-panel.is-live.is-expanded .overlay-expanded-content, textarea)::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--scrollbar-thumb-hover), var(--scrollbar-thumb));
+  background-clip: padding-box;
+}
+
+:where(.workspace-scroll, .overlay-panel.is-live.is-expanded .overlay-expanded-content, textarea)::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 215, 161, 0.42), var(--scrollbar-thumb-hover));
+  background-clip: padding-box;
 }
 
 .app-shell {
@@ -566,10 +596,12 @@ button {
 
 .overlay-route {
   min-height: 100vh;
+  height: 100vh;
   padding: 12px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
+  overflow: hidden;
 }
 
 .overlay-panel {
@@ -586,6 +618,7 @@ button {
 
 .overlay-panel.is-live {
   width: min(100%, 388px);
+  max-height: calc(100vh - 24px);
   border-color: var(--overlay-live-border);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 34%),
@@ -631,6 +664,7 @@ button {
 
 .overlay-panel.is-live .overlay-controls {
   gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .overlay-controls button,
@@ -718,6 +752,22 @@ textarea {
 .overlay-panel.is-live .overlay-expanded-content,
 .overlay-panel.is-live .overlay-objectives {
   gap: 8px;
+}
+
+.overlay-panel.is-live .overlay-body {
+  min-height: 0;
+}
+
+.overlay-panel.is-live.is-expanded .overlay-body {
+  flex: 1 1 auto;
+}
+
+.overlay-panel.is-live.is-expanded .overlay-expanded-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+  -webkit-app-region: no-drag;
 }
 
 .overlay-panel.is-live .pill,

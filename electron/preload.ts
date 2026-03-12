@@ -10,8 +10,6 @@ type ShortcutName =
 contextBridge.exposeInMainWorld("desktop", {
   toggleOverlay: () => ipcRenderer.invoke("app:toggle-overlay"),
   resetOverlayPosition: () => ipcRenderer.invoke("overlay:reset-position"),
-  setOverlayClickThrough: (enabled: boolean) =>
-    ipcRenderer.invoke("overlay:set-click-through", enabled),
   onShortcut: (handler: (name: ShortcutName) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, name: ShortcutName) => {
       handler(name);

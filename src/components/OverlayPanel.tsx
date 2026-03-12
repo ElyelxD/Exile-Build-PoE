@@ -15,15 +15,12 @@ interface OverlayPanelProps {
   currentStage: BuildStage;
   activeTab: BuildTab;
   overlayMode: OverlayMode;
-  clickThrough: boolean;
   nextObjectives: DecoratedChecklistItem[];
   pinnedItems: DecoratedChecklistItem[];
   onSetTab?: (tab: BuildTab) => void;
   onToggleMode?: () => void;
   onMarkObjective?: () => void;
   onTogglePin?: (itemId: string) => void;
-  onToggleClickThrough?: () => void;
-  onResetPosition?: () => void;
   onToggleChecklist?: (itemId: string) => void;
   variant?: "preview" | "live";
 }
@@ -34,15 +31,12 @@ export function OverlayPanel({
   currentStage,
   activeTab,
   overlayMode,
-  clickThrough,
   nextObjectives,
   pinnedItems,
   onSetTab,
   onToggleMode,
   onMarkObjective,
   onTogglePin,
-  onToggleClickThrough,
-  onResetPosition,
   onToggleChecklist,
   variant = "preview",
 }: OverlayPanelProps) {
@@ -69,14 +63,8 @@ export function OverlayPanel({
           </p>
         </div>
         <div className="overlay-controls">
-          <button className="icon-button" onClick={onResetPosition} type="button">
-            Centro
-          </button>
           <button className="icon-button" onClick={onToggleMode} type="button">
             {overlayMode === "compact" ? "Detalhes" : "Resumo"}
-          </button>
-          <button className="icon-button" onClick={onToggleClickThrough} type="button">
-            {clickThrough ? "Editar" : "Liberar mouse"}
           </button>
         </div>
       </header>
