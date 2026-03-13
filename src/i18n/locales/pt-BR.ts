@@ -21,6 +21,8 @@ const ptBR: Record<TranslationKey, string> = {
   "builds.heading": "Builds locais",
   "builds.empty": "Nenhum Path of Building importado ainda.",
   "builds.activeBuild": "Build ativa no app",
+  "builds.delete": "Excluir build",
+  "builds.unknownLeague": "Outras",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "Snapshot do PoB",
@@ -67,6 +69,13 @@ const ptBR: Record<TranslationKey, string> = {
   "session.showOverlay": "Mostrar overlay",
   "session.recenter": "Recentrar",
   "session.importToActivate": "Importe um PoB para ativar a sessão do overlay.",
+
+  // ── Auto-update ──
+  "update.available": "Atualização v{{version}} disponível",
+  "update.download": "Baixar",
+  "update.downloading": "Baixando… {{percent}}%",
+  "update.ready": "v{{version}} pronto para instalar",
+  "update.installNow": "Reiniciar e atualizar",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

@@ -769,7 +769,9 @@ export function BuildTabContent({
 
     case "tree":
       if (pob) {
-        const decoded = activeTreeSpec?.url ? decodeTreeUrl(activeTreeSpec.url) : null;
+        // Try URL first, then raw base64 from specText
+        const treeInput = activeTreeSpec?.url ?? "";
+        const decoded = treeInput ? decodeTreeUrl(treeInput) : null;
         const allocatedNodes = decoded?.allocatedNodes ?? new Set<number>();
 
         return (

@@ -21,6 +21,8 @@ const ko: Record<TranslationKey, string> = {
   "builds.heading": "로컬 빌드",
   "builds.empty": "아직 가져온 Path of Building이 없어요.",
   "builds.activeBuild": "활성 빌드",
+  "builds.delete": "빌드 삭제",
+  "builds.unknownLeague": "기타",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "PoB 스냅샷",
@@ -66,6 +68,13 @@ const ko: Record<TranslationKey, string> = {
   "session.showOverlay": "오버레이 표시",
   "session.recenter": "중앙으로 이동",
   "session.importToActivate": "오버레이 세션을 활성화하려면 PoB를 가져오세요.",
+
+  // ── Auto-update ──
+  "update.available": "업데이트 v{{version}} 사용 가능",
+  "update.download": "다운로드",
+  "update.downloading": "다운로드 중… {{percent}}%",
+  "update.ready": "v{{version}} 설치 준비 완료",
+  "update.installNow": "재시작 후 업데이트",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

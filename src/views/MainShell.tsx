@@ -41,6 +41,9 @@ export function MainShell() {
   const [selectedFileName, setSelectedFileName] = useState("");
   const [error, setError] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [updateVersion, setUpdateVersion] = useState<string | null>(null);
+  const [updateProgress, setUpdateProgress] = useState<number | null>(null);
+  const [updateReady, setUpdateReady] = useState(false);
 
   const importModeOptions: Array<{ value: ImportMode; label: string }> = [
     { value: "paste", label: t("import.pasteUrlOrCode") },
@@ -68,6 +71,15 @@ export function MainShell() {
 
   useEffect(() => {
     document.body.dataset.view = "main";
+  }, []);
+
+  useEffect(() => {
+    const d = window.desktop;
+    if (!d) return;
+    const unsub1 = d.onUpdateAvailable((version) => setUpdateVersion(version));
+    const unsub2 = d.onDownloadProgress((percent) => setUpdateProgress(percent));
+    const unsub3 = d.onUpdateDownloaded(() => { setUpdateReady(true); setUpdateProgress(null); });
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
   useEffect(() => {
@@ -215,20 +227,51 @@ export function MainShell() {
           {state.builds.length === 0 ? (
             <p className="subtle">{t("builds.empty")}</p>
           ) : (
-            <label className="field pob-spec-field">
-              <span className="field-label">{t("builds.activeBuild")}</span>
-              <select
-                className="pob-spec-select"
-                onChange={(event) => actions.selectBuild(event.target.value)}
-                value={state.selectedBuildId ?? state.builds[0]?.id ?? ""}
-              >
-                {state.builds.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.name} · {entry.className} · {entry.ascendancy}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="build-list">
+              {(() => {
+                const grouped = new Map<string, typeof state.builds>();
+                for (const entry of state.builds) {
+                  const key = entry.league || t("builds.unknownLeague");
+                  const group = grouped.get(key);
+                  if (group) group.push(entry);
+                  else grouped.set(key, [entry]);
+                }
+                return [...grouped.entries()].map(([league, entries]) => (
+                  <div key={league} className="build-league-group">
+                    <span className="build-league-label">{league}</span>
+                    {entries.map((entry) => {
+                      const isActive = entry.id === (state.selectedBuildId ?? state.builds[0]?.id);
+                      return (
+                        <div
+                          key={entry.id}
+                          className={`build-list-item ${isActive ? "is-active" : ""}`}
+                        >
+                          <button
+                            className="build-list-select"
+                            onClick={() => actions.selectBuild(entry.id)}
+                            type="button"
+                          >
+                            <strong>{entry.name}</strong>
+                            <span>{entry.className} · {entry.ascendancy}</span>
+                          </button>
+                          <button
+                            className="build-list-delete"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              actions.deleteBuild(entry.id);
+                            }}
+                            title={t("builds.delete")}
+                            type="button"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ));
+              })()}
+            </div>
           )}
         </section>
 
@@ -309,6 +352,48 @@ export function MainShell() {
             </div>
           </div>
         </header>
+
+        {updateVersion && (
+          <div className="update-banner">
+            {updateReady ? (
+              <>
+                <span>{t("update.ready", { version: updateVersion })}</span>
+                <button
+                  className="ghost-button"
+                  onClick={() => window.desktop?.updaterInstall()}
+                  type="button"
+                >
+                  {t("update.installNow")}
+                </button>
+              </>
+            ) : updateProgress != null ? (
+              <>
+                <span>{t("update.downloading", { percent: updateProgress })}</span>
+                <div className="update-progress-bar">
+                  <div className="update-progress-fill" style={{ width: `${updateProgress}%` }} />
+                </div>
+              </>
+            ) : (
+              <>
+                <span>{t("update.available", { version: updateVersion })}</span>
+                <button
+                  className="ghost-button"
+                  onClick={() => { setUpdateProgress(0); window.desktop?.updaterDownload(); }}
+                  type="button"
+                >
+                  {t("update.download")}
+                </button>
+                <button
+                  className="ghost-button"
+                  onClick={() => setUpdateVersion(null)}
+                  type="button"
+                >
+                  ✕
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {build && progress && currentStage && (
           <div className="session-strip">

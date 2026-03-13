@@ -32,40 +32,17 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Build Windows installer
-        run: npm run dist:win
-
-      - name: Prepare stable release assets
-        shell: pwsh
-        run: |
-          $installer = Get-ChildItem -Path "release" -Filter "*.exe" |
-            Where-Object { $_.Name -notlike "*__uninstaller*" } |
-            Select-Object -First 1
-          if (-not $installer) {
-            throw "Offline installer .exe not found in release/"
-          }
-          Copy-Item $installer.FullName "release/Exile-Build-PoE-Setup.exe" -Force
+      - name: Build & publish Windows installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: npm run build && npx electron-builder --publish always --win nsis --x64
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: Exile-Build-PoE-installer-x64
-          path: release/Exile-Build-PoE-Setup.exe
+          path: |
+            release/*.exe
+            release/latest.yml
           if-no-files-found: error
           retention-days: 14
-
-      - name: Publish installer to GitHub Releases
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $version = node -p "require('./package.json').version"
-          $tag = "windows-installer-v$version-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
-          $notes = @"
-          Windows installer build from `main`.
-
-          Commit: $env:GITHUB_SHA
-          Workflow run: https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID
-          "@
-
-          gh release create $tag "release/Exile-Build-PoE-Setup.exe" --title "Exile Build PoE Windows Installer $version" --notes $notes --latest

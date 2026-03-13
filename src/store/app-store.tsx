@@ -17,6 +17,7 @@ type Direction = 1 | -1;
 interface AppActions {
   importBuild: (sourceType: BuildSourceType, sourceValue: string) => Promise<void>;
   selectBuild: (buildId: string) => void;
+  deleteBuild: (buildId: string) => void;
   setPobTreeSpec: (buildId: string, specId: string) => void;
   setActiveTab: (tab: BuildTab) => void;
   cycleTab: (direction: Direction) => void;
@@ -37,6 +38,7 @@ type Action =
   | { type: "hydrate"; payload: AppState }
   | { type: "import-build"; build: Build }
   | { type: "select-build"; buildId: string }
+  | { type: "delete-build"; buildId: string }
   | { type: "set-pob-tree-spec"; buildId: string; specId: string }
   | { type: "set-active-tab"; tab: BuildTab }
   | { type: "cycle-tab"; direction: Direction }
@@ -163,6 +165,21 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         selectedBuildId: action.buildId,
       };
+    case "delete-build": {
+      const remaining = state.builds.filter((b) => b.id !== action.buildId);
+      const { [action.buildId]: _removed, ...restProgress } = state.progressByBuildId;
+      const nextSelectedId =
+        state.selectedBuildId === action.buildId
+          ? remaining[0]?.id ?? null
+          : state.selectedBuildId;
+
+      return {
+        ...state,
+        builds: remaining,
+        selectedBuildId: nextSelectedId,
+        progressByBuildId: restProgress,
+      };
+    }
     case "set-pob-tree-spec":
       return updateBuild(state, action.buildId, (build) => {
         if (!build.pob || !build.pob.treeSpecs.some((spec) => spec.id === action.specId)) {
@@ -333,6 +350,7 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
       dispatch({ type: "import-build", build });
     },
     selectBuild: (buildId) => dispatch({ type: "select-build", buildId }),
+    deleteBuild: (buildId) => dispatch({ type: "delete-build", buildId }),
     setPobTreeSpec: (buildId, specId) =>
       dispatch({ type: "set-pob-tree-spec", buildId, specId }),
     setActiveTab: (tab) => dispatch({ type: "set-active-tab", tab }),

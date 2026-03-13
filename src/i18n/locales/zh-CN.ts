@@ -19,6 +19,8 @@ const zhCN: Record<TranslationKey, string> = {
   "builds.heading": "本地构建",
   "builds.empty": "还没有导入 Path of Building。",
   "builds.activeBuild": "当前构建",
+  "builds.delete": "删除构建",
+  "builds.unknownLeague": "其他",
 
   // ── 快照 / PoB 摘要 ──
   "snapshot.heading": "PoB 快照",
@@ -64,6 +66,13 @@ const zhCN: Record<TranslationKey, string> = {
   "session.showOverlay": "显示悬浮窗",
   "session.recenter": "重置位置",
   "session.importToActivate": "请先导入 PoB 以激活悬浮窗会话。",
+
+  // ── Auto-update ──
+  "update.available": "v{{version}} 更新可用",
+  "update.download": "下载",
+  "update.downloading": "下载中… {{percent}}%",
+  "update.ready": "v{{version}} 已准备好安装",
+  "update.installNow": "重启并更新",
 
   // ── 顶栏 / 工作区 ──
   "header.appName": "Exile Build PoE",

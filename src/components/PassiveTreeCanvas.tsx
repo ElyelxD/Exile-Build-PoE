@@ -37,7 +37,7 @@ interface TreeData {
   bgCoords: Record<string, SpriteCoord>;
 }
 
-const tree = treeRaw as TreeData;
+const tree = treeRaw as unknown as TreeData;
 
 /* ── Pre-process nodes (once) ── */
 
@@ -68,9 +68,10 @@ interface TreeNode {
 const nodeMap = new Map<number, TreeNode>();
 const allNodes: TreeNode[] = [];
 
-// Standard ascendancy names (7 classes + Scion).
-// Filter out boss-themed clusters (Farrul, Aul, Catarina, etc.) that PoB doesn't show.
+// Ascendancy names to include: standard (7 classes + Scion) + alternate/bloodline (3.25+).
+// Only filter out far-flung boss clusters (Farrul, Aul, Catarina, etc.) that expand bounds too much.
 const STANDARD_ASC = new Set([
+  // Standard
   "Ascendant", "Reliquarian",
   "Juggernaut", "Berserker", "Chieftain",
   "Deadeye", "Warden", "Pathfinder",
@@ -78,8 +79,9 @@ const STANDARD_ASC = new Set([
   "Gladiator", "Champion", "Slayer",
   "Guardian", "Hierophant", "Inquisitor",
   "Saboteur", "Assassin", "Trickster",
-  // Legacy (may appear in older PoB imports)
-  "Raider",
+  "Raider", // Legacy
+  // Alternate ascendancies (Wildwood + Bloodline system, 3.25)
+  "Warlock", "Primalist", "Trialmaster",
 ]);
 
 for (const raw of tree.nodes) {
@@ -197,8 +199,9 @@ export function PassiveTreeCanvas({ allocatedNodes, height: fixedHeight }: Props
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const maybeCtx = canvas.getContext("2d");
+    if (!maybeCtx) return;
+    const ctx: CanvasRenderingContext2D = maybeCtx;
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = size.width * dpr;
@@ -206,12 +209,6 @@ export function PassiveTreeCanvas({ allocatedNodes, height: fixedHeight }: Props
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const { offsetX, offsetY, scale } = stateRef.current;
-
-    // Debug — log once
-    if (allocatedNodes.size > 0 && !(draw as any)._logged) {
-      console.log("[PassiveTree] allocatedNodes:", allocatedNodes.size, "sample:", [...allocatedNodes].slice(0, 5));
-      (draw as any)._logged = true;
-    }
 
     // ── Background ──
     ctx.fillStyle = "#080604";
@@ -380,24 +377,24 @@ export function PassiveTreeCanvas({ allocatedNodes, height: fixedHeight }: Props
 
     // Pass 2: Allocated connections — screen-space golden pipe (constant px regardless of zoom)
     if (allocatedNodes.size > 0) {
-      // Layer 1: Wide soft glow
-      ctx.strokeStyle = "rgba(160,120,30,0.18)";
-      ctx.lineWidth = 18 / scale;
+      // Layer 1: Soft glow
+      ctx.strokeStyle = "rgba(160,120,30,0.15)";
+      ctx.lineWidth = 12 / scale;
       forEachAllocatedEdge(drawEdge);
 
       // Layer 2: Dark gold border (outer edge of the "pipe")
       ctx.strokeStyle = "#6b5218";
-      ctx.lineWidth = 11 / scale;
+      ctx.lineWidth = 7 / scale;
       forEachAllocatedEdge(drawEdge);
 
       // Layer 3: Main gold body
       ctx.strokeStyle = "#c8952c";
-      ctx.lineWidth = 8 / scale;
+      ctx.lineWidth = 5 / scale;
       forEachAllocatedEdge(drawEdge);
 
       // Layer 4: Bright center highlight
       ctx.strokeStyle = "#f0c860";
-      ctx.lineWidth = 3 / scale;
+      ctx.lineWidth = 2 / scale;
       forEachAllocatedEdge(drawEdge);
     }
 

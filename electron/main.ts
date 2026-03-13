@@ -4,6 +4,7 @@ import { execFile } from "node:child_process";
 import { gunzipSync, inflateRawSync, inflateSync } from "node:zlib";
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
 import type { Rectangle } from "electron";
+import { autoUpdater } from "electron-updater";
 import { loadLocale, saveLocale, t } from "./i18n";
 import type { Locale } from "./i18n";
 
@@ -941,6 +942,49 @@ function toggleOverlayVisibility() {
   promoteOverlayWindow();
 }
 
+/* ── Auto-updater ── */
+
+function setupAutoUpdater() {
+  if (!app.isPackaged) return;
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("update-available", (info) => {
+    const version = info.version;
+    for (const win of [mainWindow, overlayWindow]) {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send("updater:update-available", version);
+      }
+    }
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("updater:download-progress", Math.round(progress.percent));
+    }
+  });
+
+  autoUpdater.on("update-downloaded", () => {
+    for (const win of [mainWindow, overlayWindow]) {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send("updater:update-downloaded");
+      }
+    }
+  });
+
+  autoUpdater.on("error", (err) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("updater:error", err.message);
+    }
+  });
+
+  // Check for updates after a short delay so the window is ready
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(() => {});
+  }, 5_000);
+}
+
 function registerShortcuts() {
   const bindings: Array<[string, ShortcutName | "toggle-overlay"]> = [
     ["CommandOrControl+Shift+O", "toggle-overlay"],
@@ -971,6 +1015,7 @@ app.whenReady().then(() => {
   registerShortcuts();
   ensurePoeAssetsState();
   void queueAutomaticPoeAssetSync();
+  setupAutoUpdater();
 
   screen.on("display-added", ensureOverlayWindowPosition);
   screen.on("display-removed", ensureOverlayWindowPosition);
@@ -993,6 +1038,22 @@ app.whenReady().then(() => {
       saveLocale(locale as Locale);
       rebuildTrayMenu();
     }
+  });
+
+  ipcMain.handle("updater:check", async () => {
+    return autoUpdater.checkForUpdates().catch(() => null);
+  });
+
+  ipcMain.handle("updater:download", async () => {
+    return autoUpdater.downloadUpdate().catch(() => null);
+  });
+
+  ipcMain.handle("updater:install", async () => {
+    autoUpdater.quitAndInstall(false, true);
+  });
+
+  ipcMain.handle("updater:get-version", async () => {
+    return app.getVersion();
   });
 
   app.on("activate", () => {

@@ -17,6 +17,8 @@ const en = {
   "builds.heading": "Local builds",
   "builds.empty": "No Path of Building imported yet.",
   "builds.activeBuild": "Active build",
+  "builds.delete": "Delete build",
+  "builds.unknownLeague": "Other",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "PoB Snapshot",
@@ -62,6 +64,13 @@ const en = {
   "session.showOverlay": "Show overlay",
   "session.recenter": "Recenter",
   "session.importToActivate": "Import a PoB to activate the overlay session.",
+
+  // ── Auto-update ──
+  "update.available": "Update v{{version}} available",
+  "update.download": "Download",
+  "update.downloading": "Downloading… {{percent}}%",
+  "update.ready": "v{{version}} ready to install",
+  "update.installNow": "Restart & update",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

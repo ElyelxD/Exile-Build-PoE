@@ -154,6 +154,7 @@ export interface Build {
   name: string;
   className: string;
   ascendancy: string;
+  league?: string;
   sourceType: BuildSourceType;
   sourceValue: string;
   importedAt: string;

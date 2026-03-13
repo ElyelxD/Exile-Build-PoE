@@ -225,6 +225,40 @@ button {
   justify-content: flex-end;
 }
 
+/* ── Update banner ── */
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border: 1px solid #c8952c44;
+  border-radius: 10px;
+  background: rgba(200, 149, 44, 0.08);
+  font-size: 0.82rem;
+  color: var(--text-1);
+}
+
+.update-banner .ghost-button {
+  padding: 4px 12px;
+  font-size: 0.78rem;
+}
+
+.update-progress-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.update-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: #c8952c;
+  transition: width 0.3s ease;
+}
+
 /* ── Session strip ── */
 
 .session-strip {
@@ -1939,6 +1973,103 @@ textarea {
 
 .sidebar .section-heading span {
   font-size: 0.72rem;
+}
+
+/* ── Build list ── */
+
+.build-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.build-list-item {
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.build-list-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.build-list-item.is-active {
+  background: rgba(200, 149, 44, 0.10);
+  border: 1px solid rgba(200, 149, 44, 0.25);
+}
+
+.build-list-select {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  color: var(--text-1);
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.build-list-select strong {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-0);
+  word-break: break-word;
+}
+
+.build-list-select span {
+  font-size: 0.72rem;
+  color: var(--text-2);
+}
+
+.build-list-delete {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+  margin-right: 6px;
+}
+
+.build-list-item:hover .build-list-delete {
+  opacity: 1;
+}
+
+.build-list-delete:hover {
+  color: #e05050;
+  background: rgba(224, 80, 80, 0.12);
+}
+
+.build-league-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.build-league-group + .build-league-group {
+  margin-top: 8px;
+}
+
+.build-league-label {
+  padding: 4px 10px 2px;
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .sidebar .mini-help-row {

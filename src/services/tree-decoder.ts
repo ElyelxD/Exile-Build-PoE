@@ -37,22 +37,32 @@ function base64UrlToBytes(encoded: string): Uint8Array {
   return bytes;
 }
 
+/** Try to extract the base64-encoded tree data from a URL or raw string. */
+function extractEncodedData(input: string): string | null {
+  // Case 1: Full GGG URL — extract last path segment after /passive-skill-tree/
+  const marker = "/passive-skill-tree/";
+  const idx = input.indexOf(marker);
+  if (idx >= 0) {
+    const rest = input.slice(idx + marker.length);
+    const segments = rest.split("/").filter(Boolean);
+    return segments[segments.length - 1] || null;
+  }
+
+  // Case 2: Raw base64url data (no URL prefix) — validate it looks like base64
+  const trimmed = input.trim();
+  if (trimmed.length > 10 && /^[A-Za-z0-9_\-+/=]+$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return null;
+}
+
 export function decodeTreeUrl(url: string): DecodedTree | null {
   try {
-    const marker = "/passive-skill-tree/";
-    const idx = url.indexOf(marker);
-
-    if (idx < 0) return null;
-
-    const rest = url.slice(idx + marker.length);
-    // The encoded data is the last non-empty path segment
-    const segments = rest.split("/").filter(Boolean);
-    const encoded = segments[segments.length - 1];
-
+    const encoded = extractEncodedData(url);
     if (!encoded) return null;
 
     const bytes = base64UrlToBytes(encoded);
-
     if (bytes.length < 7) return null;
 
     const view = new DataView(bytes.buffer);
@@ -74,7 +84,8 @@ export function decodeTreeUrl(url: string): DecodedTree | null {
     }
 
     return { version, classId, ascendancyId, allocatedNodes };
-  } catch {
+  } catch (err) {
+    console.error("[TreeDecoder] decode error:", err);
     return null;
   }
 }

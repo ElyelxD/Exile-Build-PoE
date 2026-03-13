@@ -22,6 +22,8 @@ const ja: Record<TranslationKey, string> = {
   "builds.heading": "ローカルビルド",
   "builds.empty": "まだPath of Buildingがインポートされていません。",
   "builds.activeBuild": "アクティブビルド",
+  "builds.delete": "ビルドを削除",
+  "builds.unknownLeague": "その他",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "PoBスナップショット",
@@ -69,6 +71,13 @@ const ja: Record<TranslationKey, string> = {
   "session.recenter": "中央に戻す",
   "session.importToActivate":
     "PoBをインポートしてオーバーレイセッションを有効にしてください。",
+
+  // ── Auto-update ──
+  "update.available": "アップデート v{{version}} が利用可能",
+  "update.download": "ダウンロード",
+  "update.downloading": "ダウンロード中… {{percent}}%",
+  "update.ready": "v{{version}} インストール準備完了",
+  "update.installNow": "再起動して更新",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

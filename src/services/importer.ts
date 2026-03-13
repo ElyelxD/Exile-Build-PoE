@@ -519,12 +519,20 @@ function parsePobData(xml: string): {
     const id = attribute(spec, "id") || String(index + 1);
     const title = attribute(spec, "title") || `Tree ${index + 1}`;
 
-    // PoB stores the tree URL as textContent inside <Spec>, not as an attribute.
-    // Also try "url" attribute as fallback for other formats.
+    // PoB stores the tree data in various ways depending on version:
+    //  1) <URL> child element (PoB Community Fork)
+    //  2) "url" attribute on <Spec>
+    //  3) Direct textContent of <Spec> (full URL or raw base64)
+    const urlChild = childElements(spec, "URL")[0];
+    const urlChildText = urlChild ? (urlChild.textContent ?? "").trim() : "";
     const specText = (spec.textContent ?? "").trim();
     const url =
+      (urlChildText.length > 10 ? urlChildText : undefined) ||
       attribute(spec, "url") ||
-      (specText.includes("passive-skill-tree") ? specText : undefined);
+      (specText.includes("passive-skill-tree") ? specText : undefined) ||
+      (specText.length > 10 && /^[A-Za-z0-9_\-+/=\s]+$/.test(specText)
+        ? specText.replace(/\s+/g, "")
+        : undefined);
 
     return {
       id,
@@ -806,6 +814,33 @@ function createCharacterCards(buildId: string, ascendancy: string, pob: PobData)
   }));
 }
 
+const TREE_VERSION_TO_LEAGUE: Record<string, string> = {
+  "3_28": "3.28 Mirage",
+  "3_27": "3.27 Early Access",
+  "3_26": "3.26 Dawn",
+  "3_25": "3.25 Settlers",
+  "3_24": "3.24 Necropolis",
+  "3_23": "3.23 Affliction",
+  "3_22": "3.22 Ancestor",
+  "3_21": "3.21 Crucible",
+  "3_20": "3.20 Sanctum",
+};
+
+function detectLeague(pob: PobData): string | undefined {
+  const activeSpec = pob.treeSpecs.find((s) => s.isActive) ?? pob.treeSpecs[0];
+  const version = activeSpec?.treeVersion;
+  if (version && TREE_VERSION_TO_LEAGUE[version]) {
+    return TREE_VERSION_TO_LEAGUE[version];
+  }
+  // Fallback: try all specs
+  for (const spec of pob.treeSpecs) {
+    if (spec.treeVersion && TREE_VERSION_TO_LEAGUE[spec.treeVersion]) {
+      return TREE_VERSION_TO_LEAGUE[spec.treeVersion];
+    }
+  }
+  return undefined;
+}
+
 export async function createImportedBuild(sourceType: BuildSourceType, sourceValue: string): Promise<Build> {
   const xml = await resolvePobXml(sourceType, sourceValue);
   const { name, className, ascendancy, notes, pob } = parsePobData(xml);
@@ -816,6 +851,7 @@ export async function createImportedBuild(sourceType: BuildSourceType, sourceVal
     name,
     className,
     ascendancy,
+    league: detectLeague(pob),
     sourceType,
     sourceValue,
     importedAt: new Date().toISOString(),
@@ -840,6 +876,7 @@ export function rehydrateImportedBuild(build: Build): Build {
 
   return {
     ...build,
+    league: build.league || detectLeague(build.pob),
     notes: sanitizePobNotes(build.pob.notes || build.notes),
     summary: createSummary(build.pob),
     stages: [createSnapshotStage(build.id, build.name, build.pob)],

@@ -21,6 +21,8 @@ const th: Record<TranslationKey, string> = {
   "builds.heading": "บิลด์ในเครื่อง",
   "builds.empty": "ยังไม่มีการนำเข้า Path of Building",
   "builds.activeBuild": "บิลด์ที่ใช้งาน",
+  "builds.delete": "ลบบิลด์",
+  "builds.unknownLeague": "อื่นๆ",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "PoB Snapshot",
@@ -66,6 +68,13 @@ const th: Record<TranslationKey, string> = {
   "session.showOverlay": "แสดงโอเวอร์เลย์",
   "session.recenter": "จัดกลาง",
   "session.importToActivate": "นำเข้า PoB เพื่อเปิดใช้เซสชันโอเวอร์เลย์",
+
+  // ── Auto-update ──
+  "update.available": "อัปเดต v{{version}} พร้อมใช้งาน",
+  "update.download": "ดาวน์โหลด",
+  "update.downloading": "กำลังดาวน์โหลด… {{percent}}%",
+  "update.ready": "v{{version}} พร้อมติดตั้ง",
+  "update.installNow": "รีสตาร์ทและอัปเดต",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

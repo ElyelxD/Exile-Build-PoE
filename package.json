@@ -25,6 +25,7 @@
     "dist:win:portable": "npm run build && electron-builder --publish never --win portable --x64"
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -58,6 +59,13 @@
       }
     ],
     "asar": true,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Elyelx",
+        "repo": "Overlay-PoE-Build"
+      }
+    ],
     "win": {
       "icon": "build/icon.ico",
       "executableName": "Exile Build PoE",

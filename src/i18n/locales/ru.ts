@@ -19,6 +19,8 @@ const ru: Record<TranslationKey, string> = {
   "builds.heading": "Локальные билды",
   "builds.empty": "Ещё не импортировано ни одного Path of Building.",
   "builds.activeBuild": "Активный билд",
+  "builds.delete": "Удалить билд",
+  "builds.unknownLeague": "Другие",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "Снапшот PoB",
@@ -64,6 +66,13 @@ const ru: Record<TranslationKey, string> = {
   "session.showOverlay": "Показать оверлей",
   "session.recenter": "Отцентрировать",
   "session.importToActivate": "Импортируй PoB, чтобы активировать сессию оверлея.",
+
+  // ── Auto-update ──
+  "update.available": "Доступно обновление v{{version}}",
+  "update.download": "Скачать",
+  "update.downloading": "Загрузка… {{percent}}%",
+  "update.ready": "v{{version}} готов к установке",
+  "update.installNow": "Перезапустить и обновить",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

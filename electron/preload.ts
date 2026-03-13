@@ -26,4 +26,25 @@ contextBridge.exposeInMainWorld("desktop", {
       ipcRenderer.removeListener("shortcut", listener);
     };
   },
+
+  // Auto-updater
+  updaterCheck: () => ipcRenderer.invoke("updater:check"),
+  updaterDownload: () => ipcRenderer.invoke("updater:download"),
+  updaterInstall: () => ipcRenderer.invoke("updater:install"),
+  updaterGetVersion: () => ipcRenderer.invoke("updater:get-version") as Promise<string>,
+  onUpdateAvailable: (handler: (version: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, version: string) => handler(version);
+    ipcRenderer.on("updater:update-available", listener);
+    return () => { ipcRenderer.removeListener("updater:update-available", listener); };
+  },
+  onDownloadProgress: (handler: (percent: number) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, percent: number) => handler(percent);
+    ipcRenderer.on("updater:download-progress", listener);
+    return () => { ipcRenderer.removeListener("updater:download-progress", listener); };
+  },
+  onUpdateDownloaded: (handler: () => void) => {
+    const listener = () => handler();
+    ipcRenderer.on("updater:update-downloaded", listener);
+    return () => { ipcRenderer.removeListener("updater:update-downloaded", listener); };
+  },
 });
