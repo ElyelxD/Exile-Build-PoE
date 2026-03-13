@@ -62,12 +62,19 @@ export interface LabStep {
   notes: string;
 }
 
+export interface PobTreeSocket {
+  nodeId: number;
+  itemId: string;
+  jewelName?: string;
+}
+
 export interface PobTreeSpec {
   id: string;
   title: string;
   levelHint?: number;
   treeVersion?: string;
   url?: string;
+  sockets?: PobTreeSocket[];
   isActive: boolean;
 }
 

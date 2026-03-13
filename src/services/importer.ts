@@ -14,6 +14,7 @@ import {
   PobItem,
   PobItemSet,
   PobSkillGroup,
+  PobTreeSocket,
   PobTreeSpec,
   UserProgress,
 } from "@/domain/models";
@@ -534,12 +535,22 @@ function parsePobData(xml: string): {
         ? specText.replace(/\s+/g, "")
         : undefined);
 
+    // Parse <Socket nodeId="..." itemId="..."/> children (jewels socketed in tree)
+    const socketElements = childElements(spec, "Socket");
+    const sockets: PobTreeSocket[] = socketElements
+      .map((sock) => ({
+        nodeId: Number(attribute(sock, "nodeId")),
+        itemId: attribute(sock, "itemId"),
+      }))
+      .filter((s) => s.nodeId > 0 && s.itemId);
+
     return {
       id,
       title,
       levelHint: extractLevelHint(title),
       treeVersion: attribute(spec, "treeVersion") || undefined,
       url,
+      sockets: sockets.length > 0 ? sockets : undefined,
       isActive: id === activeTreeSpecId || (!activeTreeSpecId && index === 0),
     };
   });
@@ -637,6 +648,18 @@ function parsePobData(xml: string): {
         };
       }),
   );
+
+  // Backfill jewel names into tree spec sockets now that rawItemsById is available
+  for (const spec of treeSpecs) {
+    if (!spec.sockets) continue;
+    for (const sock of spec.sockets) {
+      const rawText = rawItemsById.get(sock.itemId);
+      if (rawText) {
+        const parsed = parseItemHeader(rawText);
+        sock.jewelName = parsed.title;
+      }
+    }
+  }
 
   const notes = sanitizePobNotes(notesElement?.textContent ?? "");
 

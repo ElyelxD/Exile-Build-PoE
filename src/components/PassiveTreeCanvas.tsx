@@ -35,6 +35,7 @@ interface TreeData {
   lineCoords: Record<string, SpriteCoord>;
   ascCoords: Record<string, SpriteCoord>;
   bgCoords: Record<string, SpriteCoord>;
+  jewelCoords: Record<string, SpriteCoord>;
 }
 
 const tree = treeRaw as unknown as TreeData;
@@ -158,10 +159,11 @@ const CLASS_ART_KEYS = [
 
 interface Props {
   allocatedNodes: Set<number>;
+  jewelSocketMap?: Map<number, string>;
   height?: number;
 }
 
-export function PassiveTreeCanvas({ allocatedNodes, height: fixedHeight }: Props) {
+export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixedHeight }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [spritesReady, setSpritesReady] = useState(false);
@@ -231,6 +233,7 @@ export function PassiveTreeCanvas({ allocatedNodes, height: fixedHeight }: Props
     const startNodeSheet = sh("startNode");
     const ascSheet = sh("ascendancy");
     const bgSheet = sh("background");
+    const jewelSheet = sh("jewel");
     const hasSprites = !!(activeSheet && inactiveSheet);
 
     // ═══ Layer 0: Background tile + center glow ═══
@@ -451,8 +454,54 @@ export function PassiveTreeCanvas({ allocatedNodes, height: fixedHeight }: Props
       ctx.globalAlpha = 1.0;
     }
 
+    // ═══ Layer 4: Jewel socket indicators ═══
+    // Draw jewel frame sprites on socketed jewel nodes
+    if (jewelSocketMap && jewelSocketMap.size > 0) {
+      ctx.globalAlpha = 1.0;
+      for (const [nodeId, jewelName] of jewelSocketMap) {
+        const node = nodeMap.get(nodeId);
+        if (!node) continue;
+
+        // Determine jewel type for sprite selection
+        const isCrimson = /crimson|str/i.test(jewelName);
+        const isViridian = /viridian|dex/i.test(jewelName);
+        const isCobalt = /cobalt|int/i.test(jewelName);
+        const isTimeless = /timeless|legion|brutal|elegant|militant|glorious/i.test(jewelName);
+        const isAbyss = /abyss|stygian|ghastly|murderous|searching/i.test(jewelName);
+
+        const spriteKey = isCrimson ? "JewelSocketActiveRed"
+          : isViridian ? "JewelSocketActiveGreen"
+          : isCobalt ? "JewelSocketActiveBlue"
+          : isTimeless ? "JewelSocketActiveLegion"
+          : isAbyss ? "JewelSocketActiveAbyss"
+          : "JewelSocketActivePrismatic";
+
+        const jc = tree.jewelCoords?.[spriteKey];
+        if (jewelSheet && jc) {
+          const sz = 38;
+          ctx.drawImage(jewelSheet, jc[0], jc[1], jc[2], jc[3],
+            node.x - sz, node.y - sz, sz * 2, sz * 2);
+        } else {
+          // Fallback: colored circle if sprite not available
+          const fillColor = isCrimson ? "rgba(200,50,50,0.85)"
+            : isViridian ? "rgba(50,180,80,0.85)"
+            : isCobalt ? "rgba(60,120,220,0.85)"
+            : "rgba(200,160,60,0.85)";
+          ctx.strokeStyle = "#c8952c";
+          ctx.lineWidth = 3 / scale;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 22, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = fillColor;
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, 16, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
     ctx.restore();
-  }, [allocatedNodes, size.width, size.height, spritesReady]);
+  }, [allocatedNodes, jewelSocketMap, size.width, size.height, spritesReady]);
 
   /* ── Sprite drawing ── */
 
@@ -460,19 +509,31 @@ export function PassiveTreeCanvas({ allocatedNodes, height: fixedHeight }: Props
     ctx: CanvasRenderingContext2D, node: TreeNode, isAlloc: boolean, sz: number,
     activeSheet: HTMLImageElement, inactiveSheet: HTMLImageElement,
     frameSheet: HTMLImageElement | null, masterySheet: HTMLImageElement | null,
-    masteryActiveSheet: HTMLImageElement | null, ascSheet: HTMLImageElement | null,
+    _masteryActiveSheet: HTMLImageElement | null, ascSheet: HTMLImageElement | null,
   ): boolean {
-    // Mastery nodes
+    // Mastery nodes — always use mastery sheet + iconInactive coords
+    // (masteryActive sheet has different coord layout, so we draw from mastery sheet
+    //  and add a golden glow for allocated state)
     if (node.type === 3) {
-      const mSheet = isAlloc ? masteryActiveSheet : masterySheet;
-      const coordMap = isAlloc ? tree.iconActive : tree.iconInactive;
-      const coord = coordMap[node.icon];
-      if (mSheet && coord) {
+      const coord = tree.iconInactive[node.icon];
+      if (masterySheet && coord) {
+        if (isAlloc) {
+          // Golden glow behind allocated mastery
+          ctx.fillStyle = "rgba(212,160,74,0.25)";
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, sz * 1.4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(212,160,74,0.7)";
+          ctx.lineWidth = Math.min(2 / stateRef.current.scale, 6);
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, sz * 1.1, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         ctx.save();
         ctx.beginPath();
         ctx.arc(node.x, node.y, sz * 0.92, 0, Math.PI * 2);
         ctx.clip();
-        ctx.drawImage(mSheet, coord[0], coord[1], coord[2], coord[3],
+        ctx.drawImage(masterySheet, coord[0], coord[1], coord[2], coord[3],
           node.x - sz, node.y - sz, sz * 2, sz * 2);
         ctx.restore();
         return true;
@@ -811,6 +872,9 @@ export function PassiveTreeCanvas({ allocatedNodes, height: fixedHeight }: Props
                 <span key={i} className="tree-tooltip-mastery-opt">{eff}</span>
               ))}
             </div>
+          )}
+          {jewelSocketMap?.has(tooltip.node.id) && (
+            <span className="tree-tooltip-jewel">{jewelSocketMap.get(tooltip.node.id)}</span>
           )}
           {allocatedNodes.has(tooltip.node.id) && (
             <span className="tree-tooltip-alloc">Allocated</span>

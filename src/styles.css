@@ -972,6 +972,17 @@ button {
   line-height: 1.35;
 }
 
+.tree-tooltip-jewel {
+  display: block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(120, 100, 200, 0.18);
+  color: #b8a0e0;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .tree-tooltip-alloc {
   display: inline-block;
   margin-top: 4px;

@@ -774,6 +774,16 @@ export function BuildTabContent({
         const decoded = treeInput ? decodeTreeUrl(treeInput) : null;
         const allocatedNodes = decoded?.allocatedNodes ?? new Set<number>();
 
+        // Build jewel socket map: nodeId → jewel name (resolved in importer)
+        const jewelSocketMap = new Map<number, string>();
+        if (activeTreeSpec?.sockets) {
+          for (const sock of activeTreeSpec.sockets) {
+            // Ensure socket nodes are allocated (they should be in URL, but merge as backup)
+            allocatedNodes.add(sock.nodeId);
+            jewelSocketMap.set(sock.nodeId, sock.jewelName || "Jewel");
+          }
+        }
+
         return (
           <div className="content-stack">
             <section className="panel tree-panel">
@@ -801,6 +811,7 @@ export function BuildTabContent({
               )}
               <PassiveTreeCanvas
                 allocatedNodes={allocatedNodes}
+                jewelSocketMap={jewelSocketMap}
                 height={condensed ? 350 : undefined}
               />
               <div className="tree-meta-row">
@@ -808,6 +819,7 @@ export function BuildTabContent({
                   {allocatedNodes.size > 0
                     ? `${allocatedNodes.size} ${t("tree.pointCount", { count: allocatedNodes.size })}`
                     : t("tree.treeSpecImported")}
+                  {jewelSocketMap.size > 0 && `, ${jewelSocketMap.size} jewel${jewelSocketMap.size > 1 ? "s" : ""}`}
                 </span>
                 {activeTreeSpec?.url && (
                   <a
