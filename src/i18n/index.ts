@@ -60,7 +60,7 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
   th,
 };
 
-const LOCALE_STORAGE_KEY = "overlay-poe-build.locale";
+const LOCALE_STORAGE_KEY = "exile-build-poe.locale";
 
 // ── Module-level state (works outside React) ──
 

@@ -1,14 +1,14 @@
 {
-  "name": "overlay-poe-build",
+  "name": "exile-build-poe",
   "productName": "Exile Build PoE",
   "version": "0.2.0",
   "private": true,
-  "author": "Exile Build PoE contributors",
+  "author": "Elyelx",
   "description": "Windows desktop MVP scaffold for a Path of Exile build overlay app.",
   "main": "dist-electron/main.js",
   "repository": {
     "type": "git",
-    "url": "git@github.com:Elyelx/Overlay-PoE-Build.git"
+    "url": "git@github.com:Elyelx/Exile-Build-PoE.git"
   },
   "scripts": {
     "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\" \"npm:dev:app\"",
@@ -63,7 +63,7 @@
       {
         "provider": "github",
         "owner": "Elyelx",
-        "repo": "Overlay-PoE-Build"
+        "repo": "Exile-Build-PoE"
       }
     ],
     "win": {
@@ -95,7 +95,7 @@
       "shortcutName": "Exile Build PoE",
       "uninstallDisplayName": "Exile Build PoE",
       "artifactName": "Exile-Build-PoE-Web-Installer.${ext}",
-      "appPackageUrl": "https://github.com/Elyelx/Overlay-PoE-Build/releases/download/windows-installer-latest"
+      "appPackageUrl": "https://github.com/Elyelx/Exile-Build-PoE/releases/download/windows-installer-latest"
     }
   }
 }

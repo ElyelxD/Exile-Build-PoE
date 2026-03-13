@@ -136,7 +136,7 @@ The repository includes a Windows workflow that generates an offline Windows ins
 
 Windows download:
 
-- [Download Exile Build PoE for Windows](https://github.com/Elyelx/Overlay-PoE-Build/releases/latest/download/Exile-Build-PoE-Setup.exe)
+- [Download Exile Build PoE for Windows](https://github.com/Elyelx/Exile-Build-PoE/releases/latest/download/Exile-Build-PoE-Setup.exe)
 
 Flow:
 

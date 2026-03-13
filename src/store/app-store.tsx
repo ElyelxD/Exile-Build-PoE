@@ -10,7 +10,7 @@ import { createImportedBuild, createInitialProgress, rehydrateImportedBuild } fr
 import { getSuggestedPobTreeSpecForLevel } from "@/services/pob-selectors";
 import { findStageForLevel, getCurrentStage, getNextObjectives } from "@/store/selectors";
 
-const STORAGE_KEY = "overlay-poe-build.state.v1";
+const STORAGE_KEY = "exile-build-poe.state.v1";
 
 type Direction = 1 | -1;
 
