@@ -146,6 +146,7 @@ const ko: Record<TranslationKey, string> = {
   "tree.activeTreeInApp": "앱 내 활성 트리",
   "tree.passiveTree": "패시브 트리 {{version}}",
   "tree.treeSpecImported": "PoB에서 트리 스펙이 정확하게 가져와졌어요.",
+  "tree.viewTree": "트리 보기",
   "tree.passiveMilestones": "패시브 마일스톤",
   "tree.pointCount": "{{count}} 포인트",
   "tree.fullRoadmap": "전체 로드맵",
@@ -259,6 +260,11 @@ const ko: Record<TranslationKey, string> = {
   "electron.dialogClose": "앱 닫기",
   "electron.dialogMinimize": "최소화",
   "electron.dialogCancel": "취소",
+
+  // ── Settings ──
+  "settings.heading": "설정",
+  "settings.hotkeys": "단축키",
+  "settings.language": "언어",
 
   // ── Locale picker ──
   "locale.label": "언어",

@@ -146,6 +146,7 @@ const th: Record<TranslationKey, string> = {
   "tree.activeTreeInApp": "ทรีที่ใช้ในแอป",
   "tree.passiveTree": "Passive tree {{version}}",
   "tree.treeSpecImported": "สเปคทรีถูกนำเข้าตรงจาก PoB",
+  "tree.viewTree": "ดูทรี",
   "tree.passiveMilestones": "เป้าหมาย passive",
   "tree.pointCount": "{{count}} พอยต์",
   "tree.fullRoadmap": "แผนทั้งหมด",
@@ -259,6 +260,11 @@ const th: Record<TranslationKey, string> = {
   "electron.dialogClose": "ปิดแอป",
   "electron.dialogMinimize": "ย่อ",
   "electron.dialogCancel": "ยกเลิก",
+
+  // ── Settings ──
+  "settings.heading": "ตั้งค่า",
+  "settings.hotkeys": "ปุ่มลัด",
+  "settings.language": "ภาษา",
 
   // ── Locale picker ──
   "locale.label": "ภาษา",

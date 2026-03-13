@@ -144,6 +144,7 @@ const ru: Record<TranslationKey, string> = {
   "tree.activeTreeInApp": "Активное дерево в приложении",
   "tree.passiveTree": "Дерево пассивок {{version}}",
   "tree.treeSpecImported": "Спека дерева импортирована точно из PoB.",
+  "tree.viewTree": "Открыть дерево",
   "tree.passiveMilestones": "Вехи пассивок",
   "tree.pointCount": "{{count}} очков",
   "tree.fullRoadmap": "Полный роадмап",
@@ -257,6 +258,11 @@ const ru: Record<TranslationKey, string> = {
   "electron.dialogClose": "Закрыть приложение",
   "electron.dialogMinimize": "Свернуть",
   "electron.dialogCancel": "Отмена",
+
+  // ── Settings ──
+  "settings.heading": "Настройки",
+  "settings.hotkeys": "Горячие клавиши",
+  "settings.language": "Язык",
 
   // ── Locale picker ──
   "locale.label": "Язык",

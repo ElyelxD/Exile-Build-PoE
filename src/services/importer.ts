@@ -519,12 +519,19 @@ function parsePobData(xml: string): {
     const id = attribute(spec, "id") || String(index + 1);
     const title = attribute(spec, "title") || `Tree ${index + 1}`;
 
+    // PoB stores the tree URL as textContent inside <Spec>, not as an attribute.
+    // Also try "url" attribute as fallback for other formats.
+    const specText = (spec.textContent ?? "").trim();
+    const url =
+      attribute(spec, "url") ||
+      (specText.includes("passive-skill-tree") ? specText : undefined);
+
     return {
       id,
       title,
       levelHint: extractLevelHint(title),
       treeVersion: attribute(spec, "treeVersion") || undefined,
-      url: attribute(spec, "url") || undefined,
+      url,
       isActive: id === activeTreeSpecId || (!activeTreeSpecId && index === 0),
     };
   });

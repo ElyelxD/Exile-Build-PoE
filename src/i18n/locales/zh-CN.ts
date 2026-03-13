@@ -144,6 +144,7 @@ const zhCN: Record<TranslationKey, string> = {
   "tree.activeTreeInApp": "应用中的当前天赋树",
   "tree.passiveTree": "天赋树 {{version}}",
   "tree.treeSpecImported": "天赋树配置已从 PoB 精确导入。",
+  "tree.viewTree": "查看天赋树",
   "tree.passiveMilestones": "天赋里程碑",
   "tree.pointCount": "{{count}} 点",
   "tree.fullRoadmap": "完整路线图",
@@ -257,6 +258,11 @@ const zhCN: Record<TranslationKey, string> = {
   "electron.dialogClose": "关闭应用",
   "electron.dialogMinimize": "最小化",
   "electron.dialogCancel": "取消",
+
+  // ── 设置 ──
+  "settings.heading": "设置",
+  "settings.hotkeys": "快捷键",
+  "settings.language": "语言",
 
   // ── 语言选择 ──
   "locale.label": "语言",

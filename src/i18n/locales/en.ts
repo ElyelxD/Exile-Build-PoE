@@ -142,6 +142,7 @@ const en = {
   "tree.activeTreeInApp": "Active tree in app",
   "tree.passiveTree": "Passive tree {{version}}",
   "tree.treeSpecImported": "Tree spec imported exactly from PoB.",
+  "tree.viewTree": "View tree",
   "tree.passiveMilestones": "Passive milestones",
   "tree.pointCount": "{{count}} points",
   "tree.fullRoadmap": "Full roadmap",
@@ -255,6 +256,11 @@ const en = {
   "electron.dialogClose": "Close app",
   "electron.dialogMinimize": "Minimize",
   "electron.dialogCancel": "Cancel",
+
+  // ── Settings ──
+  "settings.heading": "Settings",
+  "settings.hotkeys": "Hotkeys",
+  "settings.language": "Language",
 
   // ── Locale picker ──
   "locale.label": "Language",

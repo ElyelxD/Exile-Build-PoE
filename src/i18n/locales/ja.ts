@@ -149,6 +149,7 @@ const ja: Record<TranslationKey, string> = {
   "tree.activeTreeInApp": "アプリ内のアクティブツリー",
   "tree.passiveTree": "パッシブツリー {{version}}",
   "tree.treeSpecImported": "ツリースペックはPoBから正確にインポートされました。",
+  "tree.viewTree": "ツリーを見る",
   "tree.passiveMilestones": "パッシブマイルストーン",
   "tree.pointCount": "{{count}}ポイント",
   "tree.fullRoadmap": "全ロードマップ",
@@ -266,6 +267,11 @@ const ja: Record<TranslationKey, string> = {
   "electron.dialogClose": "アプリを閉じる",
   "electron.dialogMinimize": "最小化",
   "electron.dialogCancel": "キャンセル",
+
+  // ── Settings ──
+  "settings.heading": "設定",
+  "settings.hotkeys": "ホットキー",
+  "settings.language": "言語",
 
   // ── Locale picker ──
   "locale.label": "言語",

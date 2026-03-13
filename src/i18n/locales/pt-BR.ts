@@ -147,6 +147,7 @@ const ptBR: Record<TranslationKey, string> = {
   "tree.activeTreeInApp": "Tree ativa no app",
   "tree.passiveTree": "Passive tree {{version}}",
   "tree.treeSpecImported": "Tree spec importada exatamente do PoB.",
+  "tree.viewTree": "Ver árvore",
   "tree.passiveMilestones": "Passive milestones",
   "tree.pointCount": "{{count}} pontos",
   "tree.fullRoadmap": "Roadmap completo",
@@ -261,6 +262,11 @@ const ptBR: Record<TranslationKey, string> = {
   "electron.dialogClose": "Fechar app",
   "electron.dialogMinimize": "Minimizar",
   "electron.dialogCancel": "Cancelar",
+
+  // ── Settings ──
+  "settings.heading": "Configurações",
+  "settings.hotkeys": "Atalhos",
+  "settings.language": "Idioma",
 
   // ── Locale picker ──
   "locale.label": "Idioma",

@@ -21,6 +21,8 @@ import {
   getActivePobTreeSpec,
 } from "@/services/pob-selectors";
 import { useI18n } from "@/i18n";
+import { PassiveTreeCanvas } from "@/components/PassiveTreeCanvas";
+import { decodeTreeUrl } from "@/services/tree-decoder";
 
 type DecoratedChecklistItem = {
   id: string;
@@ -617,6 +619,22 @@ export function BuildTabContent({
                     <strong>{displayNextUpgrade || t("overview.reviewNotes")}</strong>
                   </div>
                 </div>
+                {pob.treeSpecs.length > 1 && (
+                  <label className="field pob-spec-field">
+                    <span className="field-label">{t("snapshot.activeTreeInApp")}</span>
+                    <select
+                      className="pob-spec-select"
+                      onChange={(event) => onSetPobTreeSpec?.(event.target.value)}
+                      value={activeTreeSpec?.id ?? ""}
+                    >
+                      {pob.treeSpecs.map((spec) => (
+                        <option key={spec.id} value={spec.id}>
+                          {spec.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
               </section>
 
               <section className="panel">
@@ -751,20 +769,18 @@ export function BuildTabContent({
 
     case "tree":
       if (pob) {
-        const visibleTreeSpecs = condensed
-          ? pob.treeSpecs.filter((spec) => spec.id === activeTreeSpec?.id)
-          : pob.treeSpecs;
+        const decoded = activeTreeSpec?.url ? decodeTreeUrl(activeTreeSpec.url) : null;
+        const allocatedNodes = decoded?.allocatedNodes ?? new Set<number>();
 
         return (
           <div className="content-stack">
-            <section className="panel">
+            <section className="panel tree-panel">
               <div className="section-heading">
                 <h3>{condensed ? t("tree.activeTree") : t("tree.treeTimeline")}</h3>
-                <span>{condensed ? activeTreeSpec?.title ?? t("tree.noActiveTree") : pob.treeSpecs.length}</span>
+                <span>{activeTreeSpec?.title ?? t("tree.noActiveTree")}</span>
               </div>
-              {condensed && pob.treeSpecs.length > 1 && (
+              {pob.treeSpecs.length > 1 && (
                 <div className="pob-spec-switcher">
-                  <span className="mini-help-title">{t("tree.activeTreeInApp")}</span>
                   <label className="field pob-spec-field">
                     <span className="field-label">{t("tree.selectTree")}</span>
                     <select
@@ -781,28 +797,26 @@ export function BuildTabContent({
                   </label>
                 </div>
               )}
-              <div className="card-grid tree-spec-grid">
-                {visibleTreeSpecs.map((spec) => (
-                  <article
-                    className={`detail-card tree-spec-card ${activeTreeSpec?.id === spec.id ? "is-selected" : ""}`}
-                    key={spec.id}
+              <PassiveTreeCanvas
+                allocatedNodes={allocatedNodes}
+                height={condensed ? 350 : undefined}
+              />
+              <div className="tree-meta-row">
+                <span className="detail-meta">
+                  {allocatedNodes.size > 0
+                    ? `${allocatedNodes.size} ${t("tree.pointCount", { count: allocatedNodes.size })}`
+                    : t("tree.treeSpecImported")}
+                </span>
+                {activeTreeSpec?.url && (
+                  <a
+                    className="tree-view-link"
+                    href={activeTreeSpec.url}
+                    rel="noreferrer"
+                    target="_blank"
                   >
-                    <div className="stage-card-header">
-                      <div>
-                        <span className="eyebrow">{activeTreeSpec?.id === spec.id ? t("tree.activeInApp") : "PoB"}</span>
-                        <h3>{spec.title}</h3>
-                      </div>
-                      <span className="pill">
-                        {spec.levelHint ? `Lvl ${spec.levelHint}` : "PoB"}
-                      </span>
-                    </div>
-                    <span className="detail-meta">
-                      {spec.treeVersion
-                        ? t("tree.passiveTree", { version: spec.treeVersion })
-                        : t("tree.treeSpecImported")}
-                    </span>
-                  </article>
-                ))}
+                    {t("tree.viewTree")}
+                  </a>
+                )}
               </div>
             </section>
           </div>

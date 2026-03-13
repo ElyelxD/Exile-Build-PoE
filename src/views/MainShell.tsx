@@ -1,9 +1,8 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 import { BuildTabContent } from "@/components/BuildTabContent";
 import { BUILD_TABS, BuildSourceType } from "@/domain/models";
-import { sanitizePobInlineText, splitPobParagraphs } from "@/services/pob-display";
+import { sanitizePobInlineText } from "@/services/pob-display";
 import {
-  getActivePobItemSet,
   getActivePobTreeSpec,
   getNextPobTreeSpecForLevel,
 } from "@/services/pob-selectors";
@@ -36,8 +35,8 @@ export function MainShell() {
   const { state, actions } = useAppStore();
   const { t, locale, setLocale } = useI18n();
   const [importMode, setImportMode] = useState<ImportMode>("paste");
-  const [langOpen, setLangOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
   const [sourceValue, setSourceValue] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("");
   const [error, setError] = useState("");
@@ -59,14 +58,6 @@ export function MainShell() {
   const currentStage = build && progress ? getCurrentStage(build, progress) : undefined;
   const pob = build?.pob;
   const activeTreeSpec = getActivePobTreeSpec(pob);
-  const activeItemSet = getActivePobItemSet(pob);
-  const activePobItems =
-    pob && activeItemSet
-      ? pob.items.filter((item) => item.setId === activeItemSet.id)
-      : pob?.items ?? [];
-  const pobNotePreview = build
-    ? splitPobParagraphs(build.notes)[0]?.split("\n")[0]
-    : undefined;
   const nextUpgradeLabel = build ? sanitizePobInlineText(build.summary.nextUpgrade) : "";
   const displayStageTitle = activeTreeSpec?.title ?? currentStage?.title ?? t("session.currentStage");
   const isTreeDrivenBuild = Boolean(pob && pob.treeSpecs.length > 1);
@@ -80,15 +71,15 @@ export function MainShell() {
   }, []);
 
   useEffect(() => {
-    if (!langOpen) return;
+    if (!settingsOpen) return;
     const handleClick = (e: MouseEvent) => {
-      if (langRef.current && !langRef.current.contains(e.target as Node)) {
-        setLangOpen(false);
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [langOpen]);
+  }, [settingsOpen]);
 
   const sourceLabel =
     importMode === "paste"
@@ -163,7 +154,7 @@ export function MainShell() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <section className="panel import-card">
+        <section className="sb-section">
           <div className="section-heading">
             <h2>{t("import.heading")}</h2>
             <span>{t("import.desktopOnly")}</span>
@@ -216,7 +207,7 @@ export function MainShell() {
           </form>
         </section>
 
-        <section className="panel">
+        <section className="sb-section">
           <div className="section-heading">
             <h2>{t("builds.heading")}</h2>
             <span>{state.builds.length}</span>
@@ -238,165 +229,6 @@ export function MainShell() {
                 ))}
               </select>
             </label>
-          )}
-        </section>
-
-        <section className="panel is-import-summary">
-          <div className="section-heading">
-            <h2>{pob ? t("snapshot.heading") : t("snapshot.legacyHeading")}</h2>
-            <span>{pob ? t("snapshot.exactImport") : t("snapshot.reimport")}</span>
-          </div>
-          {pob ? (
-            <>
-              <div className="metric-stack">
-                <div>
-                  <span>{t("snapshot.mainSkill")}</span>
-                  <strong>{pob.mainSkill ?? t("snapshot.noMainLabel")}</strong>
-                </div>
-                <div>
-                  <span>{t("snapshot.activeTree")}</span>
-                  <strong>{activeTreeSpec?.title ?? t("snapshot.noActiveSpec")}</strong>
-                </div>
-                <div>
-                  <span>{t("snapshot.activeItemSet")}</span>
-                  <strong>{activeItemSet?.title ?? t("snapshot.noActiveSet")}</strong>
-                </div>
-                <div>
-                  <span>{t("snapshot.itemsInSet")}</span>
-                  <strong>{activePobItems.length}</strong>
-                </div>
-              </div>
-              {pob.treeSpecs.length > 1 && (
-                <div className="pob-spec-switcher">
-                  <span className="mini-help-title">{t("snapshot.pobTrees")}</span>
-                  <label className="field pob-spec-field">
-                    <span className="field-label">{t("snapshot.activeTreeInApp")}</span>
-                    <select
-                      className="pob-spec-select"
-                      onChange={(event) => actions.setPobTreeSpec(build.id, event.target.value)}
-                      value={activeTreeSpec?.id ?? ""}
-                    >
-                      {pob.treeSpecs.map((spec) => (
-                        <option key={spec.id} value={spec.id}>
-                          {spec.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              )}
-              <div className="mini-help">
-                <span className="mini-help-title">{t("snapshot.importedContent")}</span>
-                <div className="mini-help-row">
-                  <strong>{t("snapshot.treeSpecCount", { count: pob.treeSpecs.length })}</strong>
-                  <span>{t("snapshot.fromPoB")}</span>
-                </div>
-                <div className="mini-help-row">
-                  <strong>{t("snapshot.skillGroupCount", { count: pob.skillGroups.length })}</strong>
-                  <span>{t("snapshot.importedExactly")}</span>
-                </div>
-                <div className="mini-help-row">
-                  <strong>{pob.bandit ?? t("snapshot.noBandit")}</strong>
-                  <span>
-                    {[pob.pantheonMajor, pob.pantheonMinor].filter(Boolean).join(" · ") ||
-                      t("snapshot.pantheonNotSpecified")}
-                  </span>
-                </div>
-                {pobNotePreview && (
-                  <div className="mini-help-row">
-                    <strong>{t("snapshot.notes")}</strong>
-                    <span>{pobNotePreview}</span>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="lead-copy">
-                {t("snapshot.legacyDescription")}
-              </p>
-              <div className="mini-help">
-                <span className="mini-help-title">{t("snapshot.nextStep")}</span>
-                <div className="mini-help-row">
-                  <strong>{t("snapshot.reimportPoB")}</strong>
-                  <span>{t("snapshot.reimportDetail")}</span>
-                </div>
-                <div className="mini-help-row">
-                  <strong>{t("snapshot.noDataLoss")}</strong>
-                  <span>{t("snapshot.noDataLossDetail")}</span>
-                </div>
-              </div>
-            </>
-          )}
-        </section>
-
-        <section className="panel">
-          <div className="section-heading">
-            <h2>{t("session.heading")}</h2>
-            <span>{t("session.alwaysOnTop")}</span>
-          </div>
-          <p className="subtle">
-            {t("session.displayTip")}
-          </p>
-          {build && progress && currentStage ? (
-            <div className="section-stack">
-              <div className="metric-stack">
-                <div>
-                  <span>{isTreeDrivenBuild ? t("session.activeTree") : t("session.currentStage")}</span>
-                  <strong>{displayStageTitle}</strong>
-                </div>
-                <div>
-                  <span>{t("session.playerLevel")}</span>
-                  <strong>{progress.playerLevel}</strong>
-                </div>
-              </div>
-
-              {isTreeDrivenBuild && (
-                <p className="subtle">
-                  {nextTreeSpec
-                    ? t("session.nextTree", { title: nextTreeSpec.title })
-                    : t("session.lastTreeActive")}
-                </p>
-              )}
-
-              <div className="level-controls">
-                <button
-                  className="icon-button"
-                  onClick={() => actions.setPlayerLevel(build.id, progress.playerLevel - 1)}
-                  type="button"
-                >
-                  -
-                </button>
-                <input
-                  className="level-input"
-                  max={100}
-                  min={1}
-                  onChange={(event) =>
-                    actions.setPlayerLevel(build.id, Number(event.target.value) || 1)
-                  }
-                  type="number"
-                  value={progress.playerLevel}
-                />
-                <button
-                  className="icon-button"
-                  onClick={() => actions.setPlayerLevel(build.id, progress.playerLevel + 1)}
-                  type="button"
-                >
-                  +
-                </button>
-              </div>
-
-              <div className="inline-actions overlay-session-actions">
-                <button className="ghost-button" onClick={toggleOverlay} type="button">
-                  {t("session.showOverlay")}
-                </button>
-                <button className="ghost-button" onClick={resetOverlayPosition} type="button">
-                  {t("session.recenter")}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="subtle">{t("session.importToActivate")}</p>
           )}
         </section>
 
@@ -429,29 +261,42 @@ export function MainShell() {
             <button className="primary-button" onClick={toggleOverlay} type="button">
               {t("header.openOverlay")}
             </button>
-            <div className="lang-picker" ref={langRef}>
+            <div className="settings-picker" ref={settingsRef}>
               <button
-                className="lang-trigger"
-                onClick={() => setLangOpen((v) => !v)}
+                className="settings-trigger"
+                onClick={() => setSettingsOpen((v) => !v)}
                 type="button"
-                aria-label={t("locale.label")}
+                aria-label={t("settings.heading")}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M2 12h20" />
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z" />
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                 </svg>
-                <span>{LOCALE_SHORT[locale]}</span>
               </button>
-              {langOpen && (
-                <div className="lang-dropdown">
+              {settingsOpen && (
+                <div className="settings-dropdown">
+                  <span className="settings-section-title">{t("settings.hotkeys")}</span>
+                  <div className="settings-hotkey-row">
+                    <span>Open overlay</span>
+                    <kbd>Ctrl+Shift+O</kbd>
+                  </div>
+                  <div className="settings-hotkey-row">
+                    <span>Mark next</span>
+                    <kbd>Ctrl+Shift+M</kbd>
+                  </div>
+                  <div className="settings-hotkey-row">
+                    <span>Adjust level</span>
+                    <kbd>Ctrl+Shift+L</kbd>
+                  </div>
+                  <hr className="settings-divider" />
+                  <span className="settings-section-title">{t("settings.language")}</span>
                   {SUPPORTED_LOCALES.map((loc) => (
                     <button
                       className={`lang-option ${locale === loc.value ? "is-active" : ""}`}
                       key={loc.value}
                       onClick={() => {
                         setLocale(loc.value);
-                        setLangOpen(false);
+                        setSettingsOpen(false);
                       }}
                       type="button"
                     >
@@ -464,6 +309,58 @@ export function MainShell() {
             </div>
           </div>
         </header>
+
+        {build && progress && currentStage && (
+          <div className="session-strip">
+            <span className="session-strip-label">
+              {isTreeDrivenBuild ? t("session.activeTree") : t("session.currentStage")}
+              {": "}
+              <strong>{displayStageTitle}</strong>
+            </span>
+
+            <div className="level-controls">
+              <button
+                className="icon-button"
+                onClick={() => actions.setPlayerLevel(build.id, progress.playerLevel - 1)}
+                type="button"
+              >
+                −
+              </button>
+              <input
+                className="level-input"
+                max={100}
+                min={1}
+                onChange={(e) =>
+                  actions.setPlayerLevel(build.id, Number(e.target.value) || 1)
+                }
+                type="number"
+                value={progress.playerLevel}
+              />
+              <button
+                className="icon-button"
+                onClick={() => actions.setPlayerLevel(build.id, progress.playerLevel + 1)}
+                type="button"
+              >
+                +
+              </button>
+            </div>
+
+            {isTreeDrivenBuild && nextTreeSpec && (
+              <span className="session-strip-hint">
+                {t("session.nextTree", { title: nextTreeSpec.title })}
+              </span>
+            )}
+
+            <div className="session-strip-actions">
+              <button className="ghost-button" onClick={toggleOverlay} type="button">
+                {t("session.showOverlay")}
+              </button>
+              <button className="ghost-button" onClick={resetOverlayPosition} type="button">
+                {t("session.recenter")}
+              </button>
+            </div>
+          </div>
+        )}
 
         {!build || !progress || !currentStage ? (
           <section className="panel empty-state">
