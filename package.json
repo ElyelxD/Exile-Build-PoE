@@ -42,7 +42,7 @@
     "wait-on": "^8.0.1"
   },
   "build": {
-    "appId": "com.buildpilotpoe.desktop",
+    "appId": "com.exilebuildpoe.desktop",
     "productName": "Exile Build PoE",
     "directories": {
       "output": "release",
