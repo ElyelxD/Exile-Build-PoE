@@ -35,7 +35,9 @@ jobs:
       - name: Read version from package.json
         id: pkg
         shell: bash
-        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Delete existing draft release for this version
         shell: bash
