@@ -1,10 +1,10 @@
 {
   "name": "exile-build-poe",
   "productName": "Exile Build PoE",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
-  "author": "Elyelx",
-  "description": "Windows desktop MVP scaffold for a Path of Exile build overlay app.",
+  "author": "ElyelxD",
+  "description": "Open-source Windows desktop overlay for Path of Exile build progression.",
   "main": "dist-electron/main.js",
   "repository": {
     "type": "git",

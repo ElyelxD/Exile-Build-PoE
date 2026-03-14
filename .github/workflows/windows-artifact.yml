@@ -32,10 +32,48 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Read version from package.json
+        id: pkg
+        shell: bash
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Delete existing draft release for this version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases --jq '.[] | select(.tag_name == "v${{ steps.pkg.outputs.version }}" and .draft == true) | .id' 2>/dev/null || true)
+          if [ -n "$RELEASE_ID" ]; then
+            gh api -X DELETE repos/${{ github.repository }}/releases/$RELEASE_ID
+            echo "Deleted draft release $RELEASE_ID"
+          fi
+
+      - name: Delete existing tag if present
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git push origin :refs/tags/v${{ steps.pkg.outputs.version }} 2>/dev/null || true
+
       - name: Build & publish Windows installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: npm run build && npx electron-builder --publish always --win nsis --x64
+
+      - name: Publish release (remove draft flag)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases --jq '.[] | select(.tag_name == "v${{ steps.pkg.outputs.version }}" and .draft == true) | .id' 2>/dev/null || true)
+          if [ -n "$RELEASE_ID" ]; then
+            gh api -X PATCH repos/${{ github.repository }}/releases/$RELEASE_ID \
+              -f name="Exile Build PoE v${{ steps.pkg.outputs.version }}" \
+              -f body="Windows installer build from \`main\`.\n\nCommit: ${{ github.sha }}" \
+              -F draft=false \
+              -F make_latest=true
+            echo "Published release v${{ steps.pkg.outputs.version }}"
+          fi
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
