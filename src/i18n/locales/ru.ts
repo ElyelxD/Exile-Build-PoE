@@ -272,6 +272,14 @@ const ru: Record<TranslationKey, string> = {
   // ── Settings ──
   "settings.heading": "Настройки",
   "settings.hotkeys": "Горячие клавиши",
+  "settings.hotkeyOverlay": "Открыть оверлей",
+  "settings.hotkeyMark": "Отметить следующее",
+  "settings.hotkeyLevel": "Изменить уровень",
+  "settings.hotkeyNextTab": "Следующая вкладка",
+  "settings.hotkeyPrevTab": "Предыдущая вкладка",
+  "settings.hotkeyPin": "Закрепить/Открепить",
+  "settings.hotkeyPress": "Нажмите клавиши...",
+  "settings.hotkeyReset": "Сбросить",
   "settings.language": "Язык",
 
   // ── Locale picker ──

@@ -387,7 +387,7 @@ button {
   font-size: 0.82rem;
 }
 
-.settings-hotkey-row kbd {
+.hotkey-btn {
   padding: 2px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -395,6 +395,47 @@ button {
   font-family: inherit;
   font-size: 0.75rem;
   color: var(--text-2);
+  cursor: pointer;
+  min-width: 90px;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.hotkey-btn:hover {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.hotkey-btn.is-recording {
+  border-color: var(--accent);
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--accent);
+  animation: hotkey-pulse 1s ease-in-out infinite;
+}
+
+@keyframes hotkey-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.hotkey-reset-btn {
+  display: block;
+  width: calc(100% - 20px);
+  margin: 6px 10px 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.75rem;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.hotkey-reset-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-1);
 }
 
 .settings-divider {

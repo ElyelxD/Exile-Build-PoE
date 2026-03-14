@@ -274,6 +274,14 @@ const th: Record<TranslationKey, string> = {
   // ── Settings ──
   "settings.heading": "ตั้งค่า",
   "settings.hotkeys": "ปุ่มลัด",
+  "settings.hotkeyOverlay": "เปิดโอเวอร์เลย์",
+  "settings.hotkeyMark": "ทำเครื่องหมายถัดไป",
+  "settings.hotkeyLevel": "ปรับระดับ",
+  "settings.hotkeyNextTab": "แท็บถัดไป",
+  "settings.hotkeyPrevTab": "แท็บก่อนหน้า",
+  "settings.hotkeyPin": "ปักหมุด/ถอนหมุด",
+  "settings.hotkeyPress": "กดปุ่ม...",
+  "settings.hotkeyReset": "รีเซ็ต",
   "settings.language": "ภาษา",
 
   // ── Locale picker ──

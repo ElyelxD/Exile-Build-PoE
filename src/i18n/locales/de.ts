@@ -272,6 +272,14 @@ const de: Record<TranslationKey, string> = {
   // ── Settings ──
   "settings.heading": "Einstellungen",
   "settings.hotkeys": "Tastenkürzel",
+  "settings.hotkeyOverlay": "Overlay öffnen",
+  "settings.hotkeyMark": "Nächstes markieren",
+  "settings.hotkeyLevel": "Level anpassen",
+  "settings.hotkeyNextTab": "Nächster Tab",
+  "settings.hotkeyPrevTab": "Vorheriger Tab",
+  "settings.hotkeyPin": "Anheften/Lösen",
+  "settings.hotkeyPress": "Tasten drücken...",
+  "settings.hotkeyReset": "Zurücksetzen",
   "settings.language": "Sprache",
 
   // ── Locale picker ──

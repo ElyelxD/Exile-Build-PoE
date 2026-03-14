@@ -7,6 +7,9 @@ type ShortcutName =
   | "toggle-pin"
   | "adjust-level";
 
+type HotkeyAction = ShortcutName | "toggle-overlay";
+type HotkeyConfig = Record<HotkeyAction, string>;
+
 type ImportSourceType = "link" | "code" | "file";
 
 contextBridge.exposeInMainWorld("desktop", {
@@ -47,4 +50,10 @@ contextBridge.exposeInMainWorld("desktop", {
     ipcRenderer.on("updater:update-downloaded", listener);
     return () => { ipcRenderer.removeListener("updater:update-downloaded", listener); };
   },
+
+  // Hotkeys
+  getHotkeys: () => ipcRenderer.invoke("hotkeys:get") as Promise<HotkeyConfig>,
+  setHotkey: (action: HotkeyAction, accelerator: string) =>
+    ipcRenderer.invoke("hotkeys:set", action, accelerator) as Promise<HotkeyConfig>,
+  resetHotkeys: () => ipcRenderer.invoke("hotkeys:reset") as Promise<HotkeyConfig>,
 });

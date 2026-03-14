@@ -15,6 +15,7 @@ import {
   getSelectedBuild,
 } from "@/store/selectors";
 import { useI18n, SUPPORTED_LOCALES, type Locale } from "@/i18n";
+import type { TranslationKey } from "@/i18n/locales/en";
 
 const LOCALE_SHORT: Record<Locale, string> = {
   en: "EN",
@@ -31,6 +32,22 @@ const LOCALE_SHORT: Record<Locale, string> = {
 
 type ImportMode = "paste" | "file";
 
+const HOTKEY_ACTIONS: Array<{ action: HotkeyAction; labelKey: TranslationKey }> = [
+  { action: "toggle-overlay", labelKey: "settings.hotkeyOverlay" },
+  { action: "mark-objective", labelKey: "settings.hotkeyMark" },
+  { action: "adjust-level", labelKey: "settings.hotkeyLevel" },
+  { action: "next-tab", labelKey: "settings.hotkeyNextTab" },
+  { action: "prev-tab", labelKey: "settings.hotkeyPrevTab" },
+  { action: "toggle-pin", labelKey: "settings.hotkeyPin" },
+];
+
+/** Convert Electron accelerator string to a human-readable display. */
+function displayAccelerator(acc: string): string {
+  return acc
+    .replace(/CommandOrControl/g, "Ctrl")
+    .replace(/\+/g, " + ");
+}
+
 export function MainShell() {
   const { state, actions } = useAppStore();
   const { t, locale, setLocale } = useI18n();
@@ -44,6 +61,52 @@ export function MainShell() {
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
+  const [hotkeys, setHotkeys] = useState<HotkeyConfig | null>(null);
+  const [recordingAction, setRecordingAction] = useState<HotkeyAction | null>(null);
+
+  // Load hotkeys when settings open
+  useEffect(() => {
+    if (settingsOpen && !hotkeys && window.desktop?.getHotkeys) {
+      window.desktop.getHotkeys().then(setHotkeys);
+    }
+  }, [settingsOpen, hotkeys]);
+
+  // Keyboard listener for recording mode
+  useEffect(() => {
+    if (!recordingAction) return;
+    function onKeyDown(e: KeyboardEvent) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === "Escape") { setRecordingAction(null); return; }
+      // Ignore bare modifier presses
+      if (["Control", "Shift", "Alt", "Meta"].includes(e.key)) return;
+
+      const parts: string[] = [];
+      if (e.ctrlKey || e.metaKey) parts.push("CommandOrControl");
+      if (e.shiftKey) parts.push("Shift");
+      if (e.altKey) parts.push("Alt");
+
+      // Map special keys to Electron accelerator names
+      const keyMap: Record<string, string> = {
+        ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right",
+        " ": "Space", Enter: "Return", Backspace: "Backspace", Delete: "Delete",
+        Tab: "Tab", Home: "Home", End: "End", PageUp: "PageUp", PageDown: "PageDown",
+        Insert: "Insert",
+      };
+      const key = keyMap[e.key] ?? (e.key.length === 1 ? e.key.toUpperCase() : e.key);
+      parts.push(key);
+
+      const accelerator = parts.join("+");
+      if (window.desktop?.setHotkey && recordingAction) {
+        window.desktop.setHotkey(recordingAction, accelerator).then((cfg) => {
+          setHotkeys(cfg);
+          setRecordingAction(null);
+        });
+      }
+    }
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [recordingAction]);
 
   const importModeOptions: Array<{ value: ImportMode; label: string }> = [
     { value: "paste", label: t("import.pasteUrlOrCode") },
@@ -330,18 +393,31 @@ export function MainShell() {
               {settingsOpen && (
                 <div className="settings-dropdown">
                   <span className="settings-section-title">{t("settings.hotkeys")}</span>
-                  <div className="settings-hotkey-row">
-                    <span>Open overlay</span>
-                    <kbd>Ctrl+Shift+O</kbd>
-                  </div>
-                  <div className="settings-hotkey-row">
-                    <span>Mark next</span>
-                    <kbd>Ctrl+Shift+M</kbd>
-                  </div>
-                  <div className="settings-hotkey-row">
-                    <span>Adjust level</span>
-                    <kbd>Ctrl+Shift+L</kbd>
-                  </div>
+                  {hotkeys && HOTKEY_ACTIONS.map(({ action, labelKey }) => (
+                    <div className="settings-hotkey-row" key={action}>
+                      <span>{t(labelKey)}</span>
+                      <button
+                        className={`hotkey-btn${recordingAction === action ? " is-recording" : ""}`}
+                        type="button"
+                        onClick={() => setRecordingAction(recordingAction === action ? null : action)}
+                      >
+                        {recordingAction === action
+                          ? t("settings.hotkeyPress")
+                          : displayAccelerator(hotkeys[action] || "—")}
+                      </button>
+                    </div>
+                  ))}
+                  {hotkeys && (
+                    <button
+                      className="hotkey-reset-btn"
+                      type="button"
+                      onClick={() => {
+                        window.desktop?.resetHotkeys().then((cfg) => setHotkeys(cfg));
+                      }}
+                    >
+                      {t("settings.hotkeyReset")}
+                    </button>
+                  )}
                   <hr className="settings-divider" />
                   <span className="settings-section-title">{t("settings.language")}</span>
                   {SUPPORTED_LOCALES.map((loc) => (

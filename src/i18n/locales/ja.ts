@@ -281,6 +281,14 @@ const ja: Record<TranslationKey, string> = {
   // ── Settings ──
   "settings.heading": "設定",
   "settings.hotkeys": "ホットキー",
+  "settings.hotkeyOverlay": "オーバーレイを開く",
+  "settings.hotkeyMark": "次をマーク",
+  "settings.hotkeyLevel": "レベル調整",
+  "settings.hotkeyNextTab": "次のタブ",
+  "settings.hotkeyPrevTab": "前のタブ",
+  "settings.hotkeyPin": "ピン留め切替",
+  "settings.hotkeyPress": "キーを押してください...",
+  "settings.hotkeyReset": "デフォルトに戻す",
   "settings.language": "言語",
 
   // ── Locale picker ──

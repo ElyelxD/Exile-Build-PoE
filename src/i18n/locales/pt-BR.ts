@@ -276,6 +276,14 @@ const ptBR: Record<TranslationKey, string> = {
   // ── Settings ──
   "settings.heading": "Configurações",
   "settings.hotkeys": "Atalhos",
+  "settings.hotkeyOverlay": "Abrir overlay",
+  "settings.hotkeyMark": "Marcar próximo",
+  "settings.hotkeyLevel": "Ajustar nível",
+  "settings.hotkeyNextTab": "Próxima aba",
+  "settings.hotkeyPrevTab": "Aba anterior",
+  "settings.hotkeyPin": "Fixar/Desafixar",
+  "settings.hotkeyPress": "Pressione as teclas...",
+  "settings.hotkeyReset": "Restaurar padrão",
   "settings.language": "Idioma",
 
   // ── Locale picker ──

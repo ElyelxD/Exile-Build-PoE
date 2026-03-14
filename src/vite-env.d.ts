@@ -10,6 +10,8 @@ type ShortcutEventName =
 type ImportSourceType = "link" | "code" | "file";
 
 declare global {
+  type HotkeyAction = ShortcutEventName | "toggle-overlay";
+  type HotkeyConfig = Record<HotkeyAction, string>;
   interface Window {
     desktop?: {
       toggleOverlay: () => Promise<void>;
@@ -24,6 +26,9 @@ declare global {
       onUpdateAvailable: (handler: (version: string) => void) => () => void;
       onDownloadProgress: (handler: (percent: number) => void) => () => void;
       onUpdateDownloaded: (handler: () => void) => () => void;
+      getHotkeys: () => Promise<HotkeyConfig>;
+      setHotkey: (action: HotkeyAction, accelerator: string) => Promise<HotkeyConfig>;
+      resetHotkeys: () => Promise<HotkeyConfig>;
     };
   }
 }

@@ -272,6 +272,14 @@ const zhCN: Record<TranslationKey, string> = {
   // ── 设置 ──
   "settings.heading": "设置",
   "settings.hotkeys": "快捷键",
+  "settings.hotkeyOverlay": "打开覆盖层",
+  "settings.hotkeyMark": "标记下一个",
+  "settings.hotkeyLevel": "调整等级",
+  "settings.hotkeyNextTab": "下一个标签",
+  "settings.hotkeyPrevTab": "上一个标签",
+  "settings.hotkeyPin": "固定/取消固定",
+  "settings.hotkeyPress": "按下按键...",
+  "settings.hotkeyReset": "恢复默认",
   "settings.language": "语言",
 
   // ── 语言选择 ──

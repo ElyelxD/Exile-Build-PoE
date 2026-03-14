@@ -289,6 +289,14 @@ const fr: Record<TranslationKey, string> = {
   // ── Settings ──
   "settings.heading": "Paramètres",
   "settings.hotkeys": "Raccourcis",
+  "settings.hotkeyOverlay": "Ouvrir l'overlay",
+  "settings.hotkeyMark": "Marquer suivant",
+  "settings.hotkeyLevel": "Ajuster le niveau",
+  "settings.hotkeyNextTab": "Onglet suivant",
+  "settings.hotkeyPrevTab": "Onglet précédent",
+  "settings.hotkeyPin": "Épingler/Détacher",
+  "settings.hotkeyPress": "Appuyez sur les touches...",
+  "settings.hotkeyReset": "Réinitialiser",
   "settings.language": "Langue",
 
   // ── Locale picker ──

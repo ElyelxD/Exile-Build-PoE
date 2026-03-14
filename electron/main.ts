@@ -15,6 +15,19 @@ type ShortcutName =
   | "toggle-pin"
   | "adjust-level";
 
+type HotkeyAction = ShortcutName | "toggle-overlay";
+
+type HotkeyConfig = Record<HotkeyAction, string>;
+
+const DEFAULT_HOTKEYS: HotkeyConfig = {
+  "toggle-overlay": "CommandOrControl+Shift+O",
+  "next-tab": "CommandOrControl+Shift+]",
+  "prev-tab": "CommandOrControl+Shift+[",
+  "mark-objective": "CommandOrControl+Shift+M",
+  "toggle-pin": "CommandOrControl+Shift+P",
+  "adjust-level": "CommandOrControl+Shift+L",
+};
+
 type ImportSourceType = "link" | "code" | "file";
 
 interface PersistedWindowState {
@@ -52,6 +65,23 @@ const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
 
 function stateFilePath() {
   return path.join(app.getPath("userData"), "window-state.json");
+}
+
+function hotkeysFilePath() {
+  return path.join(app.getPath("userData"), "hotkeys.json");
+}
+
+function readHotkeys(): HotkeyConfig {
+  try {
+    const data = JSON.parse(fs.readFileSync(hotkeysFilePath(), "utf8"));
+    return { ...DEFAULT_HOTKEYS, ...data };
+  } catch {
+    return { ...DEFAULT_HOTKEYS };
+  }
+}
+
+function saveHotkeys(config: HotkeyConfig) {
+  fs.writeFileSync(hotkeysFilePath(), JSON.stringify(config, null, 2));
 }
 
 function poeAssetsStateFilePath() {
@@ -986,24 +1016,22 @@ function setupAutoUpdater() {
 }
 
 function registerShortcuts() {
-  const bindings: Array<[string, ShortcutName | "toggle-overlay"]> = [
-    ["CommandOrControl+Shift+O", "toggle-overlay"],
-    ["CommandOrControl+Shift+]", "next-tab"],
-    ["CommandOrControl+Shift+[", "prev-tab"],
-    ["CommandOrControl+Shift+M", "mark-objective"],
-    ["CommandOrControl+Shift+P", "toggle-pin"],
-    ["CommandOrControl+Shift+L", "adjust-level"],
-  ];
+  globalShortcut.unregisterAll();
+  const config = readHotkeys();
 
-  for (const [accelerator, action] of bindings) {
-    globalShortcut.register(accelerator, () => {
-      if (action === "toggle-overlay") {
-        toggleOverlayVisibility();
-        return;
-      }
-
-      emitShortcut(action);
-    });
+  for (const [action, accelerator] of Object.entries(config) as Array<[HotkeyAction, string]>) {
+    if (!accelerator) continue;
+    try {
+      globalShortcut.register(accelerator, () => {
+        if (action === "toggle-overlay") {
+          toggleOverlayVisibility();
+          return;
+        }
+        emitShortcut(action);
+      });
+    } catch (err) {
+      console.warn(`[Hotkeys] Failed to register ${action} → ${accelerator}:`, err);
+    }
   }
 }
 
@@ -1038,6 +1066,24 @@ app.whenReady().then(() => {
       saveLocale(locale as Locale);
       rebuildTrayMenu();
     }
+  });
+
+  ipcMain.handle("hotkeys:get", async () => {
+    return readHotkeys();
+  });
+
+  ipcMain.handle("hotkeys:set", async (_event, action: HotkeyAction, accelerator: string) => {
+    const config = readHotkeys();
+    config[action] = accelerator;
+    saveHotkeys(config);
+    registerShortcuts();
+    return config;
+  });
+
+  ipcMain.handle("hotkeys:reset", async () => {
+    saveHotkeys({ ...DEFAULT_HOTKEYS });
+    registerShortcuts();
+    return { ...DEFAULT_HOTKEYS };
   });
 
   ipcMain.handle("updater:check", async () => {

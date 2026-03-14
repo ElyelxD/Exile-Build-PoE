@@ -274,6 +274,14 @@ const ko: Record<TranslationKey, string> = {
   // ── Settings ──
   "settings.heading": "설정",
   "settings.hotkeys": "단축키",
+  "settings.hotkeyOverlay": "오버레이 열기",
+  "settings.hotkeyMark": "다음 표시",
+  "settings.hotkeyLevel": "레벨 조정",
+  "settings.hotkeyNextTab": "다음 탭",
+  "settings.hotkeyPrevTab": "이전 탭",
+  "settings.hotkeyPin": "고정/해제",
+  "settings.hotkeyPress": "키를 누르세요...",
+  "settings.hotkeyReset": "기본값 복원",
   "settings.language": "언어",
 
   // ── Locale picker ──

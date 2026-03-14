@@ -270,6 +270,14 @@ const en = {
   // ── Settings ──
   "settings.heading": "Settings",
   "settings.hotkeys": "Hotkeys",
+  "settings.hotkeyOverlay": "Open overlay",
+  "settings.hotkeyMark": "Mark next",
+  "settings.hotkeyLevel": "Adjust level",
+  "settings.hotkeyNextTab": "Next tab",
+  "settings.hotkeyPrevTab": "Previous tab",
+  "settings.hotkeyPin": "Toggle pin",
+  "settings.hotkeyPress": "Press keys...",
+  "settings.hotkeyReset": "Reset defaults",
   "settings.language": "Language",
 
   // ── Locale picker ──
