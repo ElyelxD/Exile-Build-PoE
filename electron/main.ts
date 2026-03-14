@@ -484,7 +484,24 @@ async function resolvePobSource(sourceType: ImportSourceType, sourceValue: strin
     return isPobXml(trimmed) ? assertPobXml(trimmed) : decodePobCodeToXml(trimmed);
   }
 
-  const response = await fetch(normalizePobLink(trimmed), { redirect: "follow" });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+
+  let response: Response;
+  try {
+    response = await fetch(normalizePobLink(trimmed), {
+      redirect: "follow",
+      signal: controller.signal,
+    });
+  } catch (err: unknown) {
+    clearTimeout(timeout);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(t("electron.networkTimeout"));
+    }
+    throw new Error(t("electron.networkError"));
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     throw new Error(t("electron.downloadFailed", { status: response.status }));

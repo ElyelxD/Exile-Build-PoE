@@ -6,6 +6,7 @@ import {
   useReducer,
 } from "react";
 import { AppState, Build, BUILD_TABS, BuildSourceType, BuildTab, UserProgress } from "@/domain/models";
+
 import { createImportedBuild, createInitialProgress, rehydrateImportedBuild } from "@/services/importer";
 import { getSuggestedPobTreeSpecForLevel } from "@/services/pob-selectors";
 import { findStageForLevel, getCurrentStage, getNextObjectives } from "@/store/selectors";
@@ -22,12 +23,13 @@ interface AppActions {
   setPobTreeSpec: (buildId: string, specId: string) => void;
   setActiveTab: (tab: BuildTab) => void;
   cycleTab: (direction: Direction) => void;
-  toggleOverlayMode: () => void;
+
   setPlayerLevel: (buildId: string, level: number) => void;
   toggleChecklist: (buildId: string, itemId: string) => void;
   markNextObjective: (buildId: string) => void;
   togglePin: (buildId: string, itemId: string) => void;
   togglePinNextObjective: (buildId: string) => void;
+  setOverlayOpacity: (opacity: number) => void;
 }
 
 interface AppStoreValue {
@@ -44,19 +46,19 @@ type Action =
   | { type: "set-pob-tree-spec"; buildId: string; specId: string }
   | { type: "set-active-tab"; tab: BuildTab }
   | { type: "cycle-tab"; direction: Direction }
-  | { type: "toggle-overlay-mode" }
   | { type: "set-player-level"; buildId: string; level: number }
   | { type: "toggle-checklist"; buildId: string; itemId: string }
   | { type: "mark-next-objective"; buildId: string }
   | { type: "toggle-pin"; buildId: string; itemId: string }
-  | { type: "toggle-pin-next-objective"; buildId: string };
+  | { type: "toggle-pin-next-objective"; buildId: string }
+  | { type: "set-overlay-opacity"; opacity: number };
 
 const defaultState: AppState = {
   builds: [],
   selectedBuildId: null,
   progressByBuildId: {},
   activeTab: "overview",
-  overlayMode: "compact",
+  overlayOpacity: 85,
 };
 
 const AppStoreContext = createContext<AppStoreValue | null>(null);
@@ -75,7 +77,7 @@ function normalizeState(candidate: Partial<AppState>): AppState {
     selectedBuildId,
     progressByBuildId: candidate.progressByBuildId ?? {},
     activeTab: candidate.activeTab ?? "overview",
-    overlayMode: candidate.overlayMode ?? "compact",
+    overlayOpacity: candidate.overlayOpacity ?? 85,
   };
 }
 
@@ -225,11 +227,6 @@ function reducer(state: AppState, action: Action): AppState {
         activeTab: BUILD_TABS[nextIndex],
       };
     }
-    case "toggle-overlay-mode":
-      return {
-        ...state,
-        overlayMode: state.overlayMode === "compact" ? "expanded" : "compact",
-      };
     case "set-player-level":
       {
         const nextLevel = Math.max(1, Math.min(100, action.level));
@@ -326,6 +323,11 @@ function reducer(state: AppState, action: Action): AppState {
         itemId: nextObjective.id,
       });
     }
+    case "set-overlay-opacity":
+      return {
+        ...state,
+        overlayOpacity: Math.max(20, Math.min(100, action.opacity)),
+      };
     default:
       return state;
   }
@@ -382,7 +384,6 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
       dispatch({ type: "set-pob-tree-spec", buildId, specId }),
     setActiveTab: (tab) => dispatch({ type: "set-active-tab", tab }),
     cycleTab: (direction) => dispatch({ type: "cycle-tab", direction }),
-    toggleOverlayMode: () => dispatch({ type: "toggle-overlay-mode" }),
     setPlayerLevel: (buildId, level) => dispatch({ type: "set-player-level", buildId, level }),
     toggleChecklist: (buildId, itemId) =>
       dispatch({ type: "toggle-checklist", buildId, itemId }),
@@ -390,6 +391,8 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
     togglePin: (buildId, itemId) => dispatch({ type: "toggle-pin", buildId, itemId }),
     togglePinNextObjective: (buildId) =>
       dispatch({ type: "toggle-pin-next-objective", buildId }),
+    setOverlayOpacity: (opacity) =>
+      dispatch({ type: "set-overlay-opacity", opacity }),
   };
 
   return (

@@ -161,6 +161,10 @@ const zhCN: Record<TranslationKey, string> = {
   "tree.pointCount": "{{count}} 点",
   "tree.fullRoadmap": "完整路线图",
   "tree.progressionOrder": "升级顺序",
+  "tree.loading": "正在加载天赋树资源…",
+  "tree.loadFailed": "加载天赋树资源失败。",
+  "tree.loadFailedHint": "请检查网络连接——精灵图从 PoE CDN 加载。",
+  "tree.retry": "重试",
 
   // ── 宝石标签页 ──
   "gems.linksAndGems": "连接与宝石",
@@ -170,6 +174,7 @@ const zhCN: Record<TranslationKey, string> = {
   "gems.primaryGem": "主宝石",
   "gems.activeLink": "当前连接",
   "gems.groupBench": "组合工作台",
+  "gems.groupCount": "{{count}} 个组",
 
   // ── 装备标签页 ──
   "gear.exactGear": "PoB 精确装备",
@@ -259,6 +264,8 @@ const zhCN: Record<TranslationKey, string> = {
     "请输入 Path of Building 链接、代码或文件。",
   "electron.downloadFailed":
     "下载 Path of Building 失败 ({{status}})。",
+  "electron.networkTimeout": "下载超时。请检查网络连接后重试，或直接粘贴 PoB 代码。",
+  "electron.networkError": "无法连接到服务器。请检查网络连接，或直接粘贴导出的 PoB 代码。",
   "electron.trayOpen": "打开 Exile Build PoE",
   "electron.trayShowOverlay": "显示悬浮窗",
   "electron.trayQuit": "退出",
@@ -283,7 +290,23 @@ const zhCN: Record<TranslationKey, string> = {
   "settings.hotkeyHelp": "点击快捷键进行更改。按 Escape 取消。",
   "settings.hotkeyPress": "按下按键...",
   "settings.hotkeyReset": "恢复默认",
+  "settings.overlayOpacity": "覆盖层透明度",
   "settings.language": "语言",
+
+  // ── 帮助 / 新手引导 ──
+  "help.title": "快速入门",
+  "help.step1Title": "从 PoB 导出",
+  "help.step1Desc":
+    "在 Path of Building 中，前往 Import/Export，复制构建代码或生成 pobb.in 链接。",
+  "help.step2Title": "在这里导入",
+  "help.step2Desc":
+    "将代码或链接粘贴到左侧导入区域，或拖入 .xml 文件。",
+  "help.step3Title": "使用悬浮窗",
+  "help.step3Desc":
+    "通过快捷键打开悬浮窗，在游戏中跟随构建，无需 Alt-Tab。",
+  "help.tip": "提示",
+  "help.tipDesc":
+    "在 PoE 中使用无边框窗口或窗口模式。独占全屏可能会遮挡悬浮窗。",
 
   // ── 语言选择 ──
   "locale.label": "语言",

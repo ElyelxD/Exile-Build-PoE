@@ -52,8 +52,8 @@ export function MainShell() {
   const { state, actions } = useAppStore();
   const { t, locale, setLocale } = useI18n();
   const [importMode, setImportMode] = useState<ImportMode>("paste");
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
+  const [openPanel, setOpenPanel] = useState<"hotkeys" | "lang" | "help" | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [sourceValue, setSourceValue] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("");
   const [error, setError] = useState("");
@@ -65,12 +65,12 @@ export function MainShell() {
   const [hotkeys, setHotkeys] = useState<HotkeyConfig | null>(null);
   const [recordingAction, setRecordingAction] = useState<HotkeyAction | null>(null);
 
-  // Load hotkeys when settings open
+  // Load hotkeys when hotkeys panel opens
   useEffect(() => {
-    if (settingsOpen && !hotkeys && window.desktop?.getHotkeys) {
+    if (openPanel === "hotkeys" && !hotkeys && window.desktop?.getHotkeys) {
       window.desktop.getHotkeys().then(setHotkeys);
     }
-  }, [settingsOpen, hotkeys]);
+  }, [openPanel, hotkeys]);
 
   // Keyboard listener for recording mode
   useEffect(() => {
@@ -147,15 +147,15 @@ export function MainShell() {
   }, []);
 
   useEffect(() => {
-    if (!settingsOpen) return;
+    if (!openPanel) return;
     const handleClick = (e: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
-        setSettingsOpen(false);
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setOpenPanel(null);
       }
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [settingsOpen]);
+  }, [openPanel]);
 
   const sourceLabel =
     importMode === "paste"
@@ -402,32 +402,53 @@ export function MainShell() {
                 : t("header.importPrompt")}
             </p>
           </div>
-          <div className="inline-actions header-actions">
-            {build && (
+          <div className="header-actions">
+            <div className="header-tools" ref={panelRef}>
+              {/* Shortcuts icon */}
               <button
-                className="ghost-button"
-                onClick={() => actions.markNextObjective(build.id)}
+                className={`tool-trigger${openPanel === "hotkeys" ? " is-active" : ""}`}
+                onClick={() => setOpenPanel(openPanel === "hotkeys" ? null : "hotkeys")}
                 type="button"
-              >
-                {t("header.markNext")}
-              </button>
-            )}
-            <button className="primary-button" onClick={toggleOverlay} type="button">
-              {t("header.openOverlay")}
-            </button>
-            <div className="settings-picker" ref={settingsRef}>
-              <button
-                className="settings-trigger"
-                onClick={() => setSettingsOpen((v) => !v)}
-                type="button"
-                aria-label={t("settings.heading")}
+                aria-label={t("settings.hotkeys")}
+                title={t("settings.hotkeys")}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                  <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8" />
                 </svg>
               </button>
-              {settingsOpen && (
+
+              {/* Language icon */}
+              <button
+                className={`tool-trigger${openPanel === "lang" ? " is-active" : ""}`}
+                onClick={() => setOpenPanel(openPanel === "lang" ? null : "lang")}
+                type="button"
+                aria-label={t("settings.language")}
+                title={t("settings.language")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z" />
+                </svg>
+              </button>
+
+              {/* Help icon */}
+              <button
+                className={`tool-trigger${openPanel === "help" ? " is-active" : ""}`}
+                onClick={() => setOpenPanel(openPanel === "help" ? null : "help")}
+                type="button"
+                aria-label={t("help.title")}
+                title={t("help.title")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </button>
+
+              {/* Hotkeys dropdown */}
+              {openPanel === "hotkeys" && (
                 <div className="settings-dropdown">
                   <span className="settings-section-title">{t("settings.hotkeys")}</span>
                   <span className="settings-help">{t("settings.hotkeyHelp")}</span>
@@ -457,6 +478,25 @@ export function MainShell() {
                     </button>
                   )}
                   <hr className="settings-divider" />
+                  <span className="settings-section-title">{t("settings.overlayOpacity")}</span>
+                  <div className="opacity-slider-row">
+                    <input
+                      type="range"
+                      className="opacity-slider"
+                      min={20}
+                      max={100}
+                      step={5}
+                      value={state.overlayOpacity}
+                      onChange={(e) => actions.setOverlayOpacity(Number(e.target.value))}
+                    />
+                    <span className="opacity-value">{state.overlayOpacity}%</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Language dropdown */}
+              {openPanel === "lang" && (
+                <div className="settings-dropdown">
                   <span className="settings-section-title">{t("settings.language")}</span>
                   {SUPPORTED_LOCALES.map((loc) => (
                     <button
@@ -464,7 +504,7 @@ export function MainShell() {
                       key={loc.value}
                       onClick={() => {
                         setLocale(loc.value);
-                        setSettingsOpen(false);
+                        setOpenPanel(null);
                       }}
                       type="button"
                     >
@@ -472,6 +512,39 @@ export function MainShell() {
                       <span>{loc.label}</span>
                     </button>
                   ))}
+                </div>
+              )}
+
+              {/* Help dropdown */}
+              {openPanel === "help" && (
+                <div className="settings-dropdown help-dropdown">
+                  <span className="settings-section-title">{t("help.title")}</span>
+                  <div className="help-step">
+                    <span className="help-step-num">1</span>
+                    <div>
+                      <strong>{t("help.step1Title")}</strong>
+                      <p>{t("help.step1Desc")}</p>
+                    </div>
+                  </div>
+                  <div className="help-step">
+                    <span className="help-step-num">2</span>
+                    <div>
+                      <strong>{t("help.step2Title")}</strong>
+                      <p>{t("help.step2Desc")}</p>
+                    </div>
+                  </div>
+                  <div className="help-step">
+                    <span className="help-step-num">3</span>
+                    <div>
+                      <strong>{t("help.step3Title")}</strong>
+                      <p>{t("help.step3Desc")}</p>
+                    </div>
+                  </div>
+                  <hr className="settings-divider" />
+                  <div className="help-tip">
+                    <strong>{t("help.tip")}</strong>
+                    <p>{t("help.tipDesc")}</p>
+                  </div>
                 </div>
               )}
             </div>

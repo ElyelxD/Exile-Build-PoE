@@ -160,6 +160,10 @@ const en = {
   "tree.pointCount": "{{count}} points",
   "tree.fullRoadmap": "Full roadmap",
   "tree.progressionOrder": "Progression order",
+  "tree.loading": "Loading tree assets\u2026",
+  "tree.loadFailed": "Failed to load tree assets.",
+  "tree.loadFailedHint": "Check your internet connection \u2014 sprites are loaded from the PoE CDN.",
+  "tree.retry": "Retry",
 
   // ── Gems tab ──
   "gems.linksAndGems": "Links and gems",
@@ -169,6 +173,7 @@ const en = {
   "gems.primaryGem": "Primary gem",
   "gems.activeLink": "Active link",
   "gems.groupBench": "Group bench",
+  "gems.groupCount": "{{count}} groups",
 
   // ── Gear tab ──
   "gear.exactGear": "Exact gear from PoB",
@@ -259,7 +264,11 @@ const en = {
   "electron.emptyImport":
     "Enter a Path of Building link, code, or file.",
   "electron.downloadFailed":
-    "Failed to download Path of Building ({{status}}). The link may have expired — try generating a new pobb.in link.",
+    "Failed to download Path of Building ({{status}}). The link may have expired \u2014 try generating a new pobb.in link.",
+  "electron.networkTimeout":
+    "The download timed out. Check your internet connection and try again, or paste the PoB code directly.",
+  "electron.networkError":
+    "Could not connect to the server. Check your internet connection, or paste the exported PoB code directly instead of a link.",
   "electron.trayOpen": "Open Exile Build PoE",
   "electron.trayShowOverlay": "Show overlay",
   "electron.trayQuit": "Quit",
@@ -284,7 +293,23 @@ const en = {
   "settings.hotkeyHelp": "Click a shortcut to change it. Press Escape to cancel.",
   "settings.hotkeyPress": "Press keys...",
   "settings.hotkeyReset": "Reset defaults",
+  "settings.overlayOpacity": "Overlay opacity",
   "settings.language": "Language",
+
+  // ── Help / onboarding ──
+  "help.title": "Getting Started",
+  "help.step1Title": "Export from PoB",
+  "help.step1Desc":
+    "In Path of Building, go to Import/Export and copy the build code or generate a pobb.in link.",
+  "help.step2Title": "Import here",
+  "help.step2Desc":
+    "Paste the code or link in the Import section on the left sidebar, or drop a .xml file.",
+  "help.step3Title": "Use the overlay",
+  "help.step3Desc":
+    "Open the overlay with the hotkey and follow your build in-game without alt-tabbing.",
+  "help.tip": "Tip",
+  "help.tipDesc":
+    "Use Borderless Window or Windowed mode in PoE. Exclusive fullscreen may block the overlay.",
 
   // ── Locale picker ──
   "locale.label": "Language",

@@ -117,6 +117,50 @@ function formatIdentifier(rawValue: string) {
     .trim();
 }
 
+import gemColorsData from "@/data/gem-colors.json";
+
+/** Lookup gem color from the 740+ gem database (poegems.com). */
+const GEM_COLOR_DB = gemColorsData as Record<string, string>;
+
+function classifyGemColor(_skillId: string, name: string): import("@/domain/models").GemColor {
+  // Try exact match first
+  let code = GEM_COLOR_DB[name];
+
+  // Try stripping parenthetical suffix: "Absolution (Absolution)" → "Absolution"
+  if (!code && name.includes("(")) {
+    code = GEM_COLOR_DB[name.replace(/\s*\([^)]*\)\s*$/, "").trim()];
+  }
+
+  // Try with "Support" suffix for support gems without it in the DB
+  if (!code && !name.includes("Support")) {
+    code = GEM_COLOR_DB[`${name} Support`];
+  }
+
+  // Try without "Vaal " prefix
+  if (!code && /^vaal /i.test(name)) {
+    code = GEM_COLOR_DB[name.replace(/^Vaal /i, "")];
+  }
+
+  // Try without "Awakened " prefix
+  if (!code && /^awakened /i.test(name)) {
+    code = GEM_COLOR_DB[name.replace(/^Awakened /i, "")];
+  }
+
+  // Case-insensitive fallback
+  if (!code) {
+    const lower = name.toLowerCase();
+    for (const [k, v] of Object.entries(GEM_COLOR_DB)) {
+      if (k.toLowerCase() === lower) { code = v; break; }
+    }
+  }
+
+  if (code === "R") return "red";
+  if (code === "G") return "green";
+  if (code === "B") return "blue";
+  if (code === "W") return "white";
+  return "blue";
+}
+
 function buildGemName(skillId: string, nameSpec: string) {
   const baseName = skillId ? formatIdentifier(skillId) : "";
 
@@ -133,6 +177,36 @@ function buildGemName(skillId: string, nameSpec: string) {
   }
 
   return baseName || t("importer.importedGem");
+}
+
+/** Extract itemLevel, quality, corrupted, and influence from PoB rawText metadata lines. */
+function parseItemMetadata(rawText: string) {
+  const lines = rawText.split(/\r?\n/);
+  let itemLevel: number | undefined;
+  let quality: number | undefined;
+  let corrupted = false;
+  const influences: import("@/domain/models").ItemInfluence[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    const ilvlMatch = trimmed.match(/^Item Level:\s*(\d+)/i);
+    if (ilvlMatch) { itemLevel = Number(ilvlMatch[1]); continue; }
+
+    const qualMatch = trimmed.match(/^Quality:\s*(\d+)/i);
+    if (qualMatch) { quality = Number(qualMatch[1]); continue; }
+
+    if (/^Corrupted$/i.test(trimmed)) { corrupted = true; continue; }
+
+    if (/^Shaper Item$/i.test(trimmed)) { influences.push("shaper"); continue; }
+    if (/^Elder Item$/i.test(trimmed)) { influences.push("elder"); continue; }
+    if (/^Crusader Item$/i.test(trimmed)) { influences.push("crusader"); continue; }
+    if (/^Hunter Item$/i.test(trimmed)) { influences.push("hunter"); continue; }
+    if (/^Redeemer Item$/i.test(trimmed)) { influences.push("redeemer"); continue; }
+    if (/^Warlord Item$/i.test(trimmed)) { influences.push("warlord"); continue; }
+  }
+
+  return { itemLevel, quality, corrupted, influences };
 }
 
 function extractLevelHint(title: string) {
@@ -618,16 +692,41 @@ function parsePobData(xml: string): {
 
     childElements(skillSet, "Skill").forEach((skill, groupIndex) => {
       const gems: PobGem[] = childElements(skill, "Gem").map((gem, gemIndex) => {
-        const skillId = attribute(gem, "skillId");
-        const nameSpec = attribute(gem, "nameSpec");
+        const skillId = attribute(gem, "skillId") || "";
+        const nameSpec = attribute(gem, "nameSpec") || "";
+        const name = buildGemName(skillId, nameSpec);
+        const lowerName = name.toLowerCase();
+        const lowerSkillId = skillId.toLowerCase();
+
+        // Detect support, vaal, awakened
+        const isSupport =
+          lowerSkillId.includes("support") || lowerName.includes("support");
+        const isVaal = lowerName.startsWith("vaal ");
+        const isAwakened = lowerName.startsWith("awakened ");
+
+        // Alternate quality
+        const qualityIdRaw = attribute(gem, "qualityId") || "Default";
+        const qualityType = (
+          ["Default", "Anomalous", "Divergent", "Phantasmal"].includes(qualityIdRaw)
+            ? qualityIdRaw
+            : "Default"
+        ) as import("@/domain/models").GemQualityType;
+
+        // Gem color: infer from skill path or keywords
+        const gemColor = classifyGemColor(skillId, name);
 
         return {
           id: `${setId}-${groupIndex + 1}-${gemIndex + 1}`,
-          name: buildGemName(skillId, nameSpec),
+          name,
           rawName: skillId || nameSpec || `Gem ${gemIndex + 1}`,
           level: attributeNumber(gem, "level"),
           quality: attributeNumber(gem, "quality"),
           enabled: attributeBoolean(gem, "enabled"),
+          isSupport: isSupport || undefined,
+          isVaal: isVaal || undefined,
+          isAwakened: isAwakened || undefined,
+          qualityType: qualityType !== "Default" ? qualityType : undefined,
+          gemColor,
         };
       });
 
@@ -687,6 +786,7 @@ function parsePobData(xml: string): {
       .map((slot) => {
         const rawText = rawItemsById.get(slot.itemId!) ?? "";
         const parsed = parseItemHeader(rawText);
+        const meta = parseItemMetadata(rawText);
 
         return {
           id: `${itemSet.id}-${slot.name}`,
@@ -697,6 +797,10 @@ function parsePobData(xml: string): {
           baseType: parsed.baseType,
           rarity: parsed.rarity,
           rawText,
+          itemLevel: meta.itemLevel,
+          quality: meta.quality,
+          corrupted: meta.corrupted || undefined,
+          influences: meta.influences.length > 0 ? meta.influences : undefined,
         };
       }),
   );
@@ -892,7 +996,7 @@ function createCharacterCards(buildId: string, ascendancy: string, pob: PobData)
   }));
 }
 
-const TREE_VERSION_TO_LEAGUE: Record<string, string> = {
+export const TREE_VERSION_TO_LEAGUE: Record<string, string> = {
   "3_28": "3.28 Mirage",
   "3_27": "3.27 Early Access",
   "3_26": "3.26 Dawn",

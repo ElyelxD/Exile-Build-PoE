@@ -65,17 +65,31 @@ export function isLoaded(key: SheetKey): boolean {
   return imageCache.has(sheets[key]);
 }
 
-/** Start loading all sprite sheets. Returns a promise that resolves when all are loaded. */
+/** Critical sheets that must load for the tree to render. */
+const CRITICAL_SHEETS: SheetKey[] = ["active", "inactive", "frame"];
+
+/** Start loading all sprite sheets. Rejects if critical sheets fail. */
 export async function loadAllSheets(): Promise<void> {
   const urls = Object.values(sheets).filter(Boolean);
   // Deduplicate (groupBackground and startNode share the same PNG)
   const unique = [...new Set(urls)];
   const results = await Promise.allSettled(unique.map(loadImage));
 
+  const failedUrls: string[] = [];
   for (let i = 0; i < results.length; i++) {
     if (results[i].status === "rejected") {
-      console.warn("[tree-sprites] Failed to load:", unique[i]);
+      failedUrls.push(unique[i]);
     }
+  }
+
+  if (failedUrls.length === 0) return;
+
+  // Check if any critical sheet failed
+  const criticalUrls = CRITICAL_SHEETS.map((k) => sheets[k]);
+  const criticalFailed = failedUrls.some((url) => criticalUrls.includes(url));
+
+  if (criticalFailed) {
+    throw new Error(`Failed to load critical tree sprites (${failedUrls.length} sheet(s) failed)`);
   }
 }
 

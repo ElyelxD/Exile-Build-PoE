@@ -23,6 +23,12 @@ export function OverlayWindow() {
     document.body.dataset.view = "overlay";
   }, []);
 
+  // Apply overlay opacity as CSS variable
+  useEffect(() => {
+    const alpha = (state.overlayOpacity / 100).toFixed(2);
+    document.documentElement.style.setProperty("--overlay-opacity", alpha);
+  }, [state.overlayOpacity]);
+
   if (!build || !progress || !currentStage) {
     return (
       <div className="overlay-route">
@@ -47,9 +53,9 @@ export function OverlayWindow() {
         onSetPlayerLevel={(level) => actions.setPlayerLevel(build.id, level)}
         onSetTab={actions.setActiveTab}
         onToggleChecklist={(itemId) => actions.toggleChecklist(build.id, itemId)}
-        onToggleMode={actions.toggleOverlayMode}
         onTogglePin={(itemId) => actions.togglePin(build.id, itemId)}
-        overlayMode={state.overlayMode}
+        overlayOpacity={state.overlayOpacity}
+        onSetOverlayOpacity={actions.setOverlayOpacity}
         pinnedItems={pinnedItems}
         progress={progress}
         variant="live"

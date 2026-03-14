@@ -63,7 +63,8 @@
       {
         "provider": "github",
         "owner": "Elyelx",
-        "repo": "Exile-Build-PoE"
+        "repo": "Exile-Build-PoE",
+        "releaseType": "release"
       }
     ],
     "win": {

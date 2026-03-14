@@ -161,6 +161,10 @@ const ru: Record<TranslationKey, string> = {
   "tree.pointCount": "{{count}} очков",
   "tree.fullRoadmap": "Полный роадмап",
   "tree.progressionOrder": "Порядок прокачки",
+  "tree.loading": "Загрузка ресурсов дерева…",
+  "tree.loadFailed": "Не удалось загрузить ресурсы дерева.",
+  "tree.loadFailedHint": "Проверьте подключение к интернету — спрайты загружаются с CDN PoE.",
+  "tree.retry": "Повторить",
 
   // ── Gems tab ──
   "gems.linksAndGems": "Линки и гемы",
@@ -170,6 +174,7 @@ const ru: Record<TranslationKey, string> = {
   "gems.primaryGem": "Основной гем",
   "gems.activeLink": "Активный линк",
   "gems.groupBench": "Стол группы",
+  "gems.groupCount": "{{count}} групп",
 
   // ── Gear tab ──
   "gear.exactGear": "Точная экипировка из PoB",
@@ -259,6 +264,8 @@ const ru: Record<TranslationKey, string> = {
     "Введи ссылку, код или файл Path of Building.",
   "electron.downloadFailed":
     "Не удалось скачать Path of Building ({{status}}).",
+  "electron.networkTimeout": "Время загрузки истекло. Проверьте подключение и попробуйте снова, или вставьте код PoB напрямую.",
+  "electron.networkError": "Не удалось подключиться к серверу. Проверьте подключение, или вставьте экспортированный код PoB напрямую.",
   "electron.trayOpen": "Открыть Exile Build PoE",
   "electron.trayShowOverlay": "Показать оверлей",
   "electron.trayQuit": "Выход",
@@ -283,7 +290,23 @@ const ru: Record<TranslationKey, string> = {
   "settings.hotkeyHelp": "Нажмите на клавишу, чтобы изменить. Escape для отмены.",
   "settings.hotkeyPress": "Нажмите клавиши...",
   "settings.hotkeyReset": "Сбросить",
+  "settings.overlayOpacity": "Прозрачность оверлея",
   "settings.language": "Язык",
+
+  // ── Help / onboarding ──
+  "help.title": "Начало работы",
+  "help.step1Title": "Экспорт из PoB",
+  "help.step1Desc":
+    "В Path of Building перейдите в Import/Export и скопируйте код билда или создайте ссылку pobb.in.",
+  "help.step2Title": "Импортируйте сюда",
+  "help.step2Desc":
+    "Вставьте код или ссылку в разделе Импорт на боковой панели или перетащите .xml файл.",
+  "help.step3Title": "Используйте оверлей",
+  "help.step3Desc":
+    "Откройте оверлей горячей клавишей и следуйте билду в игре без Alt-Tab.",
+  "help.tip": "Совет",
+  "help.tipDesc":
+    "Используйте Borderless Window или Windowed в PoE. Эксклюзивный полноэкранный режим может блокировать оверлей.",
 
   // ── Locale picker ──
   "locale.label": "Язык",

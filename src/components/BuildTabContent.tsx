@@ -21,6 +21,7 @@ import {
   getActivePobSkillGroups,
   getActivePobTreeSpec,
 } from "@/services/pob-selectors";
+import { TREE_VERSION_TO_LEAGUE } from "@/services/importer";
 import { useI18n } from "@/i18n";
 import { PassiveTreeCanvas, JewelSocketInfo } from "@/components/PassiveTreeCanvas";
 import { decodeTreeUrl } from "@/services/tree-decoder";
@@ -356,7 +357,7 @@ function SkillBoard({
 
                 return (
                   <div
-                    className={`skill-node ${index === 0 ? "is-primary" : ""}`}
+                    className={`skill-node ${index === 0 ? "is-primary" : ""}${gem.isSupport ? " is-support" : ""}`}
                     key={gem.id}
                   >
                     {index < displayGems.length - 1 && <span className="skill-link" />}
@@ -367,7 +368,12 @@ function SkillBoard({
                       rawName={gem.rawName}
                     />
                     <div className="skill-copy">
-                      <strong>{sanitizePobInlineText(gem.name)}</strong>
+                      <span className="skill-name-row">
+                        <strong>{sanitizePobInlineText(gem.name)}</strong>
+                        {gem.isVaal && <span className="gem-badge gem-badge--vaal">Vaal</span>}
+                        {gem.isAwakened && <span className="gem-badge gem-badge--awakened">Awk</span>}
+                        {gem.qualityType && <span className="gem-badge gem-badge--quality">{gem.qualityType}</span>}
+                      </span>
                       <span>{meta || (index === 0 ? t("gems.primaryGem") : t("gems.activeLink"))}</span>
                     </div>
                   </div>
@@ -429,6 +435,64 @@ function ItemSocketDisplay({ item }: { item: PobItem }) {
   );
 }
 
+const INFLUENCE_LABELS: Record<string, { short: string; color: string }> = {
+  shaper: { short: "Shaper", color: "#5085c4" },
+  elder: { short: "Elder", color: "#a080c0" },
+  crusader: { short: "Crusader", color: "#d4af37" },
+  hunter: { short: "Hunter", color: "#30a050" },
+  redeemer: { short: "Redeemer", color: "#60b0d0" },
+  warlord: { short: "Warlord", color: "#c04040" },
+};
+
+function ItemMetaBadges({ item }: { item: PobItem }) {
+  const badges: JSX.Element[] = [];
+
+  if (item.itemLevel) {
+    badges.push(
+      <span className="item-meta-badge item-meta-badge--ilvl" key="ilvl">
+        iLvl {item.itemLevel}
+      </span>
+    );
+  }
+
+  if (item.quality) {
+    badges.push(
+      <span className="item-meta-badge item-meta-badge--quality" key="q">
+        +{item.quality}% Q
+      </span>
+    );
+  }
+
+  if (item.influences) {
+    for (const inf of item.influences) {
+      const meta = INFLUENCE_LABELS[inf];
+      if (meta) {
+        badges.push(
+          <span
+            className="item-meta-badge item-meta-badge--influence"
+            key={inf}
+            style={{ borderColor: meta.color, color: meta.color }}
+          >
+            {meta.short}
+          </span>
+        );
+      }
+    }
+  }
+
+  if (item.corrupted) {
+    badges.push(
+      <span className="item-meta-badge item-meta-badge--corrupted" key="corr">
+        Corrupted
+      </span>
+    );
+  }
+
+  if (badges.length === 0) return null;
+
+  return <div className="item-meta-badges">{badges}</div>;
+}
+
 function ItemModBlock({ item, showTiers = true }: { item: PobItem; showTiers?: boolean }) {
   const detail = itemDetailedMods(item);
   const implicits = detail.mods.filter((m) => m.source === "implicit");
@@ -484,6 +548,7 @@ function FlaskExtraCard({ item, condensed }: { item: PobItem; condensed: boolean
           {!isGenericTitle && displayBase && (
             <span className="gear-item-base">{displayBase}</span>
           )}
+          <ItemMetaBadges item={item} />
         </div>
       </div>
       <ItemSocketDisplay item={item} />
@@ -556,6 +621,7 @@ function GearBoard({
                       {!isGenericTitle && displayBase && (
                         <span className="gear-item-base">{displayBase}</span>
                       )}
+                      <ItemMetaBadges item={item} />
                     </div>
                   </div>
                   <ItemSocketDisplay item={item} />
@@ -865,6 +931,11 @@ export function BuildTabContent({
                 height={condensed ? 350 : undefined}
               />
               <div className="tree-meta-row">
+                {activeTreeSpec?.treeVersion && (
+                  <span className="tree-version-badge">
+                    {TREE_VERSION_TO_LEAGUE[activeTreeSpec.treeVersion] ?? activeTreeSpec.treeVersion.replace(/_/g, ".")}
+                  </span>
+                )}
                 <span className="detail-meta">
                   {allocatedNodes.size > 0
                     ? `${allocatedNodes.size} ${t("tree.pointCount", { count: allocatedNodes.size })}`
@@ -940,12 +1011,38 @@ export function BuildTabContent({
         const visibleGroups = displayGroups.length > 0 ? displayGroups : pob.skillGroups;
         const activeSkillSetTitle = visibleGroups[0]?.setTitle ?? t("gems.activeSkillSet");
 
+        const gemsTreeVersion = activeTreeSpec?.treeVersion;
+        const gemsLeagueName = gemsTreeVersion
+          ? TREE_VERSION_TO_LEAGUE[gemsTreeVersion] ?? gemsTreeVersion.replace(/_/g, ".")
+          : null;
+
         return (
           <div className="content-stack">
             <section className="panel">
               <div className="section-heading">
                 <h3>{t("gems.linksAndGems")}</h3>
                 <span>{activeSkillSetTitle}</span>
+              </div>
+              <div className="tab-version-row">
+                {gemsLeagueName && (
+                  <span className="tree-version-badge">{gemsLeagueName}</span>
+                )}
+                <span className="detail-meta">
+                  {visibleGroups.length} {t("gems.groupCount", { count: visibleGroups.length })}
+                </span>
+                {pob.treeSpecs.length > 1 && (
+                  <select
+                    className="pob-spec-select pob-spec-select--inline"
+                    onChange={(event) => onSetPobTreeSpec?.(event.target.value)}
+                    value={activeTreeSpec?.id ?? ""}
+                  >
+                    {pob.treeSpecs.map((spec) => (
+                      <option key={spec.id} value={spec.id}>
+                        {spec.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <SkillBoard groups={visibleGroups} />
             </section>
@@ -989,8 +1086,34 @@ export function BuildTabContent({
 
     case "gear":
       if (pob) {
+        const gearTreeVersion = activeTreeSpec?.treeVersion;
+        const gearLeagueName = gearTreeVersion
+          ? TREE_VERSION_TO_LEAGUE[gearTreeVersion] ?? gearTreeVersion.replace(/_/g, ".")
+          : null;
+
         return (
           <div className="content-stack">
+            {pob.treeSpecs.length > 1 && (
+              <div className="tab-version-row">
+                {gearLeagueName && (
+                  <span className="tree-version-badge">{gearLeagueName}</span>
+                )}
+                <span className="detail-meta">
+                  {activeItemSet?.title ?? t("gear.exactGear")}
+                </span>
+                <select
+                  className="pob-spec-select pob-spec-select--inline"
+                  onChange={(event) => onSetPobTreeSpec?.(event.target.value)}
+                  value={activeTreeSpec?.id ?? ""}
+                >
+                  {pob.treeSpecs.map((spec) => (
+                    <option key={spec.id} value={spec.id}>
+                      {spec.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <GearBoard
               itemSetTitle={activeItemSet?.title ?? t("gear.exactGear")}
               items={condensed ? activePobItems.slice(0, 12) : activePobItems}

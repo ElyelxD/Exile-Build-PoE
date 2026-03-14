@@ -20,10 +20,23 @@ export function resolveGemIcon(gemName: string): string | undefined {
   const withoutParen = gemName.replace(/\s*\(.*\)\s*$/, "");
   if (withoutParen !== gemName && gems[withoutParen]) return gems[withoutParen];
 
-  // Strip "Vaal " prefix
   const base = withoutParen || gemName;
+
+  // Try adding "Support" suffix (formatIdentifier strips it, but icons use full names)
+  if (!base.includes("Support")) {
+    const withSupport = `${base} Support`;
+    if (gems[withSupport]) return gems[withSupport];
+  }
+
+  // Strip "Vaal " prefix
   const withoutVaal = base.replace(/^Vaal\s+/i, "");
-  if (withoutVaal !== base && gems[withoutVaal]) return gems[withoutVaal];
+  if (withoutVaal !== base) {
+    if (gems[withoutVaal]) return gems[withoutVaal];
+    // Also try "Vaal X" → "X Support"
+    if (!withoutVaal.includes("Support") && gems[`${withoutVaal} Support`]) {
+      return gems[`${withoutVaal} Support`];
+    }
+  }
 
   // Strip "Summon " prefix: "Summon Sentinel of Radiance" → "Sentinel of Radiance"
   const withoutSummon = base.replace(/^Summon\s+/i, "");
@@ -37,6 +50,11 @@ export function resolveGemIcon(gemName: string): string | undefined {
   const lowerName = base.toLowerCase();
   const match = Object.keys(gems).find((k) => k.toLowerCase() === lowerName);
   if (match) return gems[match];
+
+  // Case-insensitive with "Support" suffix
+  const lowerWithSupport = `${lowerName} support`;
+  const matchSupport = Object.keys(gems).find((k) => k.toLowerCase() === lowerWithSupport);
+  if (matchSupport) return gems[matchSupport];
 
   return undefined;
 }

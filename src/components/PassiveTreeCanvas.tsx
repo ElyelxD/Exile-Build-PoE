@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import treeRaw from "@/data/tree-default.json";
 import { buildClusterExpansions, type ClusterNode } from "@/services/cluster-expansion";
 import { getSheet, loadAllSheets, type SheetKey } from "@/services/tree-sprites";
+import { t } from "@/i18n";
 
 /* ── Types for the compact tree data ── */
 
@@ -1044,15 +1045,17 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
         <div className="tree-loading">
           {spriteError ? (
             <>
-              <span>Failed to load tree assets.</span>
+              <span>{t("tree.loadFailed")}</span>
+              <span className="tree-loading-hint">{t("tree.loadFailedHint")}</span>
               <button type="button" className="ghost-button" onClick={() => {
                 setSpriteError(false);
+                const retryTimeout = setTimeout(() => setSpriteError(true), 15_000);
                 loadAllSheets()
-                  .then(() => setSpritesReady(true))
-                  .catch(() => setSpriteError(true));
-              }}>Retry</button>
+                  .then(() => { clearTimeout(retryTimeout); setSpritesReady(true); })
+                  .catch(() => { clearTimeout(retryTimeout); setSpriteError(true); });
+              }}>{t("tree.retry")}</button>
             </>
-          ) : "Loading tree assets…"}
+          ) : t("tree.loading")}
         </div>
       )}
       {tooltip && (() => {

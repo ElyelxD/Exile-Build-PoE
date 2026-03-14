@@ -166,6 +166,10 @@ const ja: Record<TranslationKey, string> = {
   "tree.pointCount": "{{count}}ポイント",
   "tree.fullRoadmap": "全ロードマップ",
   "tree.progressionOrder": "進行順序",
+  "tree.loading": "ツリーアセットを読み込み中…",
+  "tree.loadFailed": "ツリーアセットの読み込みに失敗しました。",
+  "tree.loadFailedHint": "インターネット接続を確認してください — スプライトはPoE CDNから読み込まれます。",
+  "tree.retry": "再試行",
 
   // ── Gems tab ──
   "gems.linksAndGems": "リンクとジェム",
@@ -175,6 +179,7 @@ const ja: Record<TranslationKey, string> = {
   "gems.primaryGem": "メインジェム",
   "gems.activeLink": "アクティブリンク",
   "gems.groupBench": "グループベンチ",
+  "gems.groupCount": "{{count}} グループ",
 
   // ── Gear tab ──
   "gear.exactGear": "PoBからの正確な装備",
@@ -269,6 +274,8 @@ const ja: Record<TranslationKey, string> = {
     "Path of Buildingのリンク、コード、またはファイルを入力してください。",
   "electron.downloadFailed":
     "Path of Buildingのダウンロードに失敗しました（{{status}}）。",
+  "electron.networkTimeout": "ダウンロードがタイムアウトしました。接続を確認して再試行するか、PoBコードを直接貼り付けてください。",
+  "electron.networkError": "サーバーに接続できません。接続を確認するか、エクスポートしたPoBコードを直接貼り付けてください。",
   "electron.trayOpen": "Exile Build PoEを開く",
   "electron.trayShowOverlay": "オーバーレイを表示",
   "electron.trayQuit": "終了",
@@ -292,7 +299,23 @@ const ja: Record<TranslationKey, string> = {
   "settings.hotkeyHelp": "ショートカットをクリックして変更。Escapeでキャンセル。",
   "settings.hotkeyPress": "キーを押してください...",
   "settings.hotkeyReset": "デフォルトに戻す",
+  "settings.overlayOpacity": "オーバーレイの不透明度",
   "settings.language": "言語",
+
+  // ── ヘルプ / オンボーディング ──
+  "help.title": "はじめに",
+  "help.step1Title": "PoBからエクスポート",
+  "help.step1Desc":
+    "Path of BuildingでImport/Exportに移動し、ビルドコードをコピーするかpobb.inリンクを生成してください。",
+  "help.step2Title": "ここでインポート",
+  "help.step2Desc":
+    "サイドバーのインポートセクションにコードまたはリンクを貼り付けるか、.xmlファイルをドラッグしてください。",
+  "help.step3Title": "オーバーレイを使用",
+  "help.step3Desc":
+    "ホットキーでオーバーレイを開き、Alt-Tabなしでゲーム内でビルドを追跡できます。",
+  "help.tip": "ヒント",
+  "help.tipDesc":
+    "PoEではBorderless WindowまたはWindowedモードを使用してください。排他的フルスクリーンはオーバーレイをブロックする場合があります。",
 
   // ── Locale picker ──
   "locale.label": "言語",

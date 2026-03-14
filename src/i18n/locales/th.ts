@@ -163,6 +163,10 @@ const th: Record<TranslationKey, string> = {
   "tree.pointCount": "{{count}} พอยต์",
   "tree.fullRoadmap": "แผนทั้งหมด",
   "tree.progressionOrder": "ลำดับการเก็บ",
+  "tree.loading": "กำลังโหลดแอสเซทต้นไม้…",
+  "tree.loadFailed": "โหลดแอสเซทต้นไม้ล้มเหลว",
+  "tree.loadFailedHint": "ตรวจสอบการเชื่อมต่ออินเทอร์เน็ต — สไปรต์โหลดจาก PoE CDN",
+  "tree.retry": "ลองใหม่",
 
   // ── Gems tab ──
   "gems.linksAndGems": "ลิงก์และเจม",
@@ -172,6 +176,7 @@ const th: Record<TranslationKey, string> = {
   "gems.primaryGem": "เจมหลัก",
   "gems.activeLink": "ลิงก์ที่ใช้งาน",
   "gems.groupBench": "กลุ่มเจม",
+  "gems.groupCount": "{{count}} กลุ่ม",
 
   // ── Gear tab ──
   "gear.exactGear": "อุปกรณ์ตรงจาก PoB",
@@ -261,6 +266,8 @@ const th: Record<TranslationKey, string> = {
     "กรุณาใส่ลิงก์ โค้ด หรือไฟล์ Path of Building",
   "electron.downloadFailed":
     "ดาวน์โหลด Path of Building ไม่สำเร็จ ({{status}})",
+  "electron.networkTimeout": "การดาวน์โหลดหมดเวลา ตรวจสอบการเชื่อมต่อแล้วลองใหม่ หรือวางโค้ด PoB โดยตรง",
+  "electron.networkError": "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ ตรวจสอบการเชื่อมต่อ หรือวางโค้ด PoB ที่ส่งออกมาโดยตรง",
   "electron.trayOpen": "เปิด Exile Build PoE",
   "electron.trayShowOverlay": "แสดงโอเวอร์เลย์",
   "electron.trayQuit": "ออก",
@@ -285,7 +292,23 @@ const th: Record<TranslationKey, string> = {
   "settings.hotkeyHelp": "คลิกที่ปุ่มลัดเพื่อเปลี่ยน กด Escape เพื่อยกเลิก",
   "settings.hotkeyPress": "กดปุ่ม...",
   "settings.hotkeyReset": "รีเซ็ต",
+  "settings.overlayOpacity": "ความทึบของโอเวอร์เลย์",
   "settings.language": "ภาษา",
+
+  // ── ช่วยเหลือ / เริ่มต้นใช้งาน ──
+  "help.title": "เริ่มต้นใช้งาน",
+  "help.step1Title": "ส่งออกจาก PoB",
+  "help.step1Desc":
+    "ใน Path of Building ไปที่ Import/Export และคัดลอกโค้ดบิลด์หรือสร้างลิงก์ pobb.in",
+  "help.step2Title": "นำเข้าที่นี่",
+  "help.step2Desc":
+    "วางโค้ดหรือลิงก์ในส่วนนำเข้าที่แถบด้านข้าง หรือลากไฟล์ .xml",
+  "help.step3Title": "ใช้โอเวอร์เลย์",
+  "help.step3Desc":
+    "เปิดโอเวอร์เลย์ด้วยปุ่มลัดและติดตามบิลด์ในเกมโดยไม่ต้อง Alt-Tab",
+  "help.tip": "เคล็ดลับ",
+  "help.tipDesc":
+    "ใช้ Borderless Window หรือ Windowed ใน PoE โหมดเต็มจออาจบล็อกโอเวอร์เลย์",
 
   // ── Locale picker ──
   "locale.label": "ภาษา",

@@ -161,6 +161,10 @@ const es: Record<TranslationKey, string> = {
   "tree.pointCount": "{{count}} puntos",
   "tree.fullRoadmap": "Hoja de ruta completa",
   "tree.progressionOrder": "Orden de progresión",
+  "tree.loading": "Cargando assets del árbol…",
+  "tree.loadFailed": "Error al cargar los assets del árbol.",
+  "tree.loadFailedHint": "Revisa tu conexión — los sprites se cargan desde el CDN de PoE.",
+  "tree.retry": "Reintentar",
 
   // ── Gems tab ──
   "gems.linksAndGems": "Links y gems",
@@ -170,6 +174,7 @@ const es: Record<TranslationKey, string> = {
   "gems.primaryGem": "Gem principal",
   "gems.activeLink": "Link activo",
   "gems.groupBench": "Banco de grupo",
+  "gems.groupCount": "{{count}} grupos",
 
   // ── Gear tab ──
   "gear.exactGear": "Gear exacto de PoB",
@@ -259,6 +264,8 @@ const es: Record<TranslationKey, string> = {
     "Introduce un enlace, código o archivo de Path of Building.",
   "electron.downloadFailed":
     "Error al descargar Path of Building ({{status}}).",
+  "electron.networkTimeout": "La descarga expiró. Revisa tu conexión e intenta de nuevo, o pega el código de PoB directamente.",
+  "electron.networkError": "No se pudo conectar al servidor. Revisa tu conexión, o pega el código exportado de PoB directamente.",
   "electron.trayOpen": "Abrir Exile Build PoE",
   "electron.trayShowOverlay": "Mostrar overlay",
   "electron.trayQuit": "Salir",
@@ -283,7 +290,23 @@ const es: Record<TranslationKey, string> = {
   "settings.hotkeyHelp": "Haz clic en un atajo para cambiarlo. Presiona Escape para cancelar.",
   "settings.hotkeyPress": "Presiona teclas...",
   "settings.hotkeyReset": "Restaurar predeterminados",
+  "settings.overlayOpacity": "Opacidad del overlay",
   "settings.language": "Idioma",
+
+  // ── Help / onboarding ──
+  "help.title": "Primeros Pasos",
+  "help.step1Title": "Exporta desde PoB",
+  "help.step1Desc":
+    "En Path of Building, ve a Import/Export y copia el código de build o genera un enlace pobb.in.",
+  "help.step2Title": "Importa aquí",
+  "help.step2Desc":
+    "Pega el código o enlace en la sección Importar de la barra lateral, o arrastra un archivo .xml.",
+  "help.step3Title": "Usa el overlay",
+  "help.step3Desc":
+    "Abre el overlay con el atajo y sigue tu build en el juego sin alt-tab.",
+  "help.tip": "Consejo",
+  "help.tipDesc":
+    "Usa Borderless Window o Windowed en PoE. Fullscreen exclusivo puede bloquear el overlay.",
 
   // ── Locale picker ──
   "locale.label": "Idioma",

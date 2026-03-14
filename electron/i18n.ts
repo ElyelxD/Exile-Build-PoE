@@ -36,6 +36,10 @@ const en: Record<string, string> = {
     "Enter a Path of Building link, code, or file.",
   "electron.downloadFailed":
     "Failed to download Path of Building ({{status}}).",
+  "electron.networkTimeout":
+    "The download timed out. Check your internet connection and try again, or paste the PoB code directly.",
+  "electron.networkError":
+    "Could not connect to the server. Check your internet connection, or paste the exported PoB code directly instead of a link.",
   "electron.trayOpen": "Open Exile Build PoE",
   "electron.trayShowOverlay": "Show overlay",
   "electron.trayQuit": "Quit",
@@ -67,6 +71,10 @@ const ptBR: Record<string, string> = {
     "Informe um link, código ou arquivo do Path of Building.",
   "electron.downloadFailed":
     "Falha ao baixar o Path of Building ({{status}}).",
+  "electron.networkTimeout":
+    "O download expirou. Verifique sua conexão e tente novamente, ou cole o código do PoB diretamente.",
+  "electron.networkError":
+    "Não foi possível conectar ao servidor. Verifique sua conexão, ou cole o código exportado do PoB diretamente.",
   "electron.trayOpen": "Abrir Exile Build PoE",
   "electron.trayShowOverlay": "Mostrar overlay",
   "electron.trayQuit": "Sair",
@@ -97,6 +105,10 @@ const es: Record<string, string> = {
     "Introduce un enlace, código o archivo de Path of Building.",
   "electron.downloadFailed":
     "Error al descargar Path of Building ({{status}}).",
+  "electron.networkTimeout":
+    "La descarga expiró. Revisa tu conexión e intenta de nuevo, o pega el código de PoB directamente.",
+  "electron.networkError":
+    "No se pudo conectar al servidor. Revisa tu conexión, o pega el código exportado de PoB directamente.",
   "electron.trayOpen": "Abrir Exile Build PoE",
   "electron.trayShowOverlay": "Mostrar overlay",
   "electron.trayQuit": "Salir",
@@ -127,6 +139,10 @@ const fr: Record<string, string> = {
     "Entre un lien, un code ou un fichier Path of Building.",
   "electron.downloadFailed":
     "Échec du téléchargement de Path of Building ({{status}}).",
+  "electron.networkTimeout":
+    "Le téléchargement a expiré. Vérifiez votre connexion et réessayez, ou collez le code PoB directement.",
+  "electron.networkError":
+    "Impossible de se connecter au serveur. Vérifiez votre connexion, ou collez le code PoB exporté directement.",
   "electron.trayOpen": "Ouvrir Exile Build PoE",
   "electron.trayShowOverlay": "Afficher l'overlay",
   "electron.trayQuit": "Quitter",
@@ -156,6 +172,10 @@ const de: Record<string, string> = {
     "Gib einen Path of Building Link, Code oder eine Datei ein.",
   "electron.downloadFailed":
     "Path of Building konnte nicht heruntergeladen werden ({{status}}).",
+  "electron.networkTimeout":
+    "Der Download ist abgelaufen. Prüfe deine Verbindung und versuche es erneut, oder füge den PoB-Code direkt ein.",
+  "electron.networkError":
+    "Verbindung zum Server fehlgeschlagen. Prüfe deine Verbindung, oder füge den exportierten PoB-Code direkt ein.",
   "electron.trayOpen": "Exile Build PoE öffnen",
   "electron.trayShowOverlay": "Overlay anzeigen",
   "electron.trayQuit": "Beenden",
@@ -186,6 +206,10 @@ const ru: Record<string, string> = {
     "Введи ссылку, код или файл Path of Building.",
   "electron.downloadFailed":
     "Не удалось скачать Path of Building ({{status}}).",
+  "electron.networkTimeout":
+    "Время загрузки истекло. Проверьте подключение и попробуйте снова, или вставьте код PoB напрямую.",
+  "electron.networkError":
+    "Не удалось подключиться к серверу. Проверьте подключение, или вставьте экспортированный код PoB напрямую.",
   "electron.trayOpen": "Открыть Exile Build PoE",
   "electron.trayShowOverlay": "Показать оверлей",
   "electron.trayQuit": "Выход",
@@ -215,6 +239,10 @@ const ko: Record<string, string> = {
     "Path of Building 링크, 코드 또는 파일을 입력해주세요.",
   "electron.downloadFailed":
     "Path of Building 다운로드에 실패했어요 ({{status}}).",
+  "electron.networkTimeout":
+    "다운로드 시간이 초과되었습니다. 인터넷 연결을 확인하고 다시 시도하거나, PoB 코드를 직접 붙여넣으세요.",
+  "electron.networkError":
+    "서버에 연결할 수 없습니다. 인터넷 연결을 확인하거나, 내보낸 PoB 코드를 직접 붙여넣으세요.",
   "electron.trayOpen": "Exile Build PoE 열기",
   "electron.trayShowOverlay": "오버레이 표시",
   "electron.trayQuit": "종료",
@@ -241,6 +269,10 @@ const zhCN: Record<string, string> = {
     "请输入 Path of Building 链接、代码或文件。",
   "electron.downloadFailed":
     "下载 Path of Building 失败 ({{status}})。",
+  "electron.networkTimeout":
+    "下载超时。请检查网络连接后重试，或直接粘贴 PoB 代码。",
+  "electron.networkError":
+    "无法连接到服务器。请检查网络连接，或直接粘贴导出的 PoB 代码。",
   "electron.trayOpen": "打开 Exile Build PoE",
   "electron.trayShowOverlay": "显示悬浮窗",
   "electron.trayQuit": "退出",
@@ -272,6 +304,10 @@ const ja: Record<string, string> = {
     "Path of Buildingのリンク、コード、またはファイルを入力してください。",
   "electron.downloadFailed":
     "Path of Buildingのダウンロードに失敗しました（{{status}}）。",
+  "electron.networkTimeout":
+    "ダウンロードがタイムアウトしました。接続を確認して再試行するか、PoBコードを直接貼り付けてください。",
+  "electron.networkError":
+    "サーバーに接続できません。接続を確認するか、エクスポートしたPoBコードを直接貼り付けてください。",
   "electron.trayOpen": "Exile Build PoEを開く",
   "electron.trayShowOverlay": "オーバーレイを表示",
   "electron.trayQuit": "終了",
@@ -301,6 +337,10 @@ const th: Record<string, string> = {
     "กรุณาใส่ลิงก์ โค้ด หรือไฟล์ Path of Building",
   "electron.downloadFailed":
     "ดาวน์โหลด Path of Building ไม่สำเร็จ ({{status}})",
+  "electron.networkTimeout":
+    "การดาวน์โหลดหมดเวลา ตรวจสอบการเชื่อมต่อแล้วลองใหม่ หรือวางโค้ด PoB โดยตรง",
+  "electron.networkError":
+    "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ ตรวจสอบการเชื่อมต่อ หรือวางโค้ด PoB ที่ส่งออกมาโดยตรง",
   "electron.trayOpen": "เปิด Exile Build PoE",
   "electron.trayShowOverlay": "แสดงโอเวอร์เลย์",
   "electron.trayQuit": "ออก",

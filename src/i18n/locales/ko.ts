@@ -163,6 +163,10 @@ const ko: Record<TranslationKey, string> = {
   "tree.pointCount": "{{count}} 포인트",
   "tree.fullRoadmap": "전체 로드맵",
   "tree.progressionOrder": "진행 순서",
+  "tree.loading": "트리 에셋 로딩 중…",
+  "tree.loadFailed": "트리 에셋 로드 실패.",
+  "tree.loadFailedHint": "인터넷 연결을 확인하세요 — 스프라이트는 PoE CDN에서 로드됩니다.",
+  "tree.retry": "재시도",
 
   // ── Gems tab ──
   "gems.linksAndGems": "링크와 젬",
@@ -172,6 +176,7 @@ const ko: Record<TranslationKey, string> = {
   "gems.primaryGem": "주요 젬",
   "gems.activeLink": "활성 링크",
   "gems.groupBench": "그룹 벤치",
+  "gems.groupCount": "{{count}}개 그룹",
 
   // ── Gear tab ──
   "gear.exactGear": "PoB에서 가져온 정확한 장비",
@@ -261,6 +266,8 @@ const ko: Record<TranslationKey, string> = {
     "Path of Building 링크, 코드 또는 파일을 입력해주세요.",
   "electron.downloadFailed":
     "Path of Building 다운로드에 실패했어요 ({{status}}).",
+  "electron.networkTimeout": "다운로드 시간이 초과되었습니다. 인터넷 연결을 확인하고 다시 시도하거나, PoB 코드를 직접 붙여넣으세요.",
+  "electron.networkError": "서버에 연결할 수 없습니다. 인터넷 연결을 확인하거나, 내보낸 PoB 코드를 직접 붙여넣으세요.",
   "electron.trayOpen": "Exile Build PoE 열기",
   "electron.trayShowOverlay": "오버레이 표시",
   "electron.trayQuit": "종료",
@@ -285,7 +292,23 @@ const ko: Record<TranslationKey, string> = {
   "settings.hotkeyHelp": "단축키를 클릭하여 변경하세요. Escape로 취소합니다.",
   "settings.hotkeyPress": "키를 누르세요...",
   "settings.hotkeyReset": "기본값 복원",
+  "settings.overlayOpacity": "오버레이 투명도",
   "settings.language": "언어",
+
+  // ── Help / onboarding ──
+  "help.title": "시작하기",
+  "help.step1Title": "PoB에서 내보내기",
+  "help.step1Desc":
+    "Path of Building에서 Import/Export로 이동하여 빌드 코드를 복사하거나 pobb.in 링크를 생성하세요.",
+  "help.step2Title": "여기서 가져오기",
+  "help.step2Desc":
+    "사이드바의 가져오기 섹션에 코드나 링크를 붙여넣거나 .xml 파일을 드래그하세요.",
+  "help.step3Title": "오버레이 사용",
+  "help.step3Desc":
+    "단축키로 오버레이를 열고 Alt-Tab 없이 게임 내에서 빌드를 따라가세요.",
+  "help.tip": "팁",
+  "help.tipDesc":
+    "PoE에서 Borderless Window 또는 Windowed 모드를 사용하세요. 전체 화면은 오버레이를 차단할 수 있습니다.",
 
   // ── Locale picker ──
   "locale.label": "언어",

@@ -1,7 +1,6 @@
 export const BUILD_TABS = ["overview", "tree", "gems", "gear", "labs", "notes"] as const;
 
 export type BuildTab = (typeof BUILD_TABS)[number];
-export type OverlayMode = "compact" | "expanded";
 export type BuildSourceType = "link" | "code" | "file";
 export type ChecklistType = "quest" | "gear" | "gem" | "lab" | "note";
 export type GemCategory = "main" | "utility" | "movement" | "aura";
@@ -83,6 +82,9 @@ export interface PobTreeSpec {
   isActive: boolean;
 }
 
+export type GemColor = "red" | "green" | "blue" | "white";
+export type GemQualityType = "Default" | "Anomalous" | "Divergent" | "Phantasmal";
+
 export interface PobGem {
   id: string;
   name: string;
@@ -91,6 +93,11 @@ export interface PobGem {
   quality?: number;
   enabled: boolean;
   iconUrl?: string;
+  isSupport?: boolean;
+  isVaal?: boolean;
+  isAwakened?: boolean;
+  qualityType?: GemQualityType;
+  gemColor?: GemColor;
 }
 
 export interface PobSkillGroup {
@@ -116,6 +123,8 @@ export interface PobItemSet {
   slots: PobItemSlot[];
 }
 
+export type ItemInfluence = "shaper" | "elder" | "crusader" | "hunter" | "redeemer" | "warlord";
+
 export interface PobItem {
   id: string;
   setId: string;
@@ -126,6 +135,10 @@ export interface PobItem {
   rarity?: string;
   rawText: string;
   iconUrl?: string;
+  itemLevel?: number;
+  quality?: number;
+  corrupted?: boolean;
+  influences?: ItemInfluence[];
 }
 
 export interface PobData {
@@ -193,7 +206,8 @@ export interface AppState {
   selectedBuildId: string | null;
   progressByBuildId: Record<string, UserProgress>;
   activeTab: BuildTab;
-  overlayMode: OverlayMode;
+  /** Overlay background opacity 0–100 (default 85). */
+  overlayOpacity: number;
 }
 
 export interface PoeAssetsState {
