@@ -1,5 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState, useMemo } from "react";
 import treeRaw from "@/data/tree-default.json";
+import { buildClusterExpansions, type ClusterNode } from "@/services/cluster-expansion";
 import { getSheet, loadAllSheets, type SheetKey } from "@/services/tree-sprites";
 
 /* ── Types for the compact tree data ── */
@@ -48,7 +49,9 @@ interface NodeExtra {
   ascStart?: boolean;
   notable?: boolean;
   blighted?: boolean;
-  me?: string[]; // mastery effects (each string = one choosable option)
+  proxy?: boolean;
+  ej?: { s: number; p?: number; pr?: number };
+  me?: Array<[number, string]>; // mastery effects: [effectId, display text]
 }
 
 interface TreeNode {
@@ -157,13 +160,22 @@ const CLASS_ART_KEYS = [
 
 /* ── Component ── */
 
+export interface JewelSocketInfo {
+  name: string;
+  baseType?: string;
+  rarity?: string;
+  mods?: string[];
+}
+
 interface Props {
   allocatedNodes: Set<number>;
-  jewelSocketMap?: Map<number, string>;
+  jewelSocketMap?: Map<number, string | JewelSocketInfo>;
+  /** Mastery selections: masteryNodeId → selected effectId */
+  masterySelections?: Record<string, number>;
   height?: number;
 }
 
-export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixedHeight }: Props) {
+export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelections, height: fixedHeight }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [spritesReady, setSpritesReady] = useState(false);
@@ -191,6 +203,45 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
   }, []);
 
   const [tooltip, setTooltip] = useState<{ node: TreeNode; x: number; y: number } | null>(null);
+
+  // Compute cluster jewel expansions — generates virtual nodes around sockets
+  const clusterData = useMemo(() => {
+    if (!jewelSocketMap || jewelSocketMap.size === 0) return null;
+
+    // Build SocketLayoutInfo with proxy group center and orbitIndex for rotation
+    const socketInfo = new Map<number, import("@/services/cluster-expansion").SocketLayoutInfo>();
+    for (const [nodeId] of jewelSocketMap) {
+      const n = nodeMap.get(nodeId);
+      if (!n) continue;
+      const info: import("@/services/cluster-expansion").SocketLayoutInfo = { x: n.x, y: n.y };
+
+      // Look up proxy node via ej.pr to get group center and rotation
+      const proxyId = n.extra?.ej?.pr;
+      if (proxyId != null) {
+        const proxy = nodeMap.get(proxyId);
+        if (proxy) {
+          const g = tree.groups[proxy.group];
+          if (g) info.groupCenter = { x: g.x, y: g.y };
+          info.proxyOrbitIndex = proxy.orbitIndex;
+        }
+      }
+      socketInfo.set(nodeId, info);
+    }
+
+    const expansions = buildClusterExpansions(
+      socketInfo, jewelSocketMap, tree.orbits.radii, tree.orbits.skills,
+    );
+    if (expansions.length === 0) return null;
+
+    // Build lookup for tooltips
+    const nodeOverrides = new Map<number, ClusterNode>();
+    for (const expansion of expansions) {
+      for (const cn of expansion.nodes) {
+        nodeOverrides.set(cn.id, cn);
+      }
+    }
+    return { expansions, nodeOverrides };
+  }, [jewelSocketMap]);
 
   function sh(key: SheetKey) { return getSheet(key); }
 
@@ -269,7 +320,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
     if (groupBgSheet) {
       const visibleGroups = new Set<number>();
       for (const n of allNodes) {
-        // Skip hidden expansion jewel sockets (medium/small cluster slots)
+        // Skip hidden expansion jewel sockets (medium/small cluster slots) — unless active cluster
         if (n.type === 4 && !allocatedNodes.has(n.id) && expansionJewels.has(n.id)) continue;
         visibleGroups.add(n.group);
       }
@@ -359,7 +410,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
     }
 
     // Pass 1: Unallocated connections — tree-space width (scales with zoom, like PoE game)
-    // Hide connections to/from hidden expansion jewel sockets
+    // Hide connections to/from hidden expansion jewel sockets (unless cluster-active)
     ctx.strokeStyle = "rgba(90,78,58,0.55)";
     ctx.lineWidth = 20; // 20 tree units, same as pobb.in/GGG
     for (const node of allNodes) {
@@ -378,27 +429,127 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
       }
     }
 
-    // Pass 2: Allocated connections — screen-space golden pipe (constant px regardless of zoom)
+    // ═══ Layer 2.5: Cluster Jewel Expansions ═══
+    // Drawn AFTER unallocated connections but BEFORE allocated golden pipes,
+    // so allocated paths draw ON TOP of cluster nodes, and cluster sits above unallocated.
+    if (clusterData) {
+      ctx.globalAlpha = 1.0;
+      ctx.lineCap = "round";
+
+      for (const expansion of clusterData.expansions) {
+        const socketNode_ = nodeMap.get(expansion.socketId);
+        if (!socketNode_) continue;
+        const socketNode = socketNode_; // narrowed for closures
+
+        const vnMap = new Map<number, ClusterNode>();
+        for (const cn of expansion.nodes) vnMap.set(cn.id, cn);
+
+        const { center: ec, radius: er, orbitPositions: eop, nodeOrbitIndex: eoi } = expansion;
+
+        // Draw cluster connection as arc (same orbit) or line (socket→entrance)
+        function drawClusterEdge(fromId: number, toId: number) {
+          const isSocket = fromId === expansion.socketId || toId === expansion.socketId;
+          if (isSocket) {
+            const virtualId = fromId === expansion.socketId ? toId : fromId;
+            const vn = vnMap.get(virtualId);
+            if (!vn) return;
+            ctx.beginPath();
+            ctx.moveTo(socketNode.x, socketNode.y);
+            ctx.lineTo(vn.x, vn.y);
+            ctx.stroke();
+          } else {
+            const oi1 = eoi.get(fromId);
+            const oi2 = eoi.get(toId);
+            if (oi1 == null || oi2 == null) return;
+            const a1 = (2 * Math.PI * oi1) / eop - Math.PI / 2;
+            const a2 = (2 * Math.PI * oi2) / eop - Math.PI / 2;
+            let diff = a2 - a1;
+            while (diff > Math.PI) diff -= 2 * Math.PI;
+            while (diff < -Math.PI) diff += 2 * Math.PI;
+            ctx.beginPath();
+            ctx.arc(ec.x, ec.y, er, a1, a1 + diff, diff < 0);
+            ctx.stroke();
+          }
+        }
+
+        // Connection pipes (screen-space widths)
+        const layers: Array<[string, number]> = [
+          ["rgba(160,130,60,0.25)", 12 / scale],
+          ["#6b5218", 7 / scale],
+          ["#c8952c", 5 / scale],
+          ["#f0c860", 2 / scale],
+        ];
+        for (const [color, lw] of layers) {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = lw;
+          for (const [fromId, toId] of expansion.connections) {
+            drawClusterEdge(fromId, toId);
+          }
+        }
+
+      }
+    }
+
+    // Pass 2: Allocated connections — screen-space golden pipe
     if (allocatedNodes.size > 0) {
-      // Layer 1: Soft glow
       ctx.strokeStyle = "rgba(160,120,30,0.15)";
       ctx.lineWidth = 12 / scale;
       forEachAllocatedEdge(drawEdge);
 
-      // Layer 2: Dark gold border (outer edge of the "pipe")
       ctx.strokeStyle = "#6b5218";
       ctx.lineWidth = 7 / scale;
       forEachAllocatedEdge(drawEdge);
 
-      // Layer 3: Main gold body
       ctx.strokeStyle = "#c8952c";
       ctx.lineWidth = 5 / scale;
       forEachAllocatedEdge(drawEdge);
 
-      // Layer 4: Bright center highlight
       ctx.strokeStyle = "#f0c860";
       ctx.lineWidth = 2 / scale;
       forEachAllocatedEdge(drawEdge);
+    }
+
+    // ═══ Layer 2.7: Cluster virtual nodes ═══
+    // Drawn AFTER allocated pipes so they're visible on top of golden paths.
+    // Real tree nodes + jewel sprites still draw on top in layers 3 & 4.
+    if (clusterData) {
+      ctx.globalAlpha = 1.0;
+      for (const expansion of clusterData.expansions) {
+        for (const cn of expansion.nodes) {
+          if (cn.nodeType === "notable") {
+            ctx.fillStyle = "rgba(212,160,74,0.15)";
+            ctx.beginPath();
+            ctx.arc(cn.x, cn.y, 42, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#e8c36a";
+            ctx.beginPath();
+            ctx.arc(cn.x, cn.y, 28, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#f2a95b";
+            ctx.lineWidth = 3 / scale;
+            ctx.beginPath();
+            ctx.arc(cn.x, cn.y, 28, 0, Math.PI * 2);
+            ctx.stroke();
+          } else if (cn.nodeType === "socket") {
+            const half = 20;
+            ctx.fillStyle = "#f2a95b";
+            ctx.fillRect(cn.x - half, cn.y - half, half * 2, half * 2);
+            ctx.strokeStyle = "#c8952c";
+            ctx.lineWidth = 2 / scale;
+            ctx.strokeRect(cn.x - half, cn.y - half, half * 2, half * 2);
+          } else {
+            ctx.fillStyle = "#d4a04a";
+            ctx.beginPath();
+            ctx.arc(cn.x, cn.y, 16, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#c8952c";
+            ctx.lineWidth = 1.5 / scale;
+            ctx.beginPath();
+            ctx.arc(cn.x, cn.y, 16, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+      }
     }
 
     // ═══ Layer 3: Nodes ═══
@@ -458,16 +609,19 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
     // Draw jewel frame sprites on socketed jewel nodes
     if (jewelSocketMap && jewelSocketMap.size > 0) {
       ctx.globalAlpha = 1.0;
-      for (const [nodeId, jewelName] of jewelSocketMap) {
+      for (const [nodeId, jewelEntry] of jewelSocketMap) {
         const node = nodeMap.get(nodeId);
         if (!node) continue;
 
         // Determine jewel type for sprite selection
-        const isCrimson = /crimson|str/i.test(jewelName);
-        const isViridian = /viridian|dex/i.test(jewelName);
-        const isCobalt = /cobalt|int/i.test(jewelName);
-        const isTimeless = /timeless|legion|brutal|elegant|militant|glorious/i.test(jewelName);
-        const isAbyss = /abyss|stygian|ghastly|murderous|searching/i.test(jewelName);
+        const matchText = typeof jewelEntry === "string"
+          ? jewelEntry
+          : `${jewelEntry.name} ${jewelEntry.baseType ?? ""}`;
+        const isCrimson = /crimson|str/i.test(matchText);
+        const isViridian = /viridian|dex/i.test(matchText);
+        const isCobalt = /cobalt|int/i.test(matchText);
+        const isTimeless = /timeless|legion|brutal|elegant|militant|glorious/i.test(matchText);
+        const isAbyss = /abyss|stygian|ghastly|murderous|searching/i.test(matchText);
 
         const spriteKey = isCrimson ? "JewelSocketActiveRed"
           : isViridian ? "JewelSocketActiveGreen"
@@ -501,7 +655,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
     }
 
     ctx.restore();
-  }, [allocatedNodes, jewelSocketMap, size.width, size.height, spritesReady]);
+  }, [allocatedNodes, jewelSocketMap, size.width, size.height, spritesReady, clusterData]);
 
   /* ── Sprite drawing ── */
 
@@ -697,10 +851,11 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
   /* ── Shape fallback ── */
 
   function drawShapeNode(ctx: CanvasRenderingContext2D, node: TreeNode, isAlloc: boolean, sz: number, scale: number) {
+    const type = node.type;
     const r = sz * (1 / Math.max(scale, 0.3));
     const dr = r * scale < 2 ? 2 / scale : r;
 
-    if (node.type === 3) {
+    if (type === 3) {
       ctx.fillStyle = isAlloc ? "rgba(212,160,74,0.5)" : "rgba(90,80,70,0.2)";
       ctx.beginPath();
       const mr = dr * 0.8;
@@ -709,7 +864,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
       ctx.closePath(); ctx.fill();
       return;
     }
-    if (node.type === 2) {
+    if (type === 2) {
       ctx.fillStyle = isAlloc ? "#ffd700" : "rgba(140,130,115,0.55)";
       ctx.beginPath();
       for (let i = 0; i < 8; i++) {
@@ -721,25 +876,25 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
       if (isAlloc) { ctx.strokeStyle = "#ffd700"; ctx.lineWidth = 3 / scale; ctx.stroke(); }
       return;
     }
-    if (node.type === 1) {
+    if (type === 1) {
       ctx.fillStyle = isAlloc ? "#e8c36a" : "rgba(140,130,115,0.45)";
       ctx.beginPath(); ctx.arc(node.x, node.y, dr, 0, Math.PI * 2); ctx.fill();
       if (isAlloc) { ctx.strokeStyle = "#f2a95b"; ctx.lineWidth = 2.5 / scale; ctx.stroke(); }
       return;
     }
-    if (node.type === 4) {
+    if (type === 4) {
       ctx.fillStyle = isAlloc ? "#f2a95b" : "rgba(140,130,115,0.30)";
       const half = dr * 0.7;
       ctx.fillRect(node.x - half, node.y - half, half * 2, half * 2);
       return;
     }
-    if (node.type === 5) {
+    if (type === 5) {
       ctx.strokeStyle = isAlloc ? "#f2a95b" : "rgba(180,170,150,0.5)";
       ctx.lineWidth = 3 / scale;
       ctx.beginPath(); ctx.arc(node.x, node.y, dr, 0, Math.PI * 2); ctx.stroke();
       return;
     }
-    if (node.type === 6) {
+    if (type === 6) {
       ctx.fillStyle = isAlloc ? "#f2a95b" : "rgba(120,110,100,0.35)";
       ctx.beginPath(); ctx.arc(node.x, node.y, dr * 0.6, 0, Math.PI * 2); ctx.fill();
       if (isAlloc) { ctx.strokeStyle = "#f2a95b"; ctx.lineWidth = 2 / scale; ctx.stroke(); }
@@ -818,6 +973,22 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
     return best;
   }
 
+  /** Hit-test virtual cluster nodes (checked before regular nodes for priority). */
+  function clusterHitTest(sx: number, sy: number): ClusterNode | null {
+    if (!clusterData) return null;
+    const [tx, ty] = screenToTree(sx, sy);
+    const hr = 50 / stateRef.current.scale;
+    const maxR2 = hr * hr;
+    let best: ClusterNode | null = null, bestD2 = maxR2;
+    for (const expansion of clusterData.expansions) {
+      for (const cn of expansion.nodes) {
+        const d2 = (cn.x - tx) ** 2 + (cn.y - ty) ** 2;
+        if (d2 < bestD2) { bestD2 = d2; best = cn; }
+      }
+    }
+    return best;
+  }
+
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     const s = stateRef.current;
     if (s.dragging) {
@@ -828,10 +999,19 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     const lx = e.clientX - rect.left, ly = e.clientY - rect.top;
+
+    // Check virtual cluster nodes first (they render on top)
+    const cHit = clusterHitTest(lx, ly);
+    if (cHit) {
+      // Create a synthetic TreeNode for the tooltip system
+      setTooltip({ node: { id: cHit.id, x: cHit.x, y: cHit.y, type: 0, icon: "", name: cHit.name, stats: cHit.stats, group: 0, orbit: 0, orbitIndex: 0, extra: null, out: [] }, x: lx, y: ly });
+      return;
+    }
+
     const hit = hitTest(lx, ly);
-    if (hit && hit.name) setTooltip({ node: hit, x: lx, y: ly });
+    if (hit && hit.name && hit.name !== "Position Proxy") setTooltip({ node: hit, x: lx, y: ly });
     else setTooltip(null);
-  }, [draw, size.width, size.height]);
+  }, [draw, size.width, size.height, clusterData]);
 
   const onPointerUp = useCallback(() => { stateRef.current.dragging = false; }, []);
   const onPointerLeave = useCallback(() => { setTooltip(null); }, []);
@@ -855,32 +1035,73 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, height: fixe
         <button type="button" className="tree-ctrl-btn" onClick={recenter}>⌂</button>
       </div>
       {!spritesReady && <div className="tree-loading">Loading tree assets…</div>}
-      {tooltip && (
-        <div className="tree-tooltip" style={{
-          left: Math.min(tooltip.x + 12, size.width - 220),
-          top: tooltip.y > size.height - 120 ? tooltip.y - 80 : tooltip.y + 16,
-        }}>
-          <strong className="tree-tooltip-name">{tooltip.node.name}</strong>
-          {tooltip.node.stats && (
-            <div className="tree-tooltip-stats">
-              {tooltip.node.stats.split("\n").map((line, i) => <span key={i}>{line}</span>)}
-            </div>
-          )}
-          {tooltip.node.extra?.me && tooltip.node.extra.me.length > 0 && (
-            <div className="tree-tooltip-mastery">
-              {tooltip.node.extra.me.map((eff, i) => (
-                <span key={i} className="tree-tooltip-mastery-opt">{eff}</span>
-              ))}
-            </div>
-          )}
-          {jewelSocketMap?.has(tooltip.node.id) && (
-            <span className="tree-tooltip-jewel">{jewelSocketMap.get(tooltip.node.id)}</span>
-          )}
-          {allocatedNodes.has(tooltip.node.id) && (
-            <span className="tree-tooltip-alloc">Allocated</span>
-          )}
-        </div>
-      )}
+      {tooltip && (() => {
+        const co = clusterData?.nodeOverrides.get(tooltip.node.id);
+        const displayName = co?.name || tooltip.node.name;
+        const displayStats = co?.stats || tooltip.node.stats;
+        return (
+          <div className="tree-tooltip" style={{
+            left: Math.min(tooltip.x + 12, size.width - 340),
+            top: tooltip.y > size.height - 120 ? tooltip.y - 80 : tooltip.y + 16,
+          }}>
+            <strong className="tree-tooltip-name">{displayName}</strong>
+            {co && (
+              <span className="tree-tooltip-cluster-label">
+                {co.nodeType === "notable" ? "Cluster Notable" : co.nodeType === "socket" ? "Jewel Socket" : "Cluster Small Passive"}
+              </span>
+            )}
+            {displayStats && (
+              <div className="tree-tooltip-stats">
+                {displayStats.split("\n").map((line, i) => <span key={i}>{line}</span>)}
+              </div>
+            )}
+            {!co && tooltip.node.extra?.me && tooltip.node.extra.me.length > 0 && (() => {
+              const effects = tooltip.node.extra.me as Array<[number, string]>;
+              const selectedEffectId = masterySelections?.[tooltip.node.id];
+              if (selectedEffectId != null) {
+                const selected = effects.find(([id]) => id === selectedEffectId);
+                return selected ? (
+                  <div className="tree-tooltip-mastery">
+                    <span className="tree-tooltip-mastery-selected">{selected[1]}</span>
+                  </div>
+                ) : null;
+              }
+              return (
+                <div className="tree-tooltip-mastery">
+                  {effects.map(([id, text]) => (
+                    <span key={id} className="tree-tooltip-mastery-opt">{text}</span>
+                  ))}
+                </div>
+              );
+            })()}
+            {jewelSocketMap?.has(tooltip.node.id) && (() => {
+              const entry = jewelSocketMap.get(tooltip.node.id);
+              if (!entry) return null;
+              const info: JewelSocketInfo = typeof entry === "string"
+                ? { name: entry }
+                : entry;
+              return (
+                <div className="tree-tooltip-jewel-info">
+                  <strong className={`tree-tooltip-jewel-name rarity-${(info.rarity ?? "normal").toLowerCase()}`}>
+                    {info.name}
+                  </strong>
+                  {info.baseType && (
+                    <span className="tree-tooltip-jewel-base">{info.baseType}</span>
+                  )}
+                  {info.mods && info.mods.length > 0 && (
+                    <div className="tree-tooltip-jewel-mods">
+                      {info.mods.map((mod, i) => <span key={i}>{mod}</span>)}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            {allocatedNodes.has(tooltip.node.id) && (
+              <span className="tree-tooltip-alloc">ALLOCATED</span>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

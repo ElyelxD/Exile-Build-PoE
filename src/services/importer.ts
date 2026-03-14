@@ -360,6 +360,45 @@ function parseItemHeader(rawText: string) {
   };
 }
 
+/** Extract visible mod lines from PoB raw item text. */
+function parseJewelMods(rawText: string): string[] {
+  const lines = rawText.replace(/\r/g, "").split("\n").map((l) => l.trim());
+  const mods: string[] = [];
+  let pastImplicits = false;
+
+  for (const line of lines) {
+    if (!line) continue;
+
+    // Strip PoB formatting tags like {variant:N}, {range:N}, {tags}, ^xHEXCOLOR, ^digit
+    const clean = line
+      .replace(/\{[^}]+\}/g, "")
+      .replace(/\^(?:x[0-9a-fA-F]{6}|[0-9])/g, "")
+      .trim();
+    if (!clean) continue;
+
+    // Once we see "Implicits: N", everything after is mods (implicit then explicit)
+    if (/^Implicits:\s*\d+/i.test(clean)) {
+      pastImplicits = true;
+      continue;
+    }
+    if (!pastImplicits) continue;
+
+    // Skip metadata/internal lines
+    if (isMetadataLine(clean)) continue;
+    if (clean === "--------") continue;
+    if (/^(Corrupted|Mirrored|Split)$/i.test(clean)) continue;
+    // Skip PoB internal mod names (e.g. "AfflictionNotableRenewal", no spaces = internal ID)
+    if (/^[A-Za-z][A-Za-z0-9_]+$/.test(clean) && !clean.includes(" ")) continue;
+    // Skip "Limited to: N" and similar
+    if (/^Limited to:/i.test(clean)) continue;
+    if (/^Radius:/i.test(clean)) continue;
+
+    mods.push(clean);
+  }
+
+  return mods;
+}
+
 function inferClassName(buildElement: Element | null, activeTreeSpec: Element | null) {
   const explicit = attribute(buildElement, "className");
 
@@ -535,14 +574,26 @@ function parsePobData(xml: string): {
         ? specText.replace(/\s+/g, "")
         : undefined);
 
-    // Parse <Socket nodeId="..." itemId="..."/> children (jewels socketed in tree)
-    const socketElements = childElements(spec, "Socket");
+    // Parse <Socket nodeId="..." itemId="..."/> — may be direct children or inside <Sockets>
+    const socketsContainer = childElements(spec, "Sockets")[0];
+    const socketElements = socketsContainer
+      ? childElements(socketsContainer, "Socket")
+      : childElements(spec, "Socket");
     const sockets: PobTreeSocket[] = socketElements
       .map((sock) => ({
         nodeId: Number(attribute(sock, "nodeId")),
         itemId: attribute(sock, "itemId"),
       }))
       .filter((s) => s.nodeId > 0 && s.itemId);
+
+    // Parse masteryEffects attribute: "{effectId,nodeId},{effectId,nodeId},..."
+    const masteryEffects: Record<string, number> = {};
+    const meAttr = attribute(spec, "masteryEffects") || "";
+    let meCount = 0;
+    for (const m of meAttr.matchAll(/\{(\d+),(\d+)\}/g)) {
+      masteryEffects[m[2]] = Number(m[1]); // nodeId → effectId
+      meCount++;
+    }
 
     return {
       id,
@@ -551,6 +602,7 @@ function parsePobData(xml: string): {
       treeVersion: attribute(spec, "treeVersion") || undefined,
       url,
       sockets: sockets.length > 0 ? sockets : undefined,
+      masteryEffects: meCount > 0 ? masteryEffects : undefined,
       isActive: id === activeTreeSpecId || (!activeTreeSpecId && index === 0),
     };
   });
@@ -649,7 +701,7 @@ function parsePobData(xml: string): {
       }),
   );
 
-  // Backfill jewel names into tree spec sockets now that rawItemsById is available
+  // Backfill jewel names and mods into tree spec sockets now that rawItemsById is available
   for (const spec of treeSpecs) {
     if (!spec.sockets) continue;
     for (const sock of spec.sockets) {
@@ -657,6 +709,9 @@ function parsePobData(xml: string): {
       if (rawText) {
         const parsed = parseItemHeader(rawText);
         sock.jewelName = parsed.title;
+        sock.jewelBaseType = parsed.baseType;
+        sock.jewelRarity = parsed.rarity;
+        sock.jewelMods = parseJewelMods(rawText);
       }
     }
   }

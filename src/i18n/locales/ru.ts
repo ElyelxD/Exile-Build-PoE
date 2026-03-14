@@ -20,6 +20,7 @@ const ru: Record<TranslationKey, string> = {
   "builds.empty": "Ещё не импортировано ни одного Path of Building.",
   "builds.activeBuild": "Активный билд",
   "builds.delete": "Удалить билд",
+  "builds.reimport": "Переимпортировать билд",
   "builds.unknownLeague": "Другие",
 
   // ── Snapshot / PoB summary ──

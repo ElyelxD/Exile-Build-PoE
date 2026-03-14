@@ -18,6 +18,7 @@ const en = {
   "builds.empty": "No Path of Building imported yet.",
   "builds.activeBuild": "Active build",
   "builds.delete": "Delete build",
+  "builds.reimport": "Re-import build",
   "builds.unknownLeague": "Other",
 
   // ── Snapshot / PoB summary ──

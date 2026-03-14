@@ -22,6 +22,7 @@ const th: Record<TranslationKey, string> = {
   "builds.empty": "ยังไม่มีการนำเข้า Path of Building",
   "builds.activeBuild": "บิลด์ที่ใช้งาน",
   "builds.delete": "ลบบิลด์",
+  "builds.reimport": "นำเข้าบิลด์ใหม่",
   "builds.unknownLeague": "อื่นๆ",
 
   // ── Snapshot / PoB summary ──

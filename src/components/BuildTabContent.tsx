@@ -21,7 +21,7 @@ import {
   getActivePobTreeSpec,
 } from "@/services/pob-selectors";
 import { useI18n } from "@/i18n";
-import { PassiveTreeCanvas } from "@/components/PassiveTreeCanvas";
+import { PassiveTreeCanvas, JewelSocketInfo } from "@/components/PassiveTreeCanvas";
 import { decodeTreeUrl } from "@/services/tree-decoder";
 
 type DecoratedChecklistItem = {
@@ -774,13 +774,24 @@ export function BuildTabContent({
         const decoded = treeInput ? decodeTreeUrl(treeInput) : null;
         const allocatedNodes = decoded?.allocatedNodes ?? new Set<number>();
 
-        // Build jewel socket map: nodeId → jewel name (resolved in importer)
-        const jewelSocketMap = new Map<number, string>();
+        // Mastery selections: prefer PoB XML attribute, fallback to URL-encoded
+        const masterySelections = activeTreeSpec?.masteryEffects ?? decoded?.masterySelections;
+
+        // Build jewel socket map: nodeId → jewel info (resolved in importer)
+        const jewelSocketMap = new Map<number, string | JewelSocketInfo>();
         if (activeTreeSpec?.sockets) {
           for (const sock of activeTreeSpec.sockets) {
-            // Ensure socket nodes are allocated (they should be in URL, but merge as backup)
             allocatedNodes.add(sock.nodeId);
-            jewelSocketMap.set(sock.nodeId, sock.jewelName || "Jewel");
+            if (sock.jewelMods && sock.jewelMods.length > 0) {
+              jewelSocketMap.set(sock.nodeId, {
+                name: sock.jewelName || "Jewel",
+                baseType: sock.jewelBaseType,
+                rarity: sock.jewelRarity,
+                mods: sock.jewelMods,
+              });
+            } else {
+              jewelSocketMap.set(sock.nodeId, sock.jewelName || "Jewel");
+            }
           }
         }
 
@@ -812,6 +823,7 @@ export function BuildTabContent({
               <PassiveTreeCanvas
                 allocatedNodes={allocatedNodes}
                 jewelSocketMap={jewelSocketMap}
+                masterySelections={masterySelections}
                 height={condensed ? 350 : undefined}
               />
               <div className="tree-meta-row">

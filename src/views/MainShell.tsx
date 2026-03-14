@@ -255,6 +255,17 @@ export function MainShell() {
                             <span>{entry.className} · {entry.ascendancy}</span>
                           </button>
                           <button
+                            className="build-list-reimport"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              actions.reimportBuild(entry.id);
+                            }}
+                            title={t("builds.reimport")}
+                            type="button"
+                          >
+                            ↻
+                          </button>
+                          <button
                             className="build-list-delete"
                             onClick={(e) => {
                               e.stopPropagation();

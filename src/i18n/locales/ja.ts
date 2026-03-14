@@ -23,6 +23,7 @@ const ja: Record<TranslationKey, string> = {
   "builds.empty": "まだPath of Buildingがインポートされていません。",
   "builds.activeBuild": "アクティブビルド",
   "builds.delete": "ビルドを削除",
+  "builds.reimport": "ビルドを再インポート",
   "builds.unknownLeague": "その他",
 
   // ── Snapshot / PoB summary ──

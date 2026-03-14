@@ -944,7 +944,7 @@ button {
 
 .tree-tooltip {
   position: absolute;
-  max-width: 260px;
+  max-width: 320px;
   padding: 8px 12px;
   border-radius: 10px;
   background: rgba(16, 13, 11, 0.95);
@@ -983,6 +983,54 @@ button {
   font-weight: 600;
 }
 
+.tree-tooltip-cluster-label {
+  display: block;
+  font-size: 0.68rem;
+  color: #8cc060;
+  font-weight: 600;
+  margin-top: 1px;
+  opacity: 0.85;
+}
+
+.tree-tooltip-jewel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 5px;
+  padding: 4px 0 0;
+  border-top: 1px solid rgba(212, 160, 74, 0.15);
+}
+
+.tree-tooltip-jewel-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.tree-tooltip-jewel-name.rarity-unique { color: #af6025; }
+.tree-tooltip-jewel-name.rarity-rare { color: #ff7; }
+.tree-tooltip-jewel-name.rarity-magic { color: #8888ff; }
+.tree-tooltip-jewel-name.rarity-normal { color: #c8c8c8; }
+
+.tree-tooltip-jewel-base {
+  font-size: 0.68rem;
+  color: var(--text-2);
+  opacity: 0.7;
+}
+
+.tree-tooltip-jewel-mods {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 2px;
+}
+
+.tree-tooltip-jewel-mods > span {
+  font-size: 0.68rem;
+  color: #8080c0;
+  line-height: 1.25;
+}
+
 .tree-tooltip-alloc {
   display: inline-block;
   margin-top: 4px;
@@ -1015,6 +1063,19 @@ button {
   content: "\25c6 ";
   color: #d4a04a;
   font-size: 0.6rem;
+}
+
+.tree-tooltip-mastery-selected {
+  color: #7af07a;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.tree-tooltip-mastery-selected::before {
+  content: "\2714 ";
+  color: #5ce65c;
+  font-size: 0.65rem;
 }
 
 .tree-meta-row {
@@ -2037,6 +2098,7 @@ textarea {
   color: var(--text-2);
 }
 
+.build-list-reimport,
 .build-list-delete {
   flex-shrink: 0;
   width: 28px;
@@ -2052,11 +2114,24 @@ textarea {
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.build-list-delete {
   margin-right: 6px;
 }
 
+.build-list-reimport {
+  font-size: 1rem;
+}
+
+.build-list-item:hover .build-list-reimport,
 .build-list-item:hover .build-list-delete {
   opacity: 1;
+}
+
+.build-list-reimport:hover {
+  color: #50b0e0;
+  background: rgba(80, 176, 224, 0.12);
 }
 
 .build-list-delete:hover {

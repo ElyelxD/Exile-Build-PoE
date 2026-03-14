@@ -133,10 +133,23 @@ async function main() {
     if (node.isAscendancyStart) extra.ascStart = true;
     if (node.isNotable && node.ascendancyName) extra.notable = true;
     if (node.isBlighted) extra.blighted = true;
+    if (node.isProxy) extra.proxy = true;
+    if (node.expansionJewel) {
+      extra.ej = { s: node.expansionJewel.size };
+      if (node.expansionJewel.parent) {
+        const parentNode = ggg.nodes[node.expansionJewel.parent];
+        extra.ej.p = parentNode?.skill ?? parseInt(node.expansionJewel.parent);
+      }
+      if (node.expansionJewel.proxy) {
+        const proxyNode = ggg.nodes[node.expansionJewel.proxy];
+        extra.ej.pr = proxyNode?.skill ?? parseInt(node.expansionJewel.proxy);
+      }
+    }
     if (node.masteryEffects && node.masteryEffects.length > 0) {
-      extra.me = node.masteryEffects.map((eff) =>
-        (eff.stats || []).join(", ")
-      );
+      extra.me = node.masteryEffects.map((eff) => [
+        eff.effect,                       // numeric effect ID (encoded in tree URL)
+        (eff.stats || []).join(", "),      // display text
+      ]);
     }
 
     // Connections (outgoing only)

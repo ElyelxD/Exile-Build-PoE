@@ -24,6 +24,7 @@ const fr: Record<TranslationKey, string> = {
   "builds.empty": "Aucun Path of Building importé pour l'instant.",
   "builds.activeBuild": "Build actif",
   "builds.delete": "Supprimer le build",
+  "builds.reimport": "Réimporter le build",
   "builds.unknownLeague": "Autres",
 
   // ── Snapshot / PoB summary ──

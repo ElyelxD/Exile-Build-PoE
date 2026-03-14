@@ -20,6 +20,7 @@ const zhCN: Record<TranslationKey, string> = {
   "builds.empty": "还没有导入 Path of Building。",
   "builds.activeBuild": "当前构建",
   "builds.delete": "删除构建",
+  "builds.reimport": "重新导入构建",
   "builds.unknownLeague": "其他",
 
   // ── 快照 / PoB 摘要 ──

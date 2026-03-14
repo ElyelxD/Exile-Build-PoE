@@ -18,6 +18,7 @@ interface AppActions {
   importBuild: (sourceType: BuildSourceType, sourceValue: string) => Promise<void>;
   selectBuild: (buildId: string) => void;
   deleteBuild: (buildId: string) => void;
+  reimportBuild: (buildId: string) => Promise<void>;
   setPobTreeSpec: (buildId: string, specId: string) => void;
   setActiveTab: (tab: BuildTab) => void;
   cycleTab: (direction: Direction) => void;
@@ -39,6 +40,7 @@ type Action =
   | { type: "import-build"; build: Build }
   | { type: "select-build"; buildId: string }
   | { type: "delete-build"; buildId: string }
+  | { type: "replace-build"; oldBuildId: string; build: Build }
   | { type: "set-pob-tree-spec"; buildId: string; specId: string }
   | { type: "set-active-tab"; tab: BuildTab }
   | { type: "cycle-tab"; direction: Direction }
@@ -178,6 +180,21 @@ function reducer(state: AppState, action: Action): AppState {
         builds: remaining,
         selectedBuildId: nextSelectedId,
         progressByBuildId: restProgress,
+      };
+    }
+    case "replace-build": {
+      const { oldBuildId, build } = action;
+      const progress = createInitialProgress(build);
+
+      return {
+        ...state,
+        builds: state.builds.map((b) => (b.id === oldBuildId ? build : b)),
+        selectedBuildId: state.selectedBuildId === oldBuildId ? build.id : state.selectedBuildId,
+        progressByBuildId: {
+          ...state.progressByBuildId,
+          [oldBuildId]: undefined as never,
+          [build.id]: progress,
+        },
       };
     }
     case "set-pob-tree-spec":
@@ -351,6 +368,16 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
     },
     selectBuild: (buildId) => dispatch({ type: "select-build", buildId }),
     deleteBuild: (buildId) => dispatch({ type: "delete-build", buildId }),
+    reimportBuild: async (buildId) => {
+      const build = state.builds.find((b) => b.id === buildId);
+      if (!build) return;
+      try {
+        const fresh = await createImportedBuild(build.sourceType, build.sourceValue);
+        dispatch({ type: "replace-build", oldBuildId: buildId, build: fresh });
+      } catch (err) {
+        console.error("[Reimport] failed:", err);
+      }
+    },
     setPobTreeSpec: (buildId, specId) =>
       dispatch({ type: "set-pob-tree-spec", buildId, specId }),
     setActiveTab: (tab) => dispatch({ type: "set-active-tab", tab }),

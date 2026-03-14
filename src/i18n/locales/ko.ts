@@ -22,6 +22,7 @@ const ko: Record<TranslationKey, string> = {
   "builds.empty": "아직 가져온 Path of Building이 없어요.",
   "builds.activeBuild": "활성 빌드",
   "builds.delete": "빌드 삭제",
+  "builds.reimport": "빌드 재가져오기",
   "builds.unknownLeague": "기타",
 
   // ── Snapshot / PoB summary ──

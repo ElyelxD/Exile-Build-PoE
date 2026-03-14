@@ -66,6 +66,9 @@ export interface PobTreeSocket {
   nodeId: number;
   itemId: string;
   jewelName?: string;
+  jewelBaseType?: string;
+  jewelRarity?: string;
+  jewelMods?: string[];
 }
 
 export interface PobTreeSpec {
@@ -75,6 +78,8 @@ export interface PobTreeSpec {
   treeVersion?: string;
   url?: string;
   sockets?: PobTreeSocket[];
+  /** Mastery selections: nodeId → effectId (plain object for JSON persistence) */
+  masteryEffects?: Record<string, number>;
   isActive: boolean;
 }
 

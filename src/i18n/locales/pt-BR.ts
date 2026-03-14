@@ -22,6 +22,7 @@ const ptBR: Record<TranslationKey, string> = {
   "builds.empty": "Nenhum Path of Building importado ainda.",
   "builds.activeBuild": "Build ativa no app",
   "builds.delete": "Excluir build",
+  "builds.reimport": "Reimportar build",
   "builds.unknownLeague": "Outras",
 
   // ── Snapshot / PoB summary ──
