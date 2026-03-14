@@ -430,6 +430,7 @@ export function MainShell() {
               {settingsOpen && (
                 <div className="settings-dropdown">
                   <span className="settings-section-title">{t("settings.hotkeys")}</span>
+                  <span className="settings-help">{t("settings.hotkeyHelp")}</span>
                   {hotkeys && HOTKEY_ACTIONS.map(({ action, labelKey }) => (
                     <div className="settings-hotkey-row" key={action}>
                       <span>{t(labelKey)}</span>

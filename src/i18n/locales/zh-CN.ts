@@ -280,6 +280,7 @@ const zhCN: Record<TranslationKey, string> = {
   "settings.hotkeyNextTab": "下一个标签",
   "settings.hotkeyPrevTab": "上一个标签",
   "settings.hotkeyPin": "固定/取消固定",
+  "settings.hotkeyHelp": "点击快捷键进行更改。按 Escape 取消。",
   "settings.hotkeyPress": "按下按键...",
   "settings.hotkeyReset": "恢复默认",
   "settings.language": "语言",

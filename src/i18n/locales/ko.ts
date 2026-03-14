@@ -282,6 +282,7 @@ const ko: Record<TranslationKey, string> = {
   "settings.hotkeyNextTab": "다음 탭",
   "settings.hotkeyPrevTab": "이전 탭",
   "settings.hotkeyPin": "고정/해제",
+  "settings.hotkeyHelp": "단축키를 클릭하여 변경하세요. Escape로 취소합니다.",
   "settings.hotkeyPress": "키를 누르세요...",
   "settings.hotkeyReset": "기본값 복원",
   "settings.language": "언어",

@@ -280,6 +280,7 @@ const es: Record<TranslationKey, string> = {
   "settings.hotkeyNextTab": "Siguiente pestaña",
   "settings.hotkeyPrevTab": "Pestaña anterior",
   "settings.hotkeyPin": "Fijar/Desfijar",
+  "settings.hotkeyHelp": "Haz clic en un atajo para cambiarlo. Presiona Escape para cancelar.",
   "settings.hotkeyPress": "Presiona teclas...",
   "settings.hotkeyReset": "Restaurar predeterminados",
   "settings.language": "Idioma",

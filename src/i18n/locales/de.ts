@@ -280,6 +280,7 @@ const de: Record<TranslationKey, string> = {
   "settings.hotkeyNextTab": "Nächster Tab",
   "settings.hotkeyPrevTab": "Vorheriger Tab",
   "settings.hotkeyPin": "Anheften/Lösen",
+  "settings.hotkeyHelp": "Klicken Sie auf eine Taste, um sie zu ändern. Escape zum Abbrechen.",
   "settings.hotkeyPress": "Tasten drücken...",
   "settings.hotkeyReset": "Zurücksetzen",
   "settings.language": "Sprache",

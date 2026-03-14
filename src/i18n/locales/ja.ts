@@ -289,6 +289,7 @@ const ja: Record<TranslationKey, string> = {
   "settings.hotkeyNextTab": "次のタブ",
   "settings.hotkeyPrevTab": "前のタブ",
   "settings.hotkeyPin": "ピン留め切替",
+  "settings.hotkeyHelp": "ショートカットをクリックして変更。Escapeでキャンセル。",
   "settings.hotkeyPress": "キーを押してください...",
   "settings.hotkeyReset": "デフォルトに戻す",
   "settings.language": "言語",

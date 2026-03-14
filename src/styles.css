@@ -69,30 +69,35 @@ button {
   cursor: pointer;
 }
 
-:where(.sidebar, .workspace-scroll, .overlay-panel.is-live.is-expanded .overlay-expanded-content, textarea) {
+/* ── Global scrollbar styling ── */
+* {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
-:where(.sidebar, .workspace-scroll, .overlay-panel.is-live.is-expanded .overlay-expanded-content, textarea)::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-:where(.sidebar, .workspace-scroll, .overlay-panel.is-live.is-expanded .overlay-expanded-content, textarea)::-webkit-scrollbar-track {
+*::-webkit-scrollbar-track {
   background: transparent;
 }
 
-:where(.sidebar, .workspace-scroll, .overlay-panel.is-live.is-expanded .overlay-expanded-content, textarea)::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 999px;
   background: linear-gradient(180deg, var(--scrollbar-thumb-hover), var(--scrollbar-thumb));
   background-clip: padding-box;
 }
 
-:where(.sidebar, .workspace-scroll, .overlay-panel.is-live.is-expanded .overlay-expanded-content, textarea)::-webkit-scrollbar-thumb:hover {
+*::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgba(255, 215, 161, 0.42), var(--scrollbar-thumb-hover));
   background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .app-shell {
@@ -350,6 +355,10 @@ button {
   flex-direction: column;
   gap: 2px;
   min-width: 280px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
   padding: 6px;
   border: 1px solid var(--border-strong);
   border-radius: 14px;
@@ -376,6 +385,14 @@ button {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.settings-help {
+  padding: 0 10px 4px;
+  color: var(--text-2);
+  font-size: 0.68rem;
+  font-style: italic;
+  opacity: 0.8;
 }
 
 .settings-hotkey-row {

@@ -282,6 +282,7 @@ const th: Record<TranslationKey, string> = {
   "settings.hotkeyNextTab": "แท็บถัดไป",
   "settings.hotkeyPrevTab": "แท็บก่อนหน้า",
   "settings.hotkeyPin": "ปักหมุด/ถอนหมุด",
+  "settings.hotkeyHelp": "คลิกที่ปุ่มลัดเพื่อเปลี่ยน กด Escape เพื่อยกเลิก",
   "settings.hotkeyPress": "กดปุ่ม...",
   "settings.hotkeyReset": "รีเซ็ต",
   "settings.language": "ภาษา",

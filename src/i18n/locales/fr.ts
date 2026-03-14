@@ -297,6 +297,7 @@ const fr: Record<TranslationKey, string> = {
   "settings.hotkeyNextTab": "Onglet suivant",
   "settings.hotkeyPrevTab": "Onglet précédent",
   "settings.hotkeyPin": "Épingler/Détacher",
+  "settings.hotkeyHelp": "Cliquez sur un raccourci pour le modifier. Appuyez sur Echap pour annuler.",
   "settings.hotkeyPress": "Appuyez sur les touches...",
   "settings.hotkeyReset": "Réinitialiser",
   "settings.language": "Langue",

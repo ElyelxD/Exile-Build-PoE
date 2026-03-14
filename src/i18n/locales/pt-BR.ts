@@ -287,6 +287,7 @@ const ptBR: Record<TranslationKey, string> = {
   "settings.hotkeyNextTab": "Próxima aba",
   "settings.hotkeyPrevTab": "Aba anterior",
   "settings.hotkeyPin": "Fixar/Desafixar",
+  "settings.hotkeyHelp": "Clique em um atalho para alterar. Pressione Escape para cancelar.",
   "settings.hotkeyPress": "Pressione as teclas...",
   "settings.hotkeyReset": "Restaurar padrão",
   "settings.language": "Idioma",

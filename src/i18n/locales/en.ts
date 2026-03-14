@@ -281,6 +281,7 @@ const en = {
   "settings.hotkeyNextTab": "Next tab",
   "settings.hotkeyPrevTab": "Previous tab",
   "settings.hotkeyPin": "Toggle pin",
+  "settings.hotkeyHelp": "Click a shortcut to change it. Press Escape to cancel.",
   "settings.hotkeyPress": "Press keys...",
   "settings.hotkeyReset": "Reset defaults",
   "settings.language": "Language",

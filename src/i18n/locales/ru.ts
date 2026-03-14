@@ -280,6 +280,7 @@ const ru: Record<TranslationKey, string> = {
   "settings.hotkeyNextTab": "Следующая вкладка",
   "settings.hotkeyPrevTab": "Предыдущая вкладка",
   "settings.hotkeyPin": "Закрепить/Открепить",
+  "settings.hotkeyHelp": "Нажмите на клавишу, чтобы изменить. Escape для отмены.",
   "settings.hotkeyPress": "Нажмите клавиши...",
   "settings.hotkeyReset": "Сбросить",
   "settings.language": "Язык",
