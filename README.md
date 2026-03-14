@@ -4,7 +4,7 @@ Open-source Windows desktop overlay for Path of Exile build progression, powered
 
 ## Quick Start
 
-1. **Download** the latest installer from [GitHub Releases](https://github.com/Elyelx/Exile-Build-PoE/releases/latest/download/Exile-Build-PoE-Setup.exe)
+1. **Download** the latest installer from [GitHub Releases](https://github.com/ElyelxD/Exile-Build-PoE/releases/latest/download/Exile-Build-PoE-Setup.exe)
 2. **Export your build** from [Path of Building](https://pathofbuilding.community/) — Copy → Share → Generate
 3. **Paste the code or link** into the import field and click Import
 4. **Press `Ctrl+Shift+O`** to toggle the in-game overlay
@@ -15,16 +15,17 @@ The overlay shows your next objectives, current level, and gem/gear targets whil
 
 Exile Build PoE bridges the gap between planning a build in Path of Building and actually playing it. Instead of alt-tabbing to PoB every few minutes, the overlay keeps your roadmap visible while you play.
 
-- **In-Game Overlay** — Always-on-top compact overlay with your next objectives, level tracking, and progress checklist. Toggle with a hotkey.
+- **In-Game Overlay** — Always-on-top overlay with tabs, level tracking, progress checklist, and configurable opacity. Toggle with a hotkey.
 - **Full PoB Import** — Paste a pobb.in link, pastebin URL, raw export code, or load a `.xml` file. Extracts passive tree, gems, gear, labs, masteries, jewels, and notes.
-- **Passive Tree Canvas** — Interactive tree with zoom/pan, GGG sprite rendering, cluster jewel expansion, mastery selections, and jewel socket details.
-- **Gear Display** — Item cards with mod tiers (T1/T2/T3), socket colors and links, rarity badges, and crafted/corrupted indicators.
-- **Gem Board** — Skill groups with linked supports, levels, quality, and gem icons.
+- **Passive Tree Canvas** — Interactive tree with zoom/pan, GGG sprite rendering, cluster jewel expansion, mastery selections, node tooltips, and jewel socket details.
+- **Gear Display** — Item cards with mod tiers (T1/T2/T3), socket colors and links, rarity badges, influence badges, iLvl/quality/corrupted indicators.
+- **Gem Board** — Skill groups with linked supports, levels, quality, gem icons, Vaal/Awakened/quality type badges.
 - **Lab Progression** — Ascendancy path with lab order and choices.
 - **Leveling Progress** — Stage-based checklist with hotkeys to mark objectives and adjust level.
+- **Tree Spec Selector** — Switch between tree specs in Tree, Gems, and Gear tabs with automatic skill/item set matching.
 - **Customizable Hotkeys** — Click-to-record keybindings for all 6 overlay actions.
-- **Build Search** — Filter your imported builds by name, class, ascendancy, or league.
-- **Copy & Share** — Copy the original PoB code or link to share with friends.
+- **Overlay Settings** — Hotkeys, language, and opacity configurable directly from the overlay without leaving the game.
+- **Build Management** — Search, filter by league, re-import, copy source, and delete builds.
 - **10 Languages** — English, Portuguese (BR), Spanish, French, German, Russian, Korean, Chinese, Japanese, Thai.
 - **Auto-Update** — Checks GitHub Releases for new versions automatically.
 
@@ -48,7 +49,7 @@ Exile Build PoE bridges the gap between planning a build in Path of Building and
 | Previous tab | `Ctrl+Shift+[` | Yes |
 | Toggle pin | `Ctrl+Shift+P` | Yes |
 
-All hotkeys can be remapped in Settings (gear icon, top-right).
+All hotkeys can be remapped in the settings panel (keyboard icon, top-right).
 
 ## Development
 
@@ -63,7 +64,7 @@ npm run dev
 npm run build
 
 # Package Windows installer
-npm run dist
+npm run dist:win
 ```
 
 ### Tech Stack
@@ -74,32 +75,23 @@ npm run dist
 - **TypeScript** — Strict mode throughout
 - **Canvas API** — Passive tree rendering with GGG sprites
 
-## Windows Installer
+## Support the Project
 
-To generate the official Windows installer:
+If Exile Build PoE helps your mapping sessions, consider supporting development:
 
-```bash
-npm install
-npm run dist:win
-```
+- [**GitHub Sponsors**](https://github.com/sponsors/ElyelxD) — 100% goes to the developer
 
-Output: `Exile-Build-PoE-Setup.exe` in `release/`.
-
-The repository includes a GitHub Actions workflow that builds the installer on every push to `main` and publishes it as a GitHub Release.
-
-Download: [Exile Build PoE for Windows](https://github.com/Elyelx/Exile-Build-PoE/releases/latest/download/Exile-Build-PoE-Setup.exe)
+Every contribution helps keep the project alive and motivates new features.
 
 ## Contributing
 
-Contributions are welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening pull requests.
-
-## Support
-
-If this project helps you, consider supporting it through GitHub Sponsors.
+Contributions are welcome! Feel free to open issues, suggest features, or submit pull requests.
 
 ## License
 
-[Apache License 2.0](./LICENSE)
+[GNU General Public License v3.0](./LICENSE)
+
+This means you can freely use, modify, and distribute this software, but any derivative work must also be open source under the same license.
 
 ## Legal & Attribution
 

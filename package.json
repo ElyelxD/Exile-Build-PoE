@@ -8,7 +8,7 @@
   "main": "dist-electron/main.js",
   "repository": {
     "type": "git",
-    "url": "git@github.com:Elyelx/Exile-Build-PoE.git"
+    "url": "git@github.com:ElyelxD/Exile-Build-PoE.git"
   },
   "scripts": {
     "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\" \"npm:dev:app\"",
@@ -62,7 +62,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "Elyelx",
+        "owner": "ElyelxD",
         "repo": "Exile-Build-PoE",
         "releaseType": "release"
       }
