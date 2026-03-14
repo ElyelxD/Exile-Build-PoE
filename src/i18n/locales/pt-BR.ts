@@ -15,7 +15,8 @@ const ptBR: Record<TranslationKey, string> = {
   "import.importButton": "Importar PoB",
   "import.openOverlay": "Abrir overlay",
   "import.emptyError": "Informe um link, código ou arquivo do Path of Building.",
-  "import.genericError": "Não foi possível importar esse Path of Building.",
+  "import.genericError":
+    "Não foi possível importar esse Path of Building. Verifique se o link é válido ou tente colar o código exportado diretamente.",
 
   // ── Builds section ──
   "builds.heading": "Builds locais",
@@ -24,6 +25,8 @@ const ptBR: Record<TranslationKey, string> = {
   "builds.delete": "Excluir build",
   "builds.reimport": "Reimportar build",
   "builds.unknownLeague": "Outras",
+  "builds.searchPlaceholder": "Buscar builds...",
+  "builds.copySource": "Copiar código/link PoB",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "Snapshot do PoB",
@@ -251,17 +254,19 @@ const ptBR: Record<TranslationKey, string> = {
   "electron.miningFailed":
     "Falha ao executar o mining local dos assets.",
   "electron.invalidPobContent":
-    "O conteúdo importado não parece ser um Path of Building válido.",
-  "electron.emptyPobCode": "O código do Path of Building está vazio.",
+    "O conteúdo importado não parece ser um Path of Building válido. Certifique-se de colar o código completo exportado do PoB.",
+  "electron.emptyPobCode":
+    "O código do Path of Building está vazio. Tente exportar novamente do PoB.",
   "electron.decodeFailed":
-    "Não foi possível decodificar o código do Path of Building.",
+    "Não foi possível decodificar o código do PoB. O código pode estar corrompido — tente copiar novamente.",
   "electron.decompressFailed":
-    "Não foi possível descompactar o código do Path of Building.",
-  "electron.invalidPastebinLink": "Link do Pastebin inválido.",
+    "Não foi possível descompactar o código do PoB. Pode ser de uma versão não suportada.",
+  "electron.invalidPastebinLink":
+    "Link do Pastebin inválido. Verifique se a URL está no formato pastebin.com/XXXXXXXX.",
   "electron.emptyImport":
     "Informe um link, código ou arquivo do Path of Building.",
   "electron.downloadFailed":
-    "Falha ao baixar o Path of Building ({{status}}).",
+    "Falha ao baixar o Path of Building ({{status}}). O link pode ter expirado — tente gerar um novo link pobb.in.",
   "electron.trayOpen": "Abrir Exile Build PoE",
   "electron.trayShowOverlay": "Mostrar overlay",
   "electron.trayQuit": "Sair",

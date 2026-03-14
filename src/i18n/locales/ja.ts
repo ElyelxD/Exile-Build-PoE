@@ -25,6 +25,8 @@ const ja: Record<TranslationKey, string> = {
   "builds.delete": "ビルドを削除",
   "builds.reimport": "ビルドを再インポート",
   "builds.unknownLeague": "その他",
+  "builds.searchPlaceholder": "ビルドを検索...",
+  "builds.copySource": "PoBコード/リンクをコピー",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "PoBスナップショット",

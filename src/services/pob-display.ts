@@ -46,6 +46,40 @@ export interface ParsedPobItemDetailed {
   mods: PobItemMod[];
 }
 
+/** A single socket color. */
+export type SocketColor = "R" | "G" | "B" | "W" | "A" | "DV";
+
+/** A group of linked sockets. */
+export interface SocketGroup {
+  colors: SocketColor[];
+}
+
+/**
+ * Parse the "Sockets: R-G-B W R-G" line from PoB rawText.
+ * Returns array of socket groups (each group = linked sockets).
+ * Returns null if no sockets line found.
+ */
+export function parseItemSockets(rawText: string): SocketGroup[] | null {
+  const match = rawText.match(/^Sockets:\s*(.+)$/im);
+  if (!match) return null;
+
+  const groups = match[1].trim().split(/\s+/);
+  const result: SocketGroup[] = [];
+
+  for (const group of groups) {
+    const colors = group.split("-").map((c) => {
+      const upper = c.trim().toUpperCase();
+      if (upper === "R" || upper === "G" || upper === "B" || upper === "W" || upper === "A" || upper === "DV") {
+        return upper as SocketColor;
+      }
+      return "W" as SocketColor; // fallback
+    });
+    if (colors.length > 0) result.push({ colors });
+  }
+
+  return result.length > 0 ? result : null;
+}
+
 /** Lines that are purely internal PoB metadata and should never be displayed. */
 export function isMetaLine(line: string) {
   return (

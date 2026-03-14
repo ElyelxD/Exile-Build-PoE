@@ -11,7 +11,8 @@ const en = {
   "import.importButton": "Import PoB",
   "import.openOverlay": "Open overlay",
   "import.emptyError": "Enter a Path of Building link, code, or file.",
-  "import.genericError": "Could not import this Path of Building.",
+  "import.genericError":
+    "Could not import this Path of Building. Check if the link is valid or try pasting the exported code directly.",
 
   // ── Builds section ──
   "builds.heading": "Local builds",
@@ -20,6 +21,8 @@ const en = {
   "builds.delete": "Delete build",
   "builds.reimport": "Re-import build",
   "builds.unknownLeague": "Other",
+  "builds.searchPlaceholder": "Search builds...",
+  "builds.copySource": "Copy PoB code/link",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "PoB Snapshot",
@@ -244,17 +247,19 @@ const en = {
   "electron.miningScriptNotFound": "Local mining script not found.",
   "electron.miningFailed": "Failed to execute local asset mining.",
   "electron.invalidPobContent":
-    "The imported content doesn't appear to be a valid Path of Building.",
-  "electron.emptyPobCode": "The Path of Building code is empty.",
+    "The imported content doesn't look like a valid Path of Building export. Make sure you're pasting the full PoB export code.",
+  "electron.emptyPobCode":
+    "The Path of Building code is empty. Try exporting again from PoB.",
   "electron.decodeFailed":
-    "Could not decode the Path of Building code.",
+    "Could not decode the Path of Building code. The code may be corrupted — try copying it again from PoB.",
   "electron.decompressFailed":
-    "Could not decompress the Path of Building code.",
-  "electron.invalidPastebinLink": "Invalid Pastebin link.",
+    "Could not decompress the Path of Building code. This may be from an unsupported PoB version.",
+  "electron.invalidPastebinLink":
+    "Invalid Pastebin link. Make sure the URL looks like pastebin.com/XXXXXXXX.",
   "electron.emptyImport":
     "Enter a Path of Building link, code, or file.",
   "electron.downloadFailed":
-    "Failed to download Path of Building ({{status}}).",
+    "Failed to download Path of Building ({{status}}). The link may have expired — try generating a new pobb.in link.",
   "electron.trayOpen": "Open Exile Build PoE",
   "electron.trayShowOverlay": "Show overlay",
   "electron.trayQuit": "Quit",

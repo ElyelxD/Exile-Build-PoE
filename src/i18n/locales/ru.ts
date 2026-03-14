@@ -22,6 +22,8 @@ const ru: Record<TranslationKey, string> = {
   "builds.delete": "Удалить билд",
   "builds.reimport": "Переимпортировать билд",
   "builds.unknownLeague": "Другие",
+  "builds.searchPlaceholder": "Поиск билдов...",
+  "builds.copySource": "Копировать код/ссылку PoB",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "Снапшот PoB",

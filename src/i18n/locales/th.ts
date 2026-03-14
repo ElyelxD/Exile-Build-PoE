@@ -24,6 +24,8 @@ const th: Record<TranslationKey, string> = {
   "builds.delete": "ลบบิลด์",
   "builds.reimport": "นำเข้าบิลด์ใหม่",
   "builds.unknownLeague": "อื่นๆ",
+  "builds.searchPlaceholder": "ค้นหาบิลด์...",
+  "builds.copySource": "คัดลอกโค้ด/ลิงก์ PoB",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "PoB Snapshot",

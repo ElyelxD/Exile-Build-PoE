@@ -179,6 +179,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [spritesReady, setSpritesReady] = useState(false);
+  const [spriteError, setSpriteError] = useState(false);
   const [size, setSize] = useState({ width: 720, height: fixedHeight ?? 520 });
   const stateRef = useRef({
     offsetX: 0, offsetY: 0, scale: 1,
@@ -199,7 +200,12 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
   }, [fixedHeight]);
 
   useEffect(() => {
-    loadAllSheets().then(() => setSpritesReady(true));
+    const timeout = setTimeout(() => setSpriteError(true), 15_000);
+    loadAllSheets()
+      .then(() => setSpritesReady(true))
+      .catch(() => setSpriteError(true))
+      .finally(() => clearTimeout(timeout));
+    return () => clearTimeout(timeout);
   }, []);
 
   const [tooltip, setTooltip] = useState<{ node: TreeNode; x: number; y: number } | null>(null);
@@ -1034,7 +1040,21 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
         <button type="button" className="tree-ctrl-btn" onClick={() => { stateRef.current.scale = Math.max(stateRef.current.scale / 1.3, 0.005); draw(); }}>−</button>
         <button type="button" className="tree-ctrl-btn" onClick={recenter}>⌂</button>
       </div>
-      {!spritesReady && <div className="tree-loading">Loading tree assets…</div>}
+      {!spritesReady && (
+        <div className="tree-loading">
+          {spriteError ? (
+            <>
+              <span>Failed to load tree assets.</span>
+              <button type="button" className="ghost-button" onClick={() => {
+                setSpriteError(false);
+                loadAllSheets()
+                  .then(() => setSpritesReady(true))
+                  .catch(() => setSpriteError(true));
+              }}>Retry</button>
+            </>
+          ) : "Loading tree assets…"}
+        </div>
+      )}
       {tooltip && (() => {
         const co = clusterData?.nodeOverrides.get(tooltip.node.id);
         const displayName = co?.name || tooltip.node.name;

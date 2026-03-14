@@ -24,6 +24,8 @@ const ko: Record<TranslationKey, string> = {
   "builds.delete": "빌드 삭제",
   "builds.reimport": "빌드 재가져오기",
   "builds.unknownLeague": "기타",
+  "builds.searchPlaceholder": "빌드 검색...",
+  "builds.copySource": "PoB 코드/링크 복사",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "PoB 스냅샷",

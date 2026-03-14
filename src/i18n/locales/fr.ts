@@ -26,6 +26,8 @@ const fr: Record<TranslationKey, string> = {
   "builds.delete": "Supprimer le build",
   "builds.reimport": "Réimporter le build",
   "builds.unknownLeague": "Autres",
+  "builds.searchPlaceholder": "Rechercher des builds...",
+  "builds.copySource": "Copier code/lien PoB",
 
   // ── Snapshot / PoB summary ──
   "snapshot.heading": "Snapshot PoB",

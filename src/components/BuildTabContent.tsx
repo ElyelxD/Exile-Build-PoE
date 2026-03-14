@@ -11,10 +11,11 @@ import { GearSlotIcon, GemIcon } from "@/components/PobVisuals";
 import {
   isMetaLine,
   parsePobItemDetailed,
+  parseItemSockets,
   sanitizePobInlineText,
   splitPobParagraphs,
 } from "@/services/pob-display";
-import type { PobItemMod } from "@/services/pob-display";
+import type { PobItemMod, SocketGroup } from "@/services/pob-display";
 import {
   getActivePobItemSet,
   getActivePobSkillGroups,
@@ -393,6 +394,41 @@ function SkillBoard({
   );
 }
 
+const SOCKET_COLORS: Record<string, string> = {
+  R: "#c03030", G: "#30a030", B: "#4070d0", W: "#c8c8c8", A: "#606060", DV: "#a020f0",
+};
+
+function ItemSocketDisplay({ item }: { item: PobItem }) {
+  const groups = parseItemSockets(item.rawText);
+  if (!groups) return null;
+
+  const totalSockets = groups.reduce((sum, g) => sum + g.colors.length, 0);
+  const maxLink = Math.max(...groups.map((g) => g.colors.length));
+
+  return (
+    <div className="gear-sockets">
+      <span className="gear-sockets-summary">
+        {totalSockets}S{maxLink > 1 ? ` ${maxLink}L` : ""}
+      </span>
+      <div className="gear-sockets-visual">
+        {groups.map((group, gi) => (
+          <span className="gear-socket-group" key={gi}>
+            {group.colors.map((color, ci) => (
+              <span key={ci} className="gear-socket-wrapper">
+                {ci > 0 && <span className="gear-socket-link" />}
+                <span
+                  className="gear-socket-dot"
+                  style={{ background: SOCKET_COLORS[color] ?? SOCKET_COLORS.W }}
+                />
+              </span>
+            ))}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ItemModBlock({ item, showTiers = true }: { item: PobItem; showTiers?: boolean }) {
   const detail = itemDetailedMods(item);
   const implicits = detail.mods.filter((m) => m.source === "implicit");
@@ -450,6 +486,7 @@ function FlaskExtraCard({ item, condensed }: { item: PobItem; condensed: boolean
           )}
         </div>
       </div>
+      <ItemSocketDisplay item={item} />
       {!condensed && <ItemModBlock item={item} showTiers={false} />}
     </article>
   );
@@ -521,6 +558,7 @@ function GearBoard({
                       )}
                     </div>
                   </div>
+                  <ItemSocketDisplay item={item} />
                   {!condensed && <ItemModBlock item={item} />}
                 </div>
               ) : (

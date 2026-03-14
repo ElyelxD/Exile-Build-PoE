@@ -2,191 +2,104 @@
 
 Open-source Windows desktop overlay for Path of Exile build progression, powered by Path of Building imports.
 
-## Overview
+## Quick Start
 
-Exile Build PoE is a Windows desktop application with an always-on-top overlay window designed to help players follow a Path of Building setup without constantly alt-tabbing.
+1. **Download** the latest installer from [GitHub Releases](https://github.com/Elyelx/Exile-Build-PoE/releases/latest/download/Exile-Build-PoE-Setup.exe)
+2. **Export your build** from [Path of Building](https://pathofbuilding.community/) — Copy → Share → Generate
+3. **Paste the code or link** into the import field and click Import
+4. **Press `Ctrl+Shift+O`** to toggle the in-game overlay
 
-Instead of focusing on price checks, the app focuses on build execution:
+The overlay shows your next objectives, current level, and gem/gear targets while you play.
 
-- passive tree progression
-- gem setup by stage
-- leveling roadmap
-- lab progression
-- gear transition notes
-- build checklists
+## What It Does
 
-The goal is simple:
+Exile Build PoE bridges the gap between planning a build in Path of Building and actually playing it. Instead of alt-tabbing to PoB every few minutes, the overlay keeps your roadmap visible while you play.
 
-**Play your build without getting stuck in PoB.**
+- **In-Game Overlay** — Always-on-top compact overlay with your next objectives, level tracking, and progress checklist. Toggle with a hotkey.
+- **Full PoB Import** — Paste a pobb.in link, pastebin URL, raw export code, or load a `.xml` file. Extracts passive tree, gems, gear, labs, masteries, jewels, and notes.
+- **Passive Tree Canvas** — Interactive tree with zoom/pan, GGG sprite rendering, cluster jewel expansion, mastery selections, and jewel socket details.
+- **Gear Display** — Item cards with mod tiers (T1/T2/T3), socket colors and links, rarity badges, and crafted/corrupted indicators.
+- **Gem Board** — Skill groups with linked supports, levels, quality, and gem icons.
+- **Lab Progression** — Ascendancy path with lab order and choices.
+- **Leveling Progress** — Stage-based checklist with hotkeys to mark objectives and adjust level.
+- **Customizable Hotkeys** — Click-to-record keybindings for all 6 overlay actions.
+- **Build Search** — Filter your imported builds by name, class, ascendancy, or league.
+- **Copy & Share** — Copy the original PoB code or link to share with friends.
+- **10 Languages** — English, Portuguese (BR), Spanish, French, German, Russian, Korean, Chinese, Japanese, Thai.
+- **Auto-Update** — Checks GitHub Releases for new versions automatically.
 
-## Current scaffold
+## Supported Import Formats
 
-- Electron + React + TypeScript desktop structure
-- main desktop window plus transparent overlay window
-- always-on-top overlay shell
-- global hotkeys wired through the desktop runtime
-- local-only persistence for MVP
-- local PoB import flow from link, code, or file
+| Format | Example |
+|--------|---------|
+| pobb.in link | `https://pobb.in/abc123` |
+| Pastebin link | `https://pastebin.com/abc123` |
+| Raw PoB code | Base64 export string from PoB |
+| XML file | Exported `.xml` from Path of Building |
 
-## Features planned for MVP
+## Default Hotkeys
 
-- Import build data from Path of Building only
-- Transform build data into playable progression stages
-- Show next passive milestones
-- Show gem and link setup by phase
-- Show lab order and ascendancy notes
-- Show gear priorities and transition notes
-- In-game overlay with compact and expanded modes
-- Manual checklist and progress tracking
+| Action | Default | Customizable |
+|--------|---------|:---:|
+| Toggle overlay | `Ctrl+Shift+O` | Yes |
+| Mark next objective | `Ctrl+Shift+M` | Yes |
+| Adjust level | `Ctrl+Shift+L` | Yes |
+| Next tab | `Ctrl+Shift+]` | Yes |
+| Previous tab | `Ctrl+Shift+[` | Yes |
+| Toggle pin | `Ctrl+Shift+P` | Yes |
 
-## Why this project exists
+All hotkeys can be remapped in Settings (gear icon, top-right).
 
-Path of Building is amazing for planning, but not ideal for step-by-step execution during gameplay.
-
-This project aims to bridge that gap with a lightweight desktop overlay experience inspired by the usability of PoE tools for Windows.
-
-## Status
-
-This project is currently in active early development.
-
-The first public goal is a usable MVP for Windows with:
-
-- PoB import
-- local progress tracking
-- passive roadmap
-- gem roadmap
-- basic overlay
-
-## Tech stack
-
-Current stack:
-
-- Electron
-- React
-- TypeScript
-- local storage for MVP state
-
-## Roadmap
-
-### MVP
-- [ ] Desktop shell
-- [ ] Build import flow
-- [ ] Progression engine
-- [ ] Overlay UI
-- [ ] Local state persistence
-- [ ] Hotkey support
-- [ ] Real Path of Building parser
-
-## Local development
+## Development
 
 ```bash
+# Install dependencies
 npm install
+
+# Run in development mode (Vite + Electron)
 npm run dev
-```
 
-Desktop-specific scripts:
-
-```bash
+# Build for production
 npm run build
-npm run typecheck
-npm run pack:win
-npm run dist:win
+
+# Package Windows installer
+npm run dist
 ```
 
-## Windows installer
+### Tech Stack
 
-To generate the official Windows installer executable on a Windows machine:
+- **Electron 30** — Desktop shell, global shortcuts, tray, auto-update
+- **React 18** — UI components
+- **Vite 5** — Build tool
+- **TypeScript** — Strict mode throughout
+- **Canvas API** — Passive tree rendering with GGG sprites
+
+## Windows Installer
+
+To generate the official Windows installer:
 
 ```bash
 npm install
 npm run dist:win
 ```
 
-Output:
+Output: `Exile-Build-PoE-Setup.exe` in `release/`.
 
-- installer `.exe` in `release/`
-- expected artifact name: `Exile Build PoE-Setup-0.1.0.exe`
+The repository includes a GitHub Actions workflow that builds the installer on every push to `main` and publishes it as a GitHub Release.
 
-Optional:
-
-```bash
-npm run dist:win:web
-```
-
-That command generates the web installer `.exe` for Windows. Use it only if the release assets are publicly reachable.
-
-Optional:
-
-```bash
-npm run dist:win:portable
-```
-
-That command generates a portable Windows executable instead of the NSIS installer.
-
-Notes:
-
-- the current packaging target is `x64`
-- MVP packaging is local-only and does not require any backend
-- if you want a custom app icon, add `build/icon.ico`
-- if you try to generate the Windows installer from Linux, `wine` is required by Electron Builder
-
-## GitHub release installer
-
-The repository includes a Windows workflow that generates an offline Windows installer, uploads it as a GitHub Actions artifact, and publishes a stable installer asset to GitHub Releases.
-
-Windows download:
-
-- [Download Exile Build PoE for Windows](https://github.com/Elyelx/Exile-Build-PoE/releases/latest/download/Exile-Build-PoE-Setup.exe)
-
-Flow:
-
-1. Push code to `main`
-2. The `Windows Installer` workflow runs on GitHub Actions
-3. It builds the Windows offline installer
-4. It uploads `Exile-Build-PoE-Setup.exe` as a workflow artifact
-5. It publishes a new GitHub Release for that build and marks it as latest
-6. End users download `Exile-Build-PoE-Setup.exe` from the latest release and run it on Windows
-
-Important:
-
-- GitHub rejects files larger than 100 MB in the repository, so installer binaries must not be committed into git
-- `release/` is still build output and should not be committed manually
-- the stable public download is the release asset `Exile-Build-PoE-Setup.exe`
-- the workflow artifact is useful for short-term validation; the GitHub Release is the better end-user download
-- the default installer is offline, so it does not depend on extra GitHub downloads during installation
-- if you explicitly need a small web installer for a public release flow, use `npm run dist:win:web`
-
-### Post-MVP
-- [ ] Multiple saved builds
-- [ ] Better build note support
-- [ ] Improved overlay customization
-- [ ] Optional cloud sync
-- [ ] Creator-friendly build packs
+Download: [Exile Build PoE for Windows](https://github.com/Elyelx/Exile-Build-PoE/releases/latest/download/Exile-Build-PoE-Setup.exe)
 
 ## Contributing
 
-Contributions are welcome.
-
-Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening pull requests.
+Contributions are welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening pull requests.
 
 ## Support
 
-If this project helps you, consider supporting it for **$1/month**.
-
-Your support helps cover:
-
-- maintenance
-- bug fixing
-- testing
-- new features
-- long-term development
-
-You can support through GitHub Sponsors if enabled for this repository.
+If this project helps you, consider supporting it through GitHub Sponsors.
 
 ## License
 
-This project is licensed under the Apache License 2.0.
-See the [LICENSE](./LICENSE) file for details.
+[Apache License 2.0](./LICENSE)
 
 ## Legal & Attribution
 
@@ -194,4 +107,4 @@ This is a community-made tool and is not affiliated with or endorsed by Grinding
 
 Path of Exile is a trademark of Grinding Gear Games.
 
-Game images and item icons are © Grinding Gear Games and used in compliance with the [Path of Exile Fan Creation Policy](https://www.pathofexile.com/legal/fan-content-policy). Icon data sourced from the official Path of Exile CDN (`web.poecdn.com`).
+Game images and item icons are © Grinding Gear Games and used in compliance with the [Path of Exile Fan Creation Policy](https://www.pathofexile.com/legal/fan-content-policy).

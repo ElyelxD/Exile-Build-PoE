@@ -1806,6 +1806,55 @@ button {
   background: #d44 !important;
 }
 
+/* ── Socket display ── */
+.gear-sockets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  margin: 2px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.gear-sockets-summary {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.gear-sockets-visual {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.gear-socket-group {
+  display: inline-flex;
+  align-items: center;
+}
+
+.gear-socket-wrapper {
+  display: inline-flex;
+  align-items: center;
+}
+
+.gear-socket-link {
+  width: 5px;
+  height: 2px;
+  background: var(--text-2);
+  margin: 0 -1px;
+}
+
+.gear-socket-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
 .gear-empty {
   flex: 1 1 auto;
   display: flex;
@@ -2096,6 +2145,27 @@ textarea {
   gap: 4px;
 }
 
+.build-filter {
+  width: 100%;
+  padding: 5px 8px;
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-1);
+  font-family: inherit;
+  font-size: 0.78rem;
+}
+
+.build-filter::placeholder {
+  color: var(--text-2);
+}
+
+.build-filter:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .build-list-item {
   display: flex;
   align-items: center;
@@ -2140,6 +2210,7 @@ textarea {
 }
 
 .build-list-reimport,
+.build-list-copy,
 .build-list-delete {
   flex-shrink: 0;
   width: 28px;
@@ -2166,6 +2237,7 @@ textarea {
 }
 
 .build-list-item:hover .build-list-reimport,
+.build-list-item:hover .build-list-copy,
 .build-list-item:hover .build-list-delete {
   opacity: 1;
 }
@@ -2173,6 +2245,11 @@ textarea {
 .build-list-reimport:hover {
   color: #50b0e0;
   background: rgba(80, 176, 224, 0.12);
+}
+
+.build-list-copy:hover {
+  color: var(--accent);
+  background: rgba(242, 169, 91, 0.12);
 }
 
 .build-list-delete:hover {

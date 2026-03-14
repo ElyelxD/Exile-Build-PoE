@@ -22,6 +22,8 @@ const zhCN: Record<TranslationKey, string> = {
   "builds.delete": "删除构建",
   "builds.reimport": "重新导入构建",
   "builds.unknownLeague": "其他",
+  "builds.searchPlaceholder": "搜索构建...",
+  "builds.copySource": "复制PoB代码/链接",
 
   // ── 快照 / PoB 摘要 ──
   "snapshot.heading": "PoB 快照",

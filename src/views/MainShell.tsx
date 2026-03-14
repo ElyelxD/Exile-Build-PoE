@@ -58,6 +58,7 @@ export function MainShell() {
   const [selectedFileName, setSelectedFileName] = useState("");
   const [error, setError] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [buildFilter, setBuildFilter] = useState("");
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
@@ -291,9 +292,27 @@ export function MainShell() {
             <p className="subtle">{t("builds.empty")}</p>
           ) : (
             <div className="build-list">
+              {state.builds.length > 3 && (
+                <input
+                  className="build-filter"
+                  type="text"
+                  placeholder={t("builds.searchPlaceholder")}
+                  value={buildFilter}
+                  onChange={(e) => setBuildFilter(e.target.value)}
+                />
+              )}
               {(() => {
+                const q = buildFilter.toLowerCase().trim();
+                const filtered = q
+                  ? state.builds.filter((b) =>
+                      b.name.toLowerCase().includes(q) ||
+                      b.className.toLowerCase().includes(q) ||
+                      b.ascendancy.toLowerCase().includes(q) ||
+                      (b.league ?? "").toLowerCase().includes(q)
+                    )
+                  : state.builds;
                 const grouped = new Map<string, typeof state.builds>();
-                for (const entry of state.builds) {
+                for (const entry of filtered) {
                   const key = entry.league || t("builds.unknownLeague");
                   const group = grouped.get(key);
                   if (group) group.push(entry);
@@ -327,6 +346,24 @@ export function MainShell() {
                             type="button"
                           >
                             ↻
+                          </button>
+                          <button
+                            className="build-list-copy"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const text = entry.sourceType === "link"
+                                ? entry.sourceValue
+                                : entry.sourceValue;
+                              navigator.clipboard.writeText(text).then(() => {
+                                const btn = e.currentTarget;
+                                btn.textContent = "✓";
+                                setTimeout(() => { btn.textContent = "⎘"; }, 1200);
+                              });
+                            }}
+                            title={t("builds.copySource")}
+                            type="button"
+                          >
+                            ⎘
                           </button>
                           <button
                             className="build-list-delete"
