@@ -4,12 +4,14 @@ Open-source Windows desktop overlay for Path of Exile build progression, powered
 
 ## Quick Start
 
-1. **Download** the latest installer from [GitHub Releases](https://github.com/ElyelxD/Exile-Build-PoE/releases/latest/download/Exile-Build-PoE-Setup.exe)
+1. **Download** the latest installer from [GitHub Releases](https://github.com/ElyelxD/Exile-Build-PoE/releases/latest/download/Exile-Build-PoE-Setup-1.0.0.exe)
 2. **Export your build** from [Path of Building](https://pathofbuilding.community/) — Copy → Share → Generate
 3. **Paste the code or link** into the import field and click Import
 4. **Press `Ctrl+Shift+O`** to toggle the in-game overlay
 
 The overlay shows your next objectives, current level, and gem/gear targets while you play.
+
+> **Windows SmartScreen:** On first launch, Windows may show a "Windows protected your computer" warning because the installer is not code-signed. Click **"More info"** → **"Run anyway"**. This is normal for free open-source projects — the app is safe and the source code is fully available for inspection.
 
 ## What It Does
 

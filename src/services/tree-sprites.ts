@@ -18,6 +18,7 @@ interface SheetUrls {
   startNode: string;
   line: string;
   ascendancy: string;
+  bloodline: string;
   background: string;
 }
 

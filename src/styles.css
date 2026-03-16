@@ -190,7 +190,8 @@ button {
   background: rgba(21, 18, 16, 0.88);
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 50;
+  overflow: visible;
 }
 
 .header-copy {
@@ -371,6 +372,14 @@ button {
   background: var(--bg-elevated);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   animation: settings-dropdown-in 120ms ease;
+}
+
+/* Portal-based dropdown: fixed position, always on top */
+.settings-dropdown--portal {
+  position: fixed;
+  top: auto;
+  right: auto;
+  z-index: 9999;
 }
 
 @keyframes settings-dropdown-in {
@@ -1024,7 +1033,6 @@ button {
 
 .tree-canvas {
   display: block;
-  width: 100%;
   cursor: grab;
   touch-action: none;
 }

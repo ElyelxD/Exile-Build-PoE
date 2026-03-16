@@ -42,6 +42,13 @@ interface TreeData {
 
 const tree = treeRaw as unknown as TreeData;
 
+/** Bloodline ascendancies whose portraits live on the bloodline sprite sheet */
+const BLOODLINE_ASCS = new Set([
+  "Warlock", "Warden", "Primalist", "Trialmaster", "Oshabi",
+  "KingInTheMists", "Catarina", "Aul", "Lycia", "Olroth",
+  "Farrul", "Delirious", "Breachlord", "Necromantic",
+]);
+
 /* ── Pre-process nodes (once) ── */
 
 interface NodeExtra {
@@ -290,6 +297,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
     const groupBgSheet = sh("groupBackground");
     const startNodeSheet = sh("startNode");
     const ascSheet = sh("ascendancy");
+    const bloodlineSheet = sh("bloodline");
     const bgSheet = sh("background");
     const jewelSheet = sh("jewel");
     const hasSprites = !!(activeSheet && inactiveSheet);
@@ -332,7 +340,12 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
         visibleGroups.add(n.group);
       }
 
-      ctx.globalAlpha = 0.40;
+      // Build set of ascendancy group IDs for enhanced rendering
+      const ascGroupIds = new Set<number>();
+      for (const n of allNodes) {
+        if (n.extra?.ascStart) ascGroupIds.add(n.group);
+      }
+
       for (const [gid, g] of Object.entries(tree.groups)) {
         if (!g.bg) continue;
         if (!visibleGroups.has(Number(gid))) continue;
@@ -341,6 +354,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
         const maxOrbit = g.orbits ? Math.max(...g.orbits) : 0;
         const orbitR = tree.orbits.radii[maxOrbit] || 82;
         const bgSz = orbitR * 2.6;
+        ctx.globalAlpha = ascGroupIds.has(Number(gid)) ? 0.55 : 0.40;
 
         if (g.half) {
           ctx.drawImage(groupBgSheet, coord[0], coord[1], coord[2], coord[3],
@@ -588,13 +602,15 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
 
       // Route ALL ascendancy nodes (type 6, but also asc notables=type1, asc keystones=type2)
       if (node.type === 6 || node.extra?.asc) {
+        // Ascendancy nodes stay brighter even when unallocated
+        if (!isAlloc && allocatedNodes.size > 0) ctx.globalAlpha = 0.78;
         const sz = node.extra?.notable ? ASC_SIZE_NOTABLE
           : node.extra?.ascStart ? ASC_SIZE_START
           : node.type === 2 ? ASC_SIZE_NOTABLE // asc keystone
           : SIZE[6];
         if (hasSprites && node.icon) {
           const drawn = drawSpriteNode(ctx, node, isAlloc, sz,
-            activeSheet!, inactiveSheet!, frameSheet, masterySheet, masteryActiveSheet, ascSheet);
+            activeSheet!, inactiveSheet!, frameSheet, masterySheet, masteryActiveSheet, ascSheet, bloodlineSheet);
           if (drawn) { ctx.globalAlpha = 1.0; continue; }
         }
         drawShapeNode(ctx, node, isAlloc, sz, scale);
@@ -605,7 +621,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
       const sz = SIZE[node.type] ?? 26;
       if (hasSprites && node.icon) {
         const drawn = drawSpriteNode(ctx, node, isAlloc, sz,
-          activeSheet!, inactiveSheet!, frameSheet, masterySheet, masteryActiveSheet, ascSheet);
+          activeSheet!, inactiveSheet!, frameSheet, masterySheet, masteryActiveSheet, ascSheet, bloodlineSheet);
         if (drawn) { ctx.globalAlpha = 1.0; continue; }
       }
       drawShapeNode(ctx, node, isAlloc, sz, scale);
@@ -671,6 +687,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
     activeSheet: HTMLImageElement, inactiveSheet: HTMLImageElement,
     frameSheet: HTMLImageElement | null, masterySheet: HTMLImageElement | null,
     _masteryActiveSheet: HTMLImageElement | null, ascSheet: HTMLImageElement | null,
+    bloodlineSheet: HTMLImageElement | null,
   ): boolean {
     // Mastery nodes — always use mastery sheet + iconInactive coords
     // (masteryActive sheet has different coord layout, so we draw from mastery sheet
@@ -704,7 +721,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
 
     // Ascendancy nodes (type 6 + notable/keystone with extra.asc)
     if ((node.type === 6 || node.extra?.asc) && ascSheet) {
-      return drawAscendancyNode(ctx, node, isAlloc, sz, activeSheet, inactiveSheet, ascSheet);
+      return drawAscendancyNode(ctx, node, isAlloc, sz, activeSheet, inactiveSheet, ascSheet, bloodlineSheet);
     }
 
     // Regular nodes
@@ -756,7 +773,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
   function drawAscendancyNode(
     ctx: CanvasRenderingContext2D, node: TreeNode, isAlloc: boolean, sz: number,
     activeSheet: HTMLImageElement, inactiveSheet: HTMLImageElement,
-    ascSheet: HTMLImageElement,
+    ascSheet: HTMLImageElement, bloodSheet: HTMLImageElement | null,
   ): boolean {
     const coordMap = isAlloc ? tree.iconActive : tree.iconInactive;
     const coord = coordMap[node.icon];
@@ -766,42 +783,84 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
       const artKey = tree.ascArt[node.extra.asc];
       if (artKey) {
         const artCoord = tree.ascCoords[artKey];
+        // Use bloodline sheet for bloodline ascendancies, fall back to ascendancy sheet
+        const isBloodline = BLOODLINE_ASCS.has(node.extra.asc);
+        const portraitSheet = isBloodline && bloodSheet ? bloodSheet : ascSheet;
         if (artCoord) {
-          const portraitSz = sz * 2.5;
+          const portraitSz = sz * 3;
+
+          // Subtle glow behind portrait
+          const glow = ctx.createRadialGradient(node.x, node.y, portraitSz * 0.4, node.x, node.y, portraitSz * 1.1);
+          glow.addColorStop(0, isAlloc ? "rgba(212,160,74,0.18)" : "rgba(140,120,80,0.10)");
+          glow.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = glow;
+          ctx.fillRect(node.x - portraitSz * 1.2, node.y - portraitSz * 1.2, portraitSz * 2.4, portraitSz * 2.4);
+
+          // Portrait clipped to circle
+          const clipR = portraitSz * 0.88;
           ctx.save();
-          ctx.globalAlpha = isAlloc ? 0.9 : 0.65;
+          ctx.globalAlpha = isAlloc ? 1.0 : 0.82;
           ctx.beginPath();
-          ctx.arc(node.x, node.y, portraitSz * 0.9, 0, Math.PI * 2);
+          ctx.arc(node.x, node.y, clipR, 0, Math.PI * 2);
           ctx.clip();
-          ctx.drawImage(ascSheet, artCoord[0], artCoord[1], artCoord[2], artCoord[3],
-            node.x - portraitSz, node.y - portraitSz, portraitSz * 2, portraitSz * 2);
+          // Account for non-square sprites (e.g. 567x537)
+          const aspect = artCoord[3] / artCoord[2];
+          const drawW = portraitSz * 2;
+          const drawH = drawW * aspect;
+          ctx.drawImage(portraitSheet, artCoord[0], artCoord[1], artCoord[2], artCoord[3],
+            node.x - portraitSz, node.y - portraitSz * aspect, drawW, drawH);
           ctx.restore();
+
+          // Golden ring border
+          ctx.strokeStyle = isAlloc ? "rgba(212,160,74,0.75)" : "rgba(160,130,80,0.40)";
+          ctx.lineWidth = Math.min(3 / stateRef.current.scale, 8);
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, clipR, 0, Math.PI * 2);
+          ctx.stroke();
         }
       }
-      const midCoord = tree.ascCoords["AscendancyMiddle"];
-      if (midCoord) {
-        const midSz = sz * 0.6;
-        ctx.drawImage(ascSheet, midCoord[0], midCoord[1], midCoord[2], midCoord[3],
-          node.x - midSz, node.y - midSz, midSz * 2, midSz * 2);
-      }
+
+      // Ascendancy name label below portrait
+      const label = node.extra.asc;
+      const fontSize = Math.min(28 / stateRef.current.scale, 200);
+      ctx.font = `600 ${fontSize}px -apple-system, "Segoe UI", sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillStyle = isAlloc ? "rgba(242,190,110,0.9)" : "rgba(200,180,150,0.55)";
+      ctx.fillText(label, node.x, node.y + sz * 3.2);
+
       return true;
     }
 
-    // Asc notables (extra.notable) and asc keystones (type 2) use the large frame
+    // Asc notables and keystones use the large frame
     const isNotable = node.extra?.notable || node.type === 2 || node.type === 1;
-    const framePrefix = isNotable ? "AscendancyFrameLarge" : "AscendancyFrameSmall";
-    const frameSuffix = isAlloc ? "Allocated" : "Normal";
-    const fc = tree.ascCoords[framePrefix + frameSuffix];
-    if (fc) {
-      const frameSz = isNotable ? sz * 1.5 : sz * 1.3;
-      ctx.drawImage(ascSheet, fc[0], fc[1], fc[2], fc[3],
-        node.x - frameSz, node.y - frameSz, frameSz * 2, frameSz * 2);
+    const iconR = isNotable ? sz * 1.0 : sz * 0.85;
+    const borderR = isNotable ? sz * 1.15 : sz * 1.0;
+
+    // Draw clean circular border instead of frame sprite (avoids blue artifacts)
+    if (isAlloc) {
+      // Allocated glow
+      ctx.fillStyle = "rgba(212,160,74,0.15)";
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, borderR * 1.4, 0, Math.PI * 2);
+      ctx.fill();
     }
+    ctx.strokeStyle = isAlloc ? "rgba(212,160,74,0.75)" : "rgba(140,120,90,0.45)";
+    ctx.lineWidth = Math.min((isNotable ? 2.5 : 1.8) / stateRef.current.scale, 6);
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, borderR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Dark background fill for the node circle
+    ctx.fillStyle = isAlloc ? "rgba(30,24,18,0.85)" : "rgba(20,16,12,0.8)";
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, iconR, 0, Math.PI * 2);
+    ctx.fill();
 
     if (coord && iconSheet) {
       ctx.save();
       ctx.beginPath();
-      ctx.arc(node.x, node.y, sz * 0.85, 0, Math.PI * 2);
+      ctx.arc(node.x, node.y, iconR, 0, Math.PI * 2);
       ctx.clip();
       ctx.drawImage(iconSheet, coord[0], coord[1], coord[2], coord[3],
         node.x - sz, node.y - sz, sz * 2, sz * 2);
@@ -937,13 +996,15 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
     const canvas = canvasRef.current;
     if (!canvas) return;
     const handler = (e: WheelEvent) => {
-      e.preventDefault(); e.stopPropagation();
-      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
       const s = stateRef.current;
+      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
       const ns = Math.min(Math.max(s.scale * factor, 0.005), 0.5);
+      // If already at zoom limit, let the page scroll instead
+      if (ns === s.scale) return;
+      e.preventDefault(); e.stopPropagation();
       const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left - size.width / 2;
-      const my = e.clientY - rect.top - size.height / 2;
+      const mx = e.clientX - rect.left - rect.width / 2;
+      const my = e.clientY - rect.top - rect.height / 2;
       const ratio = 1 - ns / s.scale;
       s.offsetX += (mx - s.offsetX) * ratio;
       s.offsetY += (my - s.offsetY) * ratio;
@@ -961,19 +1022,22 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }, []);
 
-  function screenToTree(sx: number, sy: number): [number, number] {
+  /** Convert canvas-local pixel coords to tree-space using the actual rendered size. */
+  function screenToTree(sx: number, sy: number, w: number, h: number): [number, number] {
     const s = stateRef.current;
-    const tx = (sx - size.width / 2 - s.offsetX) / s.scale + (boundsMinX + boundsMaxX) / 2;
-    const ty = (sy - size.height / 2 - s.offsetY) / s.scale + (boundsMinY + boundsMaxY) / 2;
+    const tx = (sx - w / 2 - s.offsetX) / s.scale + (boundsMinX + boundsMaxX) / 2;
+    const ty = (sy - h / 2 - s.offsetY) / s.scale + (boundsMinY + boundsMaxY) / 2;
     return [tx, ty];
   }
 
-  function hitTest(sx: number, sy: number): TreeNode | null {
-    const [tx, ty] = screenToTree(sx, sy);
+  function hitTest(sx: number, sy: number, w: number, h: number): TreeNode | null {
+    const [tx, ty] = screenToTree(sx, sy, w, h);
     const hr = 50 / stateRef.current.scale;
     const maxR2 = hr * hr;
     let best: TreeNode | null = null, bestD2 = maxR2;
     for (const n of allNodes) {
+      // Skip hidden expansion jewel sockets (they're invisible when unallocated)
+      if (n.type === 4 && !allocatedNodes.has(n.id) && expansionJewels.has(n.id)) continue;
       const d2 = (n.x - tx) ** 2 + (n.y - ty) ** 2;
       if (d2 < bestD2) { bestD2 = d2; best = n; }
     }
@@ -981,9 +1045,9 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
   }
 
   /** Hit-test virtual cluster nodes (checked before regular nodes for priority). */
-  function clusterHitTest(sx: number, sy: number): ClusterNode | null {
+  function clusterHitTest(sx: number, sy: number, w: number, h: number): ClusterNode | null {
     if (!clusterData) return null;
-    const [tx, ty] = screenToTree(sx, sy);
+    const [tx, ty] = screenToTree(sx, sy, w, h);
     const hr = 50 / stateRef.current.scale;
     const maxR2 = hr * hr;
     let best: ClusterNode | null = null, bestD2 = maxR2;
@@ -1006,16 +1070,16 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
     const lx = e.clientX - rect.left, ly = e.clientY - rect.top;
+    const w = rect.width, h = rect.height;
 
     // Check virtual cluster nodes first (they render on top)
-    const cHit = clusterHitTest(lx, ly);
+    const cHit = clusterHitTest(lx, ly, w, h);
     if (cHit) {
-      // Create a synthetic TreeNode for the tooltip system
       setTooltip({ node: { id: cHit.id, x: cHit.x, y: cHit.y, type: 0, icon: "", name: cHit.name, stats: cHit.stats, group: 0, orbit: 0, orbitIndex: 0, extra: null, out: [] }, x: lx, y: ly });
       return;
     }
 
-    const hit = hitTest(lx, ly);
+    const hit = hitTest(lx, ly, w, h);
     if (hit && hit.name && hit.name !== "Position Proxy") setTooltip({ node: hit, x: lx, y: ly });
     else setTooltip(null);
   }, [draw, size.width, size.height, clusterData]);

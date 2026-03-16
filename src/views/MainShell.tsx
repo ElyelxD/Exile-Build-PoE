@@ -1,4 +1,5 @@
-import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { BuildTabContent } from "@/components/BuildTabContent";
 import { BUILD_TABS, BuildSourceType } from "@/domain/models";
 import { sanitizePobInlineText } from "@/services/pob-display";
@@ -54,6 +55,8 @@ export function MainShell() {
   const [importMode, setImportMode] = useState<ImportMode>("paste");
   const [openPanel, setOpenPanel] = useState<"hotkeys" | "lang" | "help" | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
   const [sourceValue, setSourceValue] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("");
   const [error, setError] = useState("");
@@ -146,16 +149,29 @@ export function MainShell() {
     return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
+  // Recalculate dropdown position when panel opens or window resizes
+  const updateDropdownPos = useCallback(() => {
+    if (!panelRef.current) return;
+    const rect = panelRef.current.getBoundingClientRect();
+    setDropdownPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+  }, []);
+
   useEffect(() => {
-    if (!openPanel) return;
+    if (!openPanel) { setDropdownPos(null); return; }
+    updateDropdownPos();
     const handleClick = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpenPanel(null);
-      }
+      const target = e.target as Node;
+      if (panelRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setOpenPanel(null);
     };
+    window.addEventListener("resize", updateDropdownPos);
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [openPanel]);
+    return () => {
+      window.removeEventListener("resize", updateDropdownPos);
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [openPanel, updateDropdownPos]);
 
   const sourceLabel =
     importMode === "paste"
@@ -447,109 +463,116 @@ export function MainShell() {
                 </svg>
               </button>
 
-              {/* Hotkeys dropdown */}
-              {openPanel === "hotkeys" && (
-                <div className="settings-dropdown">
-                  <span className="settings-section-title">{t("settings.hotkeys")}</span>
-                  <span className="settings-help">{t("settings.hotkeyHelp")}</span>
-                  {hotkeys && HOTKEY_ACTIONS.map(({ action, labelKey }) => (
-                    <div className="settings-hotkey-row" key={action}>
-                      <span>{t(labelKey)}</span>
-                      <button
-                        className={`hotkey-btn${recordingAction === action ? " is-recording" : ""}`}
-                        type="button"
-                        onClick={() => setRecordingAction(recordingAction === action ? null : action)}
-                      >
-                        {recordingAction === action
-                          ? t("settings.hotkeyPress")
-                          : displayAccelerator(hotkeys[action] || "—")}
-                      </button>
-                    </div>
-                  ))}
-                  {hotkeys && (
-                    <button
-                      className="hotkey-reset-btn"
-                      type="button"
-                      onClick={() => {
-                        window.desktop?.resetHotkeys().then((cfg) => setHotkeys(cfg));
-                      }}
-                    >
-                      {t("settings.hotkeyReset")}
-                    </button>
-                  )}
-                  <hr className="settings-divider" />
-                  <span className="settings-section-title">{t("settings.overlayOpacity")}</span>
-                  <div className="opacity-slider-row">
-                    <input
-                      type="range"
-                      className="opacity-slider"
-                      min={20}
-                      max={100}
-                      step={5}
-                      value={state.overlayOpacity}
-                      onChange={(e) => actions.setOverlayOpacity(Number(e.target.value))}
-                    />
-                    <span className="opacity-value">{state.overlayOpacity}%</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Language dropdown */}
-              {openPanel === "lang" && (
-                <div className="settings-dropdown">
-                  <span className="settings-section-title">{t("settings.language")}</span>
-                  {SUPPORTED_LOCALES.map((loc) => (
-                    <button
-                      className={`lang-option ${locale === loc.value ? "is-active" : ""}`}
-                      key={loc.value}
-                      onClick={() => {
-                        setLocale(loc.value);
-                        setOpenPanel(null);
-                      }}
-                      type="button"
-                    >
-                      <span className="lang-option-short">{LOCALE_SHORT[loc.value]}</span>
-                      <span>{loc.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Help dropdown */}
-              {openPanel === "help" && (
-                <div className="settings-dropdown help-dropdown">
-                  <span className="settings-section-title">{t("help.title")}</span>
-                  <div className="help-step">
-                    <span className="help-step-num">1</span>
-                    <div>
-                      <strong>{t("help.step1Title")}</strong>
-                      <p>{t("help.step1Desc")}</p>
-                    </div>
-                  </div>
-                  <div className="help-step">
-                    <span className="help-step-num">2</span>
-                    <div>
-                      <strong>{t("help.step2Title")}</strong>
-                      <p>{t("help.step2Desc")}</p>
-                    </div>
-                  </div>
-                  <div className="help-step">
-                    <span className="help-step-num">3</span>
-                    <div>
-                      <strong>{t("help.step3Title")}</strong>
-                      <p>{t("help.step3Desc")}</p>
-                    </div>
-                  </div>
-                  <hr className="settings-divider" />
-                  <div className="help-tip">
-                    <strong>{t("help.tip")}</strong>
-                    <p>{t("help.tipDesc")}</p>
-                  </div>
-                </div>
-              )}
+              {/* Dropdowns rendered via portal — see below */}
             </div>
           </div>
         </header>
+
+        {/* Settings dropdowns — rendered via portal to escape header stacking context */}
+        {openPanel && dropdownPos && createPortal(
+          <div
+            ref={dropdownRef}
+            className={`settings-dropdown settings-dropdown--portal${openPanel === "help" ? " help-dropdown" : ""}`}
+            style={{ top: dropdownPos.top, right: dropdownPos.right }}
+          >
+            {openPanel === "hotkeys" && (
+              <>
+                <span className="settings-section-title">{t("settings.hotkeys")}</span>
+                <span className="settings-help">{t("settings.hotkeyHelp")}</span>
+                {hotkeys && HOTKEY_ACTIONS.map(({ action, labelKey }) => (
+                  <div className="settings-hotkey-row" key={action}>
+                    <span>{t(labelKey)}</span>
+                    <button
+                      className={`hotkey-btn${recordingAction === action ? " is-recording" : ""}`}
+                      type="button"
+                      onClick={() => setRecordingAction(recordingAction === action ? null : action)}
+                    >
+                      {recordingAction === action
+                        ? t("settings.hotkeyPress")
+                        : displayAccelerator(hotkeys[action] || "—")}
+                    </button>
+                  </div>
+                ))}
+                {hotkeys && (
+                  <button
+                    className="hotkey-reset-btn"
+                    type="button"
+                    onClick={() => {
+                      window.desktop?.resetHotkeys().then((cfg) => setHotkeys(cfg));
+                    }}
+                  >
+                    {t("settings.hotkeyReset")}
+                  </button>
+                )}
+                <hr className="settings-divider" />
+                <span className="settings-section-title">{t("settings.overlayOpacity")}</span>
+                <div className="opacity-slider-row">
+                  <input
+                    type="range"
+                    className="opacity-slider"
+                    min={20}
+                    max={100}
+                    step={5}
+                    value={state.overlayOpacity}
+                    onChange={(e) => actions.setOverlayOpacity(Number(e.target.value))}
+                  />
+                  <span className="opacity-value">{state.overlayOpacity}%</span>
+                </div>
+              </>
+            )}
+            {openPanel === "lang" && (
+              <>
+                <span className="settings-section-title">{t("settings.language")}</span>
+                {SUPPORTED_LOCALES.map((loc) => (
+                  <button
+                    className={`lang-option ${locale === loc.value ? "is-active" : ""}`}
+                    key={loc.value}
+                    onClick={() => {
+                      setLocale(loc.value);
+                      setOpenPanel(null);
+                    }}
+                    type="button"
+                  >
+                    <span className="lang-option-short">{LOCALE_SHORT[loc.value]}</span>
+                    <span>{loc.label}</span>
+                  </button>
+                ))}
+              </>
+            )}
+            {openPanel === "help" && (
+              <>
+                <span className="settings-section-title">{t("help.title")}</span>
+                <div className="help-step">
+                  <span className="help-step-num">1</span>
+                  <div>
+                    <strong>{t("help.step1Title")}</strong>
+                    <p>{t("help.step1Desc")}</p>
+                  </div>
+                </div>
+                <div className="help-step">
+                  <span className="help-step-num">2</span>
+                  <div>
+                    <strong>{t("help.step2Title")}</strong>
+                    <p>{t("help.step2Desc")}</p>
+                  </div>
+                </div>
+                <div className="help-step">
+                  <span className="help-step-num">3</span>
+                  <div>
+                    <strong>{t("help.step3Title")}</strong>
+                    <p>{t("help.step3Desc")}</p>
+                  </div>
+                </div>
+                <hr className="settings-divider" />
+                <div className="help-tip">
+                  <strong>{t("help.tip")}</strong>
+                  <p>{t("help.tipDesc")}</p>
+                </div>
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
 
         {updateVersion && (
           <div className="update-banner">

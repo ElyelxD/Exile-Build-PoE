@@ -237,6 +237,7 @@ async function main() {
     startNode: extractUrl(ggg.sprites.startNode),
     line: extractUrl(ggg.sprites.line),
     ascendancy: extractUrl(ggg.sprites.ascendancy),
+    bloodline: extractUrl(ggg.sprites.ascendancyBloodline || Object.entries(ggg.sprites).find(([k]) => k.endsWith("Bloodline"))?.[1]),
     background: extractUrl(ggg.sprites.background),
   };
 
