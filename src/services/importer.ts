@@ -660,12 +660,12 @@ function parsePobData(xml: string): {
       }))
       .filter((s) => s.nodeId > 0 && s.itemId);
 
-    // Parse masteryEffects attribute: "{effectId,nodeId},{effectId,nodeId},..."
+    // Parse masteryEffects attribute: "{nodeId,effectId},{nodeId,effectId},..."
     const masteryEffects: Record<string, number> = {};
     const meAttr = attribute(spec, "masteryEffects") || "";
     let meCount = 0;
     for (const m of meAttr.matchAll(/\{(\d+),(\d+)\}/g)) {
-      masteryEffects[m[2]] = Number(m[1]); // nodeId → effectId
+      masteryEffects[m[1]] = Number(m[2]); // nodeId → effectId
       meCount++;
     }
 

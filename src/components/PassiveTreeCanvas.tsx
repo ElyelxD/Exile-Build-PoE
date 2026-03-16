@@ -58,7 +58,7 @@ interface NodeExtra {
   notable?: boolean;
   blighted?: boolean;
   proxy?: boolean;
-  ej?: { s: number; p?: number; pr?: number };
+  ej?: { s: number; i?: number; p?: number; pr?: number };
   me?: Array<[number, string]>; // mastery effects: [effectId, display text]
 }
 
@@ -156,7 +156,7 @@ const treeHeight = boundsMaxY - boundsMinY;
 /* ── Draw sizes (in tree-space units) ── */
 
 const SIZE: Record<number, number> = {
-  0: 26, 1: 38, 2: 54, 3: 40, 4: 40, 5: 60, 6: 26,
+  0: 26, 1: 38, 2: 54, 3: 54, 4: 40, 5: 60, 6: 26,
 };
 const ASC_SIZE_NOTABLE = 36;
 const ASC_SIZE_START = 50;
@@ -222,6 +222,49 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
   const clusterData = useMemo(() => {
     if (!jewelSocketMap || jewelSocketMap.size === 0) return null;
 
+    // Build expansion jewel index map: socketId → { size, index, parentId }
+    // Used to compute PoB-compatible base IDs for cluster allocation tracking
+    const ejMap = new Map<number, { s: number; i: number; p?: number }>();
+    for (const n of allNodes) {
+      if (n.extra?.ej && n.extra.ej.i != null) {
+        ejMap.set(n.id, { s: n.extra.ej.s, i: n.extra.ej.i, p: n.extra.ej.p });
+      }
+    }
+
+    /** Compute PoB base ID by walking up the expansion hierarchy. */
+    function computePobBaseId(socketId: number): number | undefined {
+      const ej = ejMap.get(socketId);
+      if (!ej) return undefined;
+      // Start with signal bit
+      let id = 0x10000;
+      // Walk up to find the Large expansion ancestor
+      if (ej.s === 2) {
+        // This IS a Large expansion entry
+        id += ej.i << 6;
+      } else if (ej.s === 1) {
+        // Medium: add parent Large's index + own index
+        if (ej.p != null) {
+          const parentEj = ejMap.get(ej.p);
+          if (parentEj && parentEj.s === 2) id += parentEj.i << 6;
+        }
+        id += ej.i << 9;
+      } else if (ej.s === 0) {
+        // Small: add grandparent Large's index + parent Medium's index
+        if (ej.p != null) {
+          const parentEj = ejMap.get(ej.p);
+          if (parentEj) {
+            if (parentEj.s === 1 && parentEj.p != null) {
+              const gpEj = ejMap.get(parentEj.p);
+              if (gpEj && gpEj.s === 2) id += gpEj.i << 6;
+            }
+            if (parentEj.s === 1) id += parentEj.i << 9;
+          }
+        }
+        // Small index is always 0, no bits to add
+      }
+      return id;
+    }
+
     // Build SocketLayoutInfo with proxy group center and orbitIndex for rotation
     const socketInfo = new Map<number, import("@/services/cluster-expansion").SocketLayoutInfo>();
     for (const [nodeId] of jewelSocketMap) {
@@ -239,11 +282,26 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
           info.proxyOrbitIndex = proxy.orbitIndex;
         }
       }
+
+      // Compute PoB base ID for cluster allocation matching
+      info.pobBaseId = computePobBaseId(nodeId);
+
       socketInfo.set(nodeId, info);
     }
 
+    // Build map: parentSocketId → real sub-socket node IDs
+    const subSocketIds = new Map<number, number[]>();
+    for (const n of allNodes) {
+      if (n.type === 4 && n.extra?.ej?.p) {
+        const parentId = n.extra.ej.p as number;
+        const arr = subSocketIds.get(parentId) ?? [];
+        arr.push(n.id);
+        subSocketIds.set(parentId, arr);
+      }
+    }
+
     const expansions = buildClusterExpansions(
-      socketInfo, jewelSocketMap, tree.orbits.radii, tree.orbits.skills,
+      socketInfo, jewelSocketMap, tree.orbits.radii, tree.orbits.skills, subSocketIds,
     );
     if (expansions.length === 0) return null;
 
@@ -454,6 +512,34 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
     // Drawn AFTER unallocated connections but BEFORE allocated golden pipes,
     // so allocated paths draw ON TOP of cluster nodes, and cluster sits above unallocated.
     if (clusterData) {
+      // Cluster group backgrounds (ornate ring art from GGG sprite sheet)
+      if (groupBgSheet) {
+        for (const expansion of clusterData.expansions) {
+          const bgKey = expansion.radius > 200 ? "PSGroupBackground3" : "PSGroupBackground2";
+          const bgCoord = tree.groupBgCoords[bgKey];
+          if (!bgCoord) continue;
+          const { x: cx, y: cy } = expansion.center;
+          const isHalf = bgKey === "PSGroupBackground3";
+          const bgSz = expansion.radius * 3.2;
+          ctx.globalAlpha = 0.85;
+          if (isHalf) {
+            // Top half
+            ctx.drawImage(groupBgSheet, bgCoord[0], bgCoord[1], bgCoord[2], bgCoord[3],
+              cx - bgSz, cy - bgSz, bgSz * 2, bgSz);
+            // Mirror bottom half
+            ctx.save();
+            ctx.translate(cx, cy); ctx.scale(1, -1); ctx.translate(-cx, -cy);
+            ctx.drawImage(groupBgSheet, bgCoord[0], bgCoord[1], bgCoord[2], bgCoord[3],
+              cx - bgSz, cy - bgSz, bgSz * 2, bgSz);
+            ctx.restore();
+          } else {
+            ctx.drawImage(groupBgSheet, bgCoord[0], bgCoord[1], bgCoord[2], bgCoord[3],
+              cx - bgSz, cy - bgSz, bgSz * 2, bgSz * 2);
+          }
+          ctx.globalAlpha = 1.0;
+        }
+      }
+
       ctx.globalAlpha = 1.0;
       ctx.lineCap = "round";
 
@@ -535,39 +621,95 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
     // Real tree nodes + jewel sprites still draw on top in layers 3 & 4.
     if (clusterData) {
       ctx.globalAlpha = 1.0;
+      const iconSheet = activeSheet ?? inactiveSheet;
       for (const expansion of clusterData.expansions) {
         for (const cn of expansion.nodes) {
+          const isClusterAlloc = allocatedNodes.has(cn.id);
+
           if (cn.nodeType === "notable") {
-            ctx.fillStyle = "rgba(212,160,74,0.15)";
+            const r = 32;
+            // Outer glow
+            const glow = ctx.createRadialGradient(cn.x, cn.y, r * 0.5, cn.x, cn.y, r * 1.6);
+            glow.addColorStop(0, isClusterAlloc ? "rgba(212,160,74,0.20)" : "rgba(160,130,80,0.15)");
+            glow.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = glow;
             ctx.beginPath();
-            ctx.arc(cn.x, cn.y, 42, 0, Math.PI * 2);
+            ctx.arc(cn.x, cn.y, r * 1.6, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = "#e8c36a";
+            // Background
+            ctx.fillStyle = isClusterAlloc ? "rgba(40,30,15,0.9)" : "rgba(45,38,25,0.9)";
             ctx.beginPath();
-            ctx.arc(cn.x, cn.y, 28, 0, Math.PI * 2);
+            ctx.arc(cn.x, cn.y, r, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = "#f2a95b";
-            ctx.lineWidth = 3 / scale;
+            // Golden border
+            ctx.strokeStyle = isClusterAlloc ? "rgba(212,160,74,0.85)" : "rgba(190,155,90,0.75)";
+            ctx.lineWidth = Math.min(3 / scale, 8);
             ctx.beginPath();
-            ctx.arc(cn.x, cn.y, 28, 0, Math.PI * 2);
+            ctx.arc(cn.x, cn.y, r, 0, Math.PI * 2);
             ctx.stroke();
+            // Sprite icon clipped to circle (notable size = 37x37 in sprite sheet)
+            const iconCoord = cn.icon ? (tree.iconActive[cn.icon] ?? tree.iconInactive[cn.icon]) : null;
+            if (iconSheet && iconCoord) {
+              ctx.save();
+              ctx.globalAlpha = 1.0;
+              ctx.beginPath();
+              ctx.arc(cn.x, cn.y, r * 0.88, 0, Math.PI * 2);
+              ctx.clip();
+              const iSz = r * 1.1;
+              ctx.drawImage(iconSheet, iconCoord[0], iconCoord[1], iconCoord[2], iconCoord[3],
+                cn.x - iSz, cn.y - iSz, iSz * 2, iSz * 2);
+              ctx.restore();
+            }
+            // Name label below
+            const fontSize = Math.min(22 / scale, 160);
+            ctx.font = `600 ${fontSize}px -apple-system, "Segoe UI", sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillStyle = isClusterAlloc ? "rgba(232,195,106,0.9)" : "rgba(180,155,100,0.6)";
+            ctx.fillText(cn.name, cn.x, cn.y + r + 6);
           } else if (cn.nodeType === "socket") {
-            const half = 20;
-            ctx.fillStyle = "#f2a95b";
-            ctx.fillRect(cn.x - half, cn.y - half, half * 2, half * 2);
-            ctx.strokeStyle = "#c8952c";
-            ctx.lineWidth = 2 / scale;
-            ctx.strokeRect(cn.x - half, cn.y - half, half * 2, half * 2);
+            // Jewel Socket: diamond shape
+            const half = 22;
+            ctx.save();
+            ctx.translate(cn.x, cn.y);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillStyle = isClusterAlloc ? "rgba(40,30,15,0.9)" : "rgba(25,20,12,0.85)";
+            ctx.fillRect(-half, -half, half * 2, half * 2);
+            ctx.strokeStyle = isClusterAlloc ? "rgba(212,160,74,0.85)" : "rgba(160,130,80,0.55)";
+            ctx.lineWidth = Math.min(2.5 / scale, 6);
+            ctx.strokeRect(-half, -half, half * 2, half * 2);
+            ctx.restore();
           } else {
-            ctx.fillStyle = "#d4a04a";
+            // Small passive: circle with sprite icon
+            const r = 18;
+            ctx.fillStyle = isClusterAlloc ? "rgba(40,30,15,0.9)" : "rgba(25,20,12,0.85)";
             ctx.beginPath();
-            ctx.arc(cn.x, cn.y, 16, 0, Math.PI * 2);
+            ctx.arc(cn.x, cn.y, r, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = "#c8952c";
-            ctx.lineWidth = 1.5 / scale;
+            ctx.strokeStyle = isClusterAlloc ? "rgba(212,160,74,0.70)" : "rgba(140,120,80,0.45)";
+            ctx.lineWidth = Math.min(2 / scale, 5);
             ctx.beginPath();
-            ctx.arc(cn.x, cn.y, 16, 0, Math.PI * 2);
+            ctx.arc(cn.x, cn.y, r, 0, Math.PI * 2);
             ctx.stroke();
+            // Sprite icon clipped to circle (small size = 26x26 in sprite sheet)
+            const iconCoord = cn.icon ? (tree.iconActive[cn.icon] ?? tree.iconInactive[cn.icon]) : null;
+            if (iconSheet && iconCoord) {
+              ctx.save();
+              ctx.globalAlpha = isClusterAlloc ? 1.0 : 0.92;
+              ctx.beginPath();
+              ctx.arc(cn.x, cn.y, r * 0.88, 0, Math.PI * 2);
+              ctx.clip();
+              const iSz = r * 1.0;
+              ctx.drawImage(iconSheet, iconCoord[0], iconCoord[1], iconCoord[2], iconCoord[3],
+                cn.x - iSz, cn.y - iSz, iSz * 2, iSz * 2);
+              ctx.restore();
+            } else {
+              // Fallback dot if no icon
+              ctx.fillStyle = isClusterAlloc ? "#d4a04a" : "#8a7040";
+              ctx.beginPath();
+              ctx.arc(cn.x, cn.y, r * 0.35, 0, Math.PI * 2);
+              ctx.fill();
+            }
           }
         }
       }
@@ -695,24 +837,25 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
     if (node.type === 3) {
       const coord = tree.iconInactive[node.icon];
       if (masterySheet && coord) {
+        const mSz = sz * 1.9; // mastery icons render larger to match PoB/game
         if (isAlloc) {
           // Golden glow behind allocated mastery
           ctx.fillStyle = "rgba(212,160,74,0.25)";
           ctx.beginPath();
-          ctx.arc(node.x, node.y, sz * 1.4, 0, Math.PI * 2);
+          ctx.arc(node.x, node.y, mSz * 1.3, 0, Math.PI * 2);
           ctx.fill();
           ctx.strokeStyle = "rgba(212,160,74,0.7)";
-          ctx.lineWidth = Math.min(2 / stateRef.current.scale, 6);
+          ctx.lineWidth = Math.min(3 / stateRef.current.scale, 8);
           ctx.beginPath();
-          ctx.arc(node.x, node.y, sz * 1.1, 0, Math.PI * 2);
+          ctx.arc(node.x, node.y, mSz * 1.05, 0, Math.PI * 2);
           ctx.stroke();
         }
         ctx.save();
         ctx.beginPath();
-        ctx.arc(node.x, node.y, sz * 0.92, 0, Math.PI * 2);
+        ctx.arc(node.x, node.y, mSz * 0.95, 0, Math.PI * 2);
         ctx.clip();
         ctx.drawImage(masterySheet, coord[0], coord[1], coord[2], coord[3],
-          node.x - sz, node.y - sz, sz * 2, sz * 2);
+          node.x - mSz, node.y - mSz, mSz * 2, mSz * 2);
         ctx.restore();
         return true;
       }
@@ -1134,7 +1277,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
             <strong className="tree-tooltip-name">{displayName}</strong>
             {co && (
               <span className="tree-tooltip-cluster-label">
-                {co.nodeType === "notable" ? "Cluster Notable" : co.nodeType === "socket" ? "Jewel Socket" : "Cluster Small Passive"}
+                {co.nodeType === "notable" ? "Cluster Notable" : co.nodeType === "socket" ? "" : "Cluster Small Passive"}
               </span>
             )}
             {displayStats && (
@@ -1145,6 +1288,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
             {!co && tooltip.node.extra?.me && tooltip.node.extra.me.length > 0 && (() => {
               const effects = tooltip.node.extra.me as Array<[number, string]>;
               const selectedEffectId = masterySelections?.[tooltip.node.id];
+              const isNodeAlloc = allocatedNodes.has(tooltip.node.id);
               if (selectedEffectId != null) {
                 const selected = effects.find(([id]) => id === selectedEffectId);
                 return selected ? (
@@ -1153,6 +1297,9 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
                   </div>
                 ) : null;
               }
+              // Only show all options if the node is NOT allocated
+              // (allocated without a known selection = PoB didn't export the choice)
+              if (isNodeAlloc) return null;
               return (
                 <div className="tree-tooltip-mastery">
                   {effects.map(([id, text]) => (

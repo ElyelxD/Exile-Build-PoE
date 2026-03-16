@@ -136,6 +136,7 @@ async function main() {
     if (node.isProxy) extra.proxy = true;
     if (node.expansionJewel) {
       extra.ej = { s: node.expansionJewel.size };
+      if (node.expansionJewel.index != null) extra.ej.i = node.expansionJewel.index;
       if (node.expansionJewel.parent) {
         const parentNode = ggg.nodes[node.expansionJewel.parent];
         extra.ej.p = parentNode?.skill ?? parseInt(node.expansionJewel.parent);

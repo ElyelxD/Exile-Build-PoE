@@ -878,6 +878,13 @@ export function BuildTabContent({
         const decoded = treeInput ? decodeTreeUrl(treeInput) : null;
         const allocatedNodes = decoded?.allocatedNodes ?? new Set<number>();
 
+        // Merge cluster jewel allocated node IDs into the main set
+        if (decoded?.clusterAllocatedNodes) {
+          for (const id of decoded.clusterAllocatedNodes) {
+            allocatedNodes.add(id);
+          }
+        }
+
         // Mastery selections: prefer PoB XML attribute, fallback to URL-encoded
         const masterySelections = activeTreeSpec?.masteryEffects ?? decoded?.masterySelections;
 

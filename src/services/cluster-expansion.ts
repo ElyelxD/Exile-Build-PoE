@@ -13,6 +13,8 @@
  *  - Index 0 = entrance node (connects to the parent jewel socket)
  */
 
+import clusterNotablesDb from "@/data/cluster-notables.json";
+
 export interface ClusterNode {
   id: number;
   x: number;
@@ -20,6 +22,8 @@ export interface ClusterNode {
   name: string;
   stats: string;
   nodeType: "notable" | "small" | "socket";
+  /** Sprite icon key (from tree iconActive/iconInactive) for rendering */
+  icon?: string;
 }
 
 export interface ClusterExpansion {
@@ -68,6 +72,59 @@ type SizeConfig = typeof LARGE;
 const TRANSLATE_12_TO_16 = [0, 1, 3, 4, 5, 7, 8, 9, 11, 12, 13, 15];
 const TRANSLATE_16_TO_12 = [0, 1, 1, 2, 3, 4, 4, 5, 6, 7, 7, 8, 9, 10, 10, 11];
 
+/* ── Icon mapping for cluster nodes ── */
+// Maps keywords from small passive grants → sprite icon key in tree data
+const P = "Art/2DArt/SkillIcons/passives/";
+const SMALL_ICON_MAP: Array<[RegExp, string]> = [
+  [/minion/i,          `${P}miniondamage.png`],
+  [/totem/i,           `${P}TotemNode.png`],
+  [/trap/i,            `${P}TrapNode.png`],
+  [/mine/i,            `${P}MineNode.png`],
+  [/brand/i,           `${P}BrandDmgNode.png`],
+  [/fire damage/i,     `${P}FireDamagenode.png`],
+  [/cold damage/i,     `${P}ColdDamagenode.png`],
+  [/lightning damage/i,`${P}LightningDamagenode.png`],
+  [/chaos damage/i,    `${P}ChaosDamagenode.png`],
+  [/physical damage/i, `${P}PhysicalDamageNode.png`],
+  [/elemental damage/i,`${P}ElementalDamagenode.png`],
+  [/spell damage/i,    `${P}SpellDamageNode.png`],
+  [/attack/i,          `${P}DmgAttackSpeed.png`],
+  [/critical/i,        `${P}DmgCrit.png`],
+  [/life/i,            `${P}LifeNode.png`],
+  [/energy shield/i,   `${P}EnergyShieldNode.png`],
+  [/mana/i,            `${P}ManaNode.png`],
+  [/armour/i,          `${P}ArmourNode.png`],
+  [/evasion/i,         `${P}EvasionNode.png`],
+  [/resist/i,          `${P}ElementalResistancesNode.png`],
+  [/speed/i,           `${P}AttackSpeedNode.png`],
+  [/damage over time/i,`${P}DamageOverTimeNode.png`],
+  [/damage/i,          `${P}DmgAttackSpeed.png`],
+];
+const NOTABLE_ICON_MAP: Array<[RegExp, string]> = [
+  [/minion/i,          `${P}IncreasedMinionDamageNotable.png`],
+  [/totem/i,           `${P}TotemNotable.png`],
+  [/fire/i,            `${P}FireDamageNotable.png`],
+  [/cold/i,            `${P}ColdDamageNotable.png`],
+  [/lightning/i,       `${P}LightningDamageNotable.png`],
+  [/chaos/i,           `${P}ChaosDamageNotable.png`],
+  [/physical/i,        `${P}PhysicalDamageNotable.png`],
+  [/elemental/i,       `${P}ElementalDamageNotable.png`],
+  [/spell/i,           `${P}SpellDamageNotable.png`],
+  [/life/i,            `${P}LifeNotable.png`],
+  [/energy shield/i,   `${P}EnergyShieldNotable.png`],
+  [/armour|armor/i,    `${P}ArmourNotable.png`],
+  [/evasion/i,         `${P}EvasionNotable.png`],
+];
+const FALLBACK_SMALL = `${P}clustersLinknode1.png`;
+const FALLBACK_NOTABLE = `${P}clustersLink2.png`;
+
+function resolveIcon(stats: string, map: Array<[RegExp, string]>, fallback: string): string {
+  for (const [re, icon] of map) {
+    if (re.test(stats)) return icon;
+  }
+  return fallback;
+}
+
 /* ── Mod parsing ── */
 
 interface ParsedClusterMods {
@@ -109,6 +166,8 @@ export interface SocketLayoutInfo {
   groupCenter?: { x: number; y: number };
   /** Proxy orbitIndex in 16-position tree-space (rotation offset) */
   proxyOrbitIndex?: number;
+  /** PoB base ID for this expansion (0x10000 + expansion hierarchy bits) */
+  pobBaseId?: number;
 }
 
 export function buildClusterExpansions(
@@ -116,6 +175,8 @@ export function buildClusterExpansions(
   jewelSocketMap: Map<number, string | { name: string; mods?: string[]; baseType?: string }>,
   orbitRadii: number[],
   skillsPerOrbit: number[],
+  /** Map from parent socket ID → real sub-socket node IDs (for using real IDs instead of virtual) */
+  subSocketIds?: Map<number, number[]>,
 ): ClusterExpansion[] {
   const expansions: ClusterExpansion[] = [];
 
@@ -145,8 +206,11 @@ export function buildClusterExpansions(
     const center = info.groupCenter ?? info;
     const proxyOidx16 = info.proxyOrbitIndex ?? estimateRotation(info, orbitPositions);
 
+    const realSubIds = subSocketIds?.get(socketId) ?? [];
+    const sizeIndex = isLarge ? 2 : isMedium ? 1 : 0;
     const expansion = generateLayout(
-      socketId, info, parsed, cfg, center, proxyOidx16, radius, orbitPositions,
+      socketId, info, parsed, cfg, center, proxyOidx16, radius, orbitPositions, realSubIds,
+      info.pobBaseId, sizeIndex,
     );
     if (expansion.nodes.length > 0) expansions.push(expansion);
   }
@@ -165,35 +229,45 @@ function generateLayout(
   proxyOidx16: number,
   radius: number,
   orbitPositions: number,
+  realSubSocketIds: number[],
+  pobBaseId: number | undefined,
+  sizeIndex: number,
 ): ClusterExpansion {
   // Step 1: Assign node roles to cluster-space indices
-  const occupied = new Map<number, { role: "notable" | "small" | "socket"; name: string; stats: string }>();
+  const occupied = new Map<number, { role: "notable" | "small" | "socket"; name: string; stats: string; icon?: string }>();
 
   // Sockets first (from priority list)
+  // Sub-socket size: Large→Medium, Medium→Small
+  const subSocketLabel = cfg === LARGE ? "Medium Jewel Socket" : "Small Jewel Socket";
   let si = 0;
   for (const idx of cfg.socketIndices) {
     if (si >= parsed.jewelSocketCount) break;
-    occupied.set(idx, { role: "socket", name: "Jewel Socket", stats: "" });
+    occupied.set(idx, { role: "socket", name: subSocketLabel, stats: "" });
     si++;
   }
 
-  // Notables second (skip occupied)
+  // Notables second (skip occupied) — look up stats from cluster notables database
+  const notableDb = clusterNotablesDb as Record<string, string[]>;
   let ni = 0;
   for (const idx of cfg.notableIndices) {
     if (ni >= parsed.notableNames.length) break;
     if (occupied.has(idx)) continue;
-    occupied.set(idx, { role: "notable", name: parsed.notableNames[ni], stats: "" });
+    const nName = parsed.notableNames[ni];
+    const nStats = notableDb[nName]?.join("\n") ?? "";
+    const nIcon = resolveIcon(nStats || nName, NOTABLE_ICON_MAP, FALLBACK_NOTABLE);
+    occupied.set(idx, { role: "notable", name: nName, stats: nStats, icon: nIcon });
     ni++;
   }
 
   // Small passives fill remaining (skip occupied)
   const smallCount = parsed.totalPassives - parsed.jewelSocketCount - parsed.notableNames.length;
   const smallStats = parsed.smallPassiveGrants.join("\n");
+  const smallIcon = resolveIcon(smallStats, SMALL_ICON_MAP, FALLBACK_SMALL);
   let pi = 0;
   for (const idx of cfg.smallIndices) {
     if (pi >= smallCount) break;
     if (occupied.has(idx)) continue;
-    occupied.set(idx, { role: "small", name: "Small Passive", stats: smallStats });
+    occupied.set(idx, { role: "small", name: "Small Passive", stats: smallStats, icon: smallIcon });
     pi++;
   }
 
@@ -209,6 +283,7 @@ function generateLayout(
   const rotatedIdToVirtual = new Map<number, number>(); // orbit index → virtualId
   const nodeOrbitIndex = new Map<number, number>(); // virtualId → orbit index
 
+  let realSocketIdx = 0; // index into realSubSocketIds for socket-type nodes
   for (const [clusterIdx, info] of occupied) {
     const rotated = (clusterIdx + proxyOidxCluster) % cfg.totalIndices;
     const orbitIdx = cfg.totalIndices === 12
@@ -219,10 +294,20 @@ function generateLayout(
     const x = Math.round((center.x + radius * Math.cos(angle)) * 100) / 100;
     const y = Math.round((center.y + radius * Math.sin(angle)) * 100) / 100;
 
-    const virtualId = -(socketId * 100 + clusterIdx + 1);
-    nodes.push({ id: virtualId, x, y, name: info.name, stats: info.stats, nodeType: info.role });
-    rotatedIdToVirtual.set(orbitIdx, virtualId);
-    nodeOrbitIndex.set(virtualId, orbitIdx);
+    // Use real tree node ID for socket nodes (so jewelSocketMap lookups work).
+    // For non-socket nodes, use PoB-compatible IDs when available (enables allocation tracking).
+    // PoB ID formula: pobBaseId + (sizeIndex << 4) + clusterOrbitIndex
+    let nodeId: number;
+    if (info.role === "socket" && realSocketIdx < realSubSocketIds.length) {
+      nodeId = realSubSocketIds[realSocketIdx++];
+    } else if (pobBaseId != null) {
+      nodeId = pobBaseId + (sizeIndex << 4) + clusterIdx;
+    } else {
+      nodeId = -(socketId * 100 + clusterIdx + 1);
+    }
+    nodes.push({ id: nodeId, x, y, name: info.name, stats: info.stats, nodeType: info.role, icon: info.icon });
+    rotatedIdToVirtual.set(orbitIdx, nodeId);
+    nodeOrbitIndex.set(nodeId, orbitIdx);
   }
 
   // Step 4: Connect adjacent nodes around the ring (sorted by orbit position)

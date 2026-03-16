@@ -1,19 +1,17 @@
 /**
- * Decode a PoB / GGG passive skill tree URL to extract allocated node IDs
- * and mastery effect selections.
+ * Decode a PoB / GGG passive skill tree URL to extract allocated node IDs,
+ * cluster jewel node allocations, and mastery effect selections.
  *
- * URL format:
- *   https://www.pathofexile.com/passive-skill-tree/VERSION/BASE64URL
- *   https://www.pathofexile.com/passive-skill-tree/BASE64URL
- *
- * Binary layout (version ≥ 6):
- *   [0-3]  uint32 BE  – format version (typically 4–6)
+ * PoB binary layout (version ≥ 5):
+ *   [0-3]  uint32 BE  – format version (4–6)
  *   [4]    uint8      – character class  (0-6)
- *   [5]    uint8      – ascendancy class (0-3)
- *   [6]    uint8      – fullscreen flag  (version ≥ 6 only, 0 or 1)
- *   [7+]   uint16 BE  – allocated node IDs (skill hashes)
- *   [N]    uint8      – mastery selection count
- *   [N+1+] 4 bytes each – mastery pairs: [effectId(u16 BE), nodeId(u16 BE)]
+ *   [5]    uint8      – ascendancy class (packed: bits 0-1 primary, 2-3 secondary)
+ *   [6]    uint8      – regular node count
+ *   [7+]   uint16 BE  – regular node IDs  (count × 2 bytes)
+ *   [N]    uint8      – cluster node count  (version ≥ 5)
+ *   [N+1+] uint16 BE  – cluster node IDs   (count × 2 bytes, real id = value + 65536)
+ *   [M]    uint8      – mastery count       (version ≥ 6)
+ *   [M+1+] 4 bytes    – mastery pairs: [effectId(u16 BE), nodeId(u16 BE)]
  */
 
 export interface DecodedTree {
@@ -21,6 +19,8 @@ export interface DecodedTree {
   classId: number;
   ascendancyId: number;
   allocatedNodes: Set<number>;
+  /** Cluster jewel virtual node IDs (>= 65536) that are allocated */
+  clusterAllocatedNodes: Set<number>;
   /** Mastery selections: masteryNodeId → selected effectId */
   masterySelections: Record<string, number>;
 }
@@ -62,6 +62,11 @@ function extractEncodedData(input: string): string | null {
   return null;
 }
 
+/** Read a u16 BE at the given byte offset. */
+function readU16(view: DataView, offset: number): number {
+  return view.getUint16(offset, false);
+}
+
 export function decodeTreeUrl(url: string): DecodedTree | null {
   try {
     const encoded = extractEncodedData(url);
@@ -73,67 +78,98 @@ export function decodeTreeUrl(url: string): DecodedTree | null {
     const view = new DataView(bytes.buffer);
     const version = view.getUint32(0, false);
     const classId = bytes[4];
-    const ascendancyId = bytes[5];
-
-    // Version 6+ has a fullscreen byte at offset 6
-    const nodeStart = version >= 6 ? 7 : 6;
+    const ascendancyId = bytes[5] & 0x03; // bits 0-1
 
     const allocatedNodes = new Set<number>();
+    const clusterAllocatedNodes = new Set<number>();
     const masterySelections: Record<string, number> = {};
 
-    // Strategy: first read ALL uint16 as node IDs (safe baseline).
-    // Then try to detect the mastery section at the end.
-    // The mastery section format: [count(1 byte)][effectId(u16) nodeId(u16)] × count
-    // The count byte sits right after the last node ID.
-    // Total mastery bytes = 1 + count * 4
-    // The remaining bytes (header to count byte) must be even (node IDs = 2 bytes each).
+    // Version ≥ 5: count-based sections (PoB format)
+    if (version >= 5 && bytes.length >= 7) {
+      let offset = 6;
 
-    // First pass: read everything as node IDs
-    const allU16: number[] = [];
-    for (let i = nodeStart; i + 1 < bytes.length; i += 2) {
-      allU16.push(view.getUint16(i, false));
+      // Section 1: Regular nodes
+      const regularCount = bytes[offset++];
+      for (let i = 0; i < regularCount && offset + 1 < bytes.length; i++) {
+        const id = readU16(view, offset);
+        offset += 2;
+        if (id > 0) allocatedNodes.add(id);
+      }
+
+      // Section 2: Cluster nodes (version ≥ 5)
+      if (offset < bytes.length) {
+        const clusterCount = bytes[offset++];
+        for (let i = 0; i < clusterCount && offset + 1 < bytes.length; i++) {
+          const rawId = readU16(view, offset);
+          offset += 2;
+          const clusterId = rawId + 65536;
+          clusterAllocatedNodes.add(clusterId);
+        }
+      }
+
+      // Section 3: Mastery effects (version ≥ 6)
+      if (version >= 6 && offset < bytes.length) {
+        const masteryCount = bytes[offset++];
+        for (let i = 0; i < masteryCount && offset + 3 < bytes.length; i++) {
+          const effectId = readU16(view, offset);
+          const nodeId = readU16(view, offset + 2);
+          offset += 4;
+          if (effectId > 0 && nodeId > 0) {
+            masterySelections[nodeId] = effectId;
+            allocatedNodes.add(nodeId);
+          }
+        }
+      }
+
+      // Validate: count-based parsing should consume ALL data (±1 byte for alignment).
+      // If it doesn't, this isn't a PoB count-based format — fall back to heuristic.
+      const remaining = bytes.length - offset;
+      if (remaining <= 1) {
+        return { version, classId, ascendancyId, allocatedNodes, clusterAllocatedNodes, masterySelections };
+      }
     }
 
-    // Check if there's a trailing byte (odd remaining = count byte exists)
+    // Fallback: heuristic parser for version < 5 or non-count-based formats
+    allocatedNodes.clear();
+    clusterAllocatedNodes.clear();
+
+    const nodeStart = version >= 6 ? 7 : 6;
+    const allU16: number[] = [];
+    for (let i = nodeStart; i + 1 < bytes.length; i += 2) {
+      allU16.push(readU16(view, i));
+    }
+
     const dataBytes = bytes.length - nodeStart;
     const hasTrailingByte = dataBytes % 2 === 1;
 
     if (hasTrailingByte) {
-      // The last byte is the mastery count
       const countByte = bytes[bytes.length - 1];
-      const masteryDataBytes = countByte * 4;
-      // Mastery pairs sit before the count byte: pairs are the last `count` u16 pairs
-      // i.e. last count*2 entries in allU16
       if (countByte > 0 && countByte * 2 <= allU16.length) {
         const nodeCount = allU16.length - countByte * 2;
-        // Add regular nodes
         for (let i = 0; i < nodeCount; i++) {
           if (allU16[i] > 0) allocatedNodes.add(allU16[i]);
         }
-        // Parse mastery pairs: [effectId, nodeId] × count
         for (let i = 0; i < countByte; i++) {
           const idx = nodeCount + i * 2;
           const effectId = allU16[idx];
           const nodeId = allU16[idx + 1];
           if (effectId > 0 && nodeId > 0) {
             masterySelections[nodeId] = effectId;
-            allocatedNodes.add(nodeId); // mastery nodes are also allocated
+            allocatedNodes.add(nodeId);
           }
         }
       } else {
-        // Count doesn't make sense, treat everything as nodes
         for (const id of allU16) {
           if (id > 0) allocatedNodes.add(id);
         }
       }
     } else {
-      // Even data — no mastery count byte, all are node IDs
       for (const id of allU16) {
         if (id > 0) allocatedNodes.add(id);
       }
     }
 
-    return { version, classId, ascendancyId, allocatedNodes, masterySelections };
+    return { version, classId, ascendancyId, allocatedNodes, clusterAllocatedNodes, masterySelections };
   } catch (err) {
     console.error("[TreeDecoder] decode error:", err);
     return null;
