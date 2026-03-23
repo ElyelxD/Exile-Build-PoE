@@ -1,7 +1,7 @@
 {
   "name": "exile-build-poe",
   "productName": "Exile Build PoE",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "author": "ElyelxD",
   "description": "Open-source Windows desktop overlay for Path of Exile build progression.",
