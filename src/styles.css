@@ -2801,7 +2801,14 @@ textarea {
 /* ── Overlay minibar (minimized) ── */
 
 .overlay-route.is-minimized {
-  align-items: flex-start;
+  min-height: unset;
+  height: auto;
+  -webkit-app-region: no-drag;
+  pointer-events: none;
+}
+
+.overlay-route.is-minimized .overlay-minibar {
+  pointer-events: auto;
 }
 
 .overlay-minibar {
