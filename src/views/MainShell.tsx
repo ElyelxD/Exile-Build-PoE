@@ -53,7 +53,7 @@ export function MainShell() {
   const { state, actions } = useAppStore();
   const { t, locale, setLocale } = useI18n();
   const [importMode, setImportMode] = useState<ImportMode>("paste");
-  const [openPanel, setOpenPanel] = useState<"hotkeys" | "lang" | "help" | null>(null);
+  const [openPanel, setOpenPanel] = useState<"hotkeys" | "lang" | "opacity" | "update" | "help" | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null);
@@ -65,6 +65,7 @@ export function MainShell() {
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
+  const [updateCheckState, setUpdateCheckState] = useState<"idle" | "checking" | "upToDate">("idle");
   const [hotkeys, setHotkeys] = useState<HotkeyConfig | null>(null);
   const [recordingAction, setRecordingAction] = useState<HotkeyAction | null>(null);
 
@@ -143,7 +144,7 @@ export function MainShell() {
   useEffect(() => {
     const d = window.desktop;
     if (!d) return;
-    const unsub1 = d.onUpdateAvailable((version) => setUpdateVersion(version));
+    const unsub1 = d.onUpdateAvailable((version) => { setUpdateVersion(version); setUpdateCheckState("idle"); setOpenPanel("update"); });
     const unsub2 = d.onDownloadProgress((percent) => setUpdateProgress(percent));
     const unsub3 = d.onUpdateDownloaded(() => { setUpdateReady(true); setUpdateProgress(null); });
     return () => { unsub1(); unsub2(); unsub3(); };
@@ -448,6 +449,42 @@ export function MainShell() {
                 </svg>
               </button>
 
+              {/* Opacity icon */}
+              <button
+                className={`tool-trigger${openPanel === "opacity" ? " is-active" : ""}`}
+                onClick={() => setOpenPanel(openPanel === "opacity" ? null : "opacity")}
+                type="button"
+                aria-label={t("settings.overlayOpacity")}
+                title={t("settings.overlayOpacity")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2v20M12 2a10 10 0 0 1 0 20" fill="currentColor" opacity="0.3" />
+                </svg>
+              </button>
+
+              {/* Update icon */}
+              <button
+                className={`tool-trigger${openPanel === "update" ? " is-active" : ""}${updateVersion ? " has-badge" : ""}`}
+                onClick={() => {
+                  if (openPanel === "update") { setOpenPanel(null); return; }
+                  setOpenPanel("update");
+                  setUpdateCheckState("checking");
+                  window.desktop?.updaterCheck()
+                    .then(() => setTimeout(() => setUpdateCheckState((s) => s === "checking" ? "upToDate" : s), 3000))
+                    .catch(() => setUpdateCheckState("idle"));
+                }}
+                type="button"
+                aria-label={t("update.check")}
+                title={t("update.check")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v10m0 0l-4-4m4 4l4-4" />
+                  <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+                </svg>
+                {updateVersion && <span className="tool-badge" />}
+              </button>
+
               {/* Help icon */}
               <button
                 className={`tool-trigger${openPanel === "help" ? " is-active" : ""}`}
@@ -504,20 +541,6 @@ export function MainShell() {
                     {t("settings.hotkeyReset")}
                   </button>
                 )}
-                <hr className="settings-divider" />
-                <span className="settings-section-title">{t("settings.overlayOpacity")}</span>
-                <div className="opacity-slider-row">
-                  <input
-                    type="range"
-                    className="opacity-slider"
-                    min={20}
-                    max={100}
-                    step={5}
-                    value={state.overlayOpacity}
-                    onChange={(e) => actions.setOverlayOpacity(Number(e.target.value))}
-                  />
-                  <span className="opacity-value">{state.overlayOpacity}%</span>
-                </div>
               </>
             )}
             {openPanel === "lang" && (
@@ -537,6 +560,23 @@ export function MainShell() {
                     <span>{loc.label}</span>
                   </button>
                 ))}
+              </>
+            )}
+            {openPanel === "opacity" && (
+              <>
+                <span className="settings-section-title">{t("settings.overlayOpacity")}</span>
+                <div className="opacity-slider-row">
+                  <input
+                    type="range"
+                    className="opacity-slider"
+                    min={20}
+                    max={100}
+                    step={5}
+                    value={state.overlayOpacity}
+                    onChange={(e) => actions.setOverlayOpacity(Number(e.target.value))}
+                  />
+                  <span className="opacity-value">{state.overlayOpacity}%</span>
+                </div>
               </>
             )}
             {openPanel === "help" && (
@@ -570,50 +610,51 @@ export function MainShell() {
                 </div>
               </>
             )}
-          </div>,
-          document.body,
-        )}
-
-        {updateVersion && (
-          <div className="update-banner">
-            {updateReady ? (
+            {openPanel === "update" && (
               <>
-                <span>{t("update.ready", { version: updateVersion })}</span>
-                <button
-                  className="ghost-button"
-                  onClick={() => window.desktop?.updaterInstall()}
-                  type="button"
-                >
-                  {t("update.installNow")}
-                </button>
-              </>
-            ) : updateProgress != null ? (
-              <>
-                <span>{t("update.downloading", { percent: updateProgress })}</span>
-                <div className="update-progress-bar">
-                  <div className="update-progress-fill" style={{ width: `${updateProgress}%` }} />
+                <span className="settings-section-title">{t("update.check")}</span>
+                <div className="update-panel-body">
+                  {updateReady ? (
+                    <>
+                      <p className="update-status is-ready">{t("update.ready", { version: updateVersion ?? "" })}</p>
+                      <button
+                        className="ghost-button update-action-btn"
+                        onClick={() => window.desktop?.updaterInstall()}
+                        type="button"
+                      >
+                        {t("update.installNow")}
+                      </button>
+                    </>
+                  ) : updateProgress != null ? (
+                    <>
+                      <p className="update-status">{t("update.downloading", { percent: updateProgress })}</p>
+                      <div className="update-progress-bar">
+                        <div className="update-progress-fill" style={{ width: `${updateProgress}%` }} />
+                      </div>
+                    </>
+                  ) : updateVersion ? (
+                    <>
+                      <p className="update-status is-available">{t("update.available", { version: updateVersion })}</p>
+                      <button
+                        className="ghost-button update-action-btn"
+                        onClick={() => { setUpdateProgress(0); window.desktop?.updaterDownload(); }}
+                        type="button"
+                      >
+                        {t("update.download")}
+                      </button>
+                    </>
+                  ) : updateCheckState === "checking" ? (
+                    <p className="update-status is-checking">{t("update.checking")}</p>
+                  ) : updateCheckState === "upToDate" ? (
+                    <p className="update-status is-ok">{t("update.upToDate")}</p>
+                  ) : (
+                    <p className="update-status">{t("update.check")}</p>
+                  )}
                 </div>
               </>
-            ) : (
-              <>
-                <span>{t("update.available", { version: updateVersion })}</span>
-                <button
-                  className="ghost-button"
-                  onClick={() => { setUpdateProgress(0); window.desktop?.updaterDownload(); }}
-                  type="button"
-                >
-                  {t("update.download")}
-                </button>
-                <button
-                  className="ghost-button"
-                  onClick={() => setUpdateVersion(null)}
-                  type="button"
-                >
-                  ✕
-                </button>
-              </>
             )}
-          </div>
+          </div>,
+          document.body,
         )}
 
         {build && progress && currentStage && (

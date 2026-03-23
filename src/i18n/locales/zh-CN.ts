@@ -76,6 +76,9 @@ const zhCN: Record<TranslationKey, string> = {
   "update.downloading": "下载中… {{percent}}%",
   "update.ready": "v{{version}} 已准备好安装",
   "update.installNow": "重启并更新",
+  "update.check": "检查更新",
+  "update.checking": "正在检查…",
+  "update.upToDate": "已是最新版本！",
 
   // ── 顶栏 / 工作区 ──
   "header.appName": "Exile Build PoE",
@@ -204,6 +207,8 @@ const zhCN: Record<TranslationKey, string> = {
   "overlay.noActivePoB": "无活跃 PoB",
   "overlay.importPrompt":
     "请在主窗口导入 Path of Building，然后使用 `Ctrl + Shift + O`。",
+  "overlay.minimize": "最小化覆盖层",
+  "overlay.expand": "展开覆盖层",
 
   // ── 导入服务 ──
   "importer.desktopRequired":

@@ -75,6 +75,9 @@ const en = {
   "update.downloading": "Downloading… {{percent}}%",
   "update.ready": "v{{version}} ready to install",
   "update.installNow": "Restart & update",
+  "update.check": "Check for updates",
+  "update.checking": "Checking…",
+  "update.upToDate": "You're up to date!",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",
@@ -203,6 +206,8 @@ const en = {
   "overlay.noActivePoB": "No active PoB",
   "overlay.importPrompt":
     "Import a Path of Building in the main window and use `Ctrl + Shift + O`.",
+  "overlay.minimize": "Minimize overlay",
+  "overlay.expand": "Expand overlay",
 
   // ── Importer service ──
   "importer.desktopRequired":

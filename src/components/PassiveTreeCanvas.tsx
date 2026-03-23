@@ -289,7 +289,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
       socketInfo.set(nodeId, info);
     }
 
-    // Build map: parentSocketId → real sub-socket node IDs
+    // Build map: parentSocketId → real sub-socket node IDs (sorted by expansion index)
     const subSocketIds = new Map<number, number[]>();
     for (const n of allNodes) {
       if (n.type === 4 && n.extra?.ej?.p) {
@@ -299,20 +299,67 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
         subSocketIds.set(parentId, arr);
       }
     }
+    // Sort sub-socket IDs by expansion index (ej.i) so assignment order matches PoB
+    for (const [, ids] of subSocketIds) {
+      ids.sort((a, b) => {
+        const ea = ejMap.get(a);
+        const eb = ejMap.get(b);
+        return (ea?.i ?? 0) - (eb?.i ?? 0);
+      });
+    }
 
-    const expansions = buildClusterExpansions(
-      socketInfo, jewelSocketMap, tree.orbits.radii, tree.orbits.skills, subSocketIds,
-    );
-    if (expansions.length === 0) return null;
+    // Multi-pass expansion building: large clusters first, then medium, then small.
+    // After each pass, update socketInfo with rendered positions so nested clusters
+    // center their rings correctly around the actual sub-socket location.
+    const allExpansions: import("@/services/cluster-expansion").ClusterExpansion[] = [];
+
+    function buildPass(sizeFilter: (bt: string) => boolean) {
+      const filtered = new Map<number, string | { name: string; mods?: string[]; baseType?: string }>();
+      for (const [nodeId, entry] of jewelSocketMap!) {
+        if (typeof entry === "string") continue;
+        const bt = (entry.baseType ?? "").toLowerCase();
+        if (sizeFilter(bt)) filtered.set(nodeId, entry);
+      }
+      if (filtered.size === 0) return;
+      const exps = buildClusterExpansions(
+        socketInfo, filtered, tree.orbits.radii, tree.orbits.skills, subSocketIds,
+      );
+      for (const exp of exps) {
+        allExpansions.push(exp);
+        // Update socketInfo for sub-socket nodes so child expansions use rendered positions
+        for (const cn of exp.nodes) {
+          if (cn.nodeType === "socket" && socketInfo.has(cn.id)) {
+            const existing = socketInfo.get(cn.id)!;
+            // Offset group center by the same delta as the socket position shift
+            const dx = cn.x - existing.x;
+            const dy = cn.y - existing.y;
+            existing.x = cn.x;
+            existing.y = cn.y;
+            if (existing.groupCenter) {
+              existing.groupCenter = {
+                x: existing.groupCenter.x + dx,
+                y: existing.groupCenter.y + dy,
+              };
+            }
+          }
+        }
+      }
+    }
+
+    buildPass((bt) => bt.includes("large"));
+    buildPass((bt) => bt.includes("medium"));
+    buildPass((bt) => bt.includes("small"));
+
+    if (allExpansions.length === 0) return null;
 
     // Build lookup for tooltips
     const nodeOverrides = new Map<number, ClusterNode>();
-    for (const expansion of expansions) {
+    for (const expansion of allExpansions) {
       for (const cn of expansion.nodes) {
         nodeOverrides.set(cn.id, cn);
       }
     }
-    return { expansions, nodeOverrides };
+    return { expansions: allExpansions, nodeOverrides };
   }, [jewelSocketMap]);
 
   function sh(key: SheetKey) { return getSheet(key); }
@@ -546,7 +593,12 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
       for (const expansion of clusterData.expansions) {
         const socketNode_ = nodeMap.get(expansion.socketId);
         if (!socketNode_) continue;
-        const socketNode = socketNode_; // narrowed for closures
+
+        // For sub-sockets (medium/small inside a parent cluster), use rendered position
+        // from the parent expansion instead of tree-data position
+        const socketOverride = clusterData.nodeOverrides.get(expansion.socketId);
+        const socketX = socketOverride?.x ?? socketNode_.x;
+        const socketY = socketOverride?.y ?? socketNode_.y;
 
         const vnMap = new Map<number, ClusterNode>();
         for (const cn of expansion.nodes) vnMap.set(cn.id, cn);
@@ -561,7 +613,7 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
             const vn = vnMap.get(virtualId);
             if (!vn) return;
             ctx.beginPath();
-            ctx.moveTo(socketNode.x, socketNode.y);
+            ctx.moveTo(socketX, socketY);
             ctx.lineTo(vn.x, vn.y);
             ctx.stroke();
           } else {
@@ -660,13 +712,6 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
                 cn.x - iSz, cn.y - iSz, iSz * 2, iSz * 2);
               ctx.restore();
             }
-            // Name label below
-            const fontSize = Math.min(22 / scale, 160);
-            ctx.font = `600 ${fontSize}px -apple-system, "Segoe UI", sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "top";
-            ctx.fillStyle = isClusterAlloc ? "rgba(232,195,106,0.9)" : "rgba(180,155,100,0.6)";
-            ctx.fillText(cn.name, cn.x, cn.y + r + 6);
           } else if (cn.nodeType === "socket") {
             // Jewel Socket: diamond shape
             const half = 22;
@@ -1267,17 +1312,26 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
       )}
       {tooltip && (() => {
         const co = clusterData?.nodeOverrides.get(tooltip.node.id);
-        const displayName = co?.name || tooltip.node.name;
+        // For cluster sockets with a jewel, show jewel name as primary heading
+        const jewelEntry = jewelSocketMap?.get(tooltip.node.id);
+        const jewelInfo: JewelSocketInfo | null = jewelEntry
+          ? (typeof jewelEntry === "string" ? { name: jewelEntry } : jewelEntry)
+          : null;
+        const isClusterSocket = co?.nodeType === "socket";
+        const displayName = (isClusterSocket && jewelInfo) ? jewelInfo.name : (co?.name || tooltip.node.name);
         const displayStats = co?.stats || tooltip.node.stats;
         return (
           <div className="tree-tooltip" style={{
             left: Math.min(tooltip.x + 12, size.width - 340),
             top: tooltip.y > size.height - 120 ? tooltip.y - 80 : tooltip.y + 16,
           }}>
-            <strong className="tree-tooltip-name">{displayName}</strong>
-            {co && (
+            <strong className={`tree-tooltip-name${isClusterSocket && jewelInfo?.rarity ? ` rarity-${jewelInfo.rarity.toLowerCase()}` : ""}`}>{displayName}</strong>
+            {isClusterSocket && jewelInfo?.baseType && (
+              <span className="tree-tooltip-jewel-base">{jewelInfo.baseType}</span>
+            )}
+            {co && !isClusterSocket && (
               <span className="tree-tooltip-cluster-label">
-                {co.nodeType === "notable" ? "Cluster Notable" : co.nodeType === "socket" ? "" : "Cluster Small Passive"}
+                {co.nodeType === "notable" ? "Cluster Notable" : "Cluster Small Passive"}
               </span>
             )}
             {displayStats && (
@@ -1308,23 +1362,28 @@ export function PassiveTreeCanvas({ allocatedNodes, jewelSocketMap, masterySelec
                 </div>
               );
             })()}
-            {jewelSocketMap?.has(tooltip.node.id) && (() => {
-              const entry = jewelSocketMap.get(tooltip.node.id);
-              if (!entry) return null;
-              const info: JewelSocketInfo = typeof entry === "string"
-                ? { name: entry }
-                : entry;
+            {jewelInfo && (() => {
+              // For cluster sockets, name/base already shown above — only show mods
+              if (isClusterSocket) {
+                return jewelInfo.mods && jewelInfo.mods.length > 0 ? (
+                  <div className="tree-tooltip-jewel-info">
+                    <div className="tree-tooltip-jewel-mods">
+                      {jewelInfo.mods.map((mod, i) => <span key={i}>{mod}</span>)}
+                    </div>
+                  </div>
+                ) : null;
+              }
               return (
                 <div className="tree-tooltip-jewel-info">
-                  <strong className={`tree-tooltip-jewel-name rarity-${(info.rarity ?? "normal").toLowerCase()}`}>
-                    {info.name}
+                  <strong className={`tree-tooltip-jewel-name rarity-${(jewelInfo.rarity ?? "normal").toLowerCase()}`}>
+                    {jewelInfo.name}
                   </strong>
-                  {info.baseType && (
-                    <span className="tree-tooltip-jewel-base">{info.baseType}</span>
+                  {jewelInfo.baseType && (
+                    <span className="tree-tooltip-jewel-base">{jewelInfo.baseType}</span>
                   )}
-                  {info.mods && info.mods.length > 0 && (
+                  {jewelInfo.mods && jewelInfo.mods.length > 0 && (
                     <div className="tree-tooltip-jewel-mods">
-                      {info.mods.map((mod, i) => <span key={i}>{mod}</span>)}
+                      {jewelInfo.mods.map((mod, i) => <span key={i}>{mod}</span>)}
                     </div>
                   )}
                 </div>

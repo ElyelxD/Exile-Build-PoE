@@ -231,36 +231,72 @@ button {
 
 /* ── Update banner ── */
 
-.update-banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 14px;
-  border: 1px solid #c8952c44;
-  border-radius: 10px;
-  background: rgba(200, 149, 44, 0.08);
-  font-size: 0.82rem;
-  color: var(--text-1);
+.update-panel-body {
+  padding: 6px 2px;
 }
 
-.update-banner .ghost-button {
-  padding: 4px 12px;
-  font-size: 0.78rem;
+.update-status {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-2);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.update-status.is-checking {
+  color: var(--text-2);
+}
+
+.update-status.is-ok {
+  color: #6ec87a;
+}
+
+.update-status.is-available {
+  color: var(--accent);
+}
+
+.update-status.is-ready {
+  color: #6ec87a;
+}
+
+.update-action-btn {
+  width: 100%;
+  padding: 7px 0;
+  font-size: 0.8rem;
+  text-align: center;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  margin-top: 6px;
+  color: var(--accent);
 }
 
 .update-progress-bar {
-  flex: 1;
   height: 6px;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.06);
   overflow: hidden;
+  margin-top: 8px;
 }
 
 .update-progress-fill {
   height: 100%;
   border-radius: 3px;
-  background: #c8952c;
+  background: var(--accent);
   transition: width 0.3s ease;
+}
+
+.tool-trigger.has-badge {
+  position: relative;
+}
+
+.tool-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 /* ── Session strip ── */
@@ -2760,6 +2796,108 @@ textarea {
   background: rgba(14, 12, 11, 0.74);
   box-shadow: var(--overlay-live-shadow);
   backdrop-filter: blur(10px);
+}
+
+/* ── Overlay minibar (minimized) ── */
+
+.overlay-route.is-minimized {
+  align-items: flex-start;
+}
+
+.overlay-minibar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--overlay-live-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(242, 169, 91, 0.06), transparent 60%),
+    var(--overlay-live-bg);
+  box-shadow: var(--overlay-live-shadow);
+  backdrop-filter: blur(8px) saturate(0.88);
+  cursor: pointer;
+  -webkit-app-region: drag;
+  user-select: none;
+  max-width: 420px;
+  opacity: var(--overlay-opacity, 0.92);
+}
+
+.overlay-minibar:hover {
+  border-color: rgba(242, 169, 91, 0.25);
+  background:
+    linear-gradient(90deg, rgba(242, 169, 91, 0.10), transparent 60%),
+    var(--overlay-live-bg);
+}
+
+.minibar-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #f0c860;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.minibar-sep {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.minibar-tree {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.minibar-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: color 0.15s, background 0.15s;
+}
+
+.minibar-expand:hover {
+  background: rgba(242, 169, 91, 0.15);
+  color: #f0c860;
+}
+
+/* Collapse button in overlay header */
+.minibar-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  transition: color 0.15s, background 0.15s;
+}
+
+.minibar-collapse:hover {
+  background: rgba(242, 169, 91, 0.12);
+  color: #f0c860;
 }
 
 @media (max-width: 1340px) {

@@ -78,6 +78,9 @@ const ko: Record<TranslationKey, string> = {
   "update.downloading": "다운로드 중… {{percent}}%",
   "update.ready": "v{{version}} 설치 준비 완료",
   "update.installNow": "재시작 후 업데이트",
+  "update.check": "업데이트 확인",
+  "update.checking": "확인 중…",
+  "update.upToDate": "최신 버전입니다!",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",
@@ -206,6 +209,8 @@ const ko: Record<TranslationKey, string> = {
   "overlay.noActivePoB": "활성 PoB 없음",
   "overlay.importPrompt":
     "메인 창에서 Path of Building을 가져온 후 `Ctrl + Shift + O`를 사용하세요.",
+  "overlay.minimize": "오버레이 최소화",
+  "overlay.expand": "오버레이 확장",
 
   // ── Importer service ──
   "importer.desktopRequired":
