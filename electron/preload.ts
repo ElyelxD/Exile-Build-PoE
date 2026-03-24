@@ -50,6 +50,16 @@ contextBridge.exposeInMainWorld("desktop", {
     ipcRenderer.on("updater:update-downloaded", listener);
     return () => { ipcRenderer.removeListener("updater:update-downloaded", listener); };
   },
+  onUpToDate: (handler: () => void) => {
+    const listener = () => handler();
+    ipcRenderer.on("updater:up-to-date", listener);
+    return () => { ipcRenderer.removeListener("updater:up-to-date", listener); };
+  },
+  onUpdateError: (handler: (msg: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, msg: string) => handler(msg);
+    ipcRenderer.on("updater:error", listener);
+    return () => { ipcRenderer.removeListener("updater:error", listener); };
+  },
 
   // Hotkeys
   getHotkeys: () => ipcRenderer.invoke("hotkeys:get") as Promise<HotkeyConfig>,

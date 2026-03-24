@@ -1020,6 +1020,12 @@ function setupAutoUpdater() {
     }
   });
 
+  autoUpdater.on("update-not-available", () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("updater:up-to-date");
+    }
+  });
+
   autoUpdater.on("error", (err) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send("updater:error", err.message);

@@ -147,7 +147,9 @@ export function MainShell() {
     const unsub1 = d.onUpdateAvailable((version) => { setUpdateVersion(version); setUpdateCheckState("idle"); setOpenPanel("update"); });
     const unsub2 = d.onDownloadProgress((percent) => setUpdateProgress(percent));
     const unsub3 = d.onUpdateDownloaded(() => { setUpdateReady(true); setUpdateProgress(null); });
-    return () => { unsub1(); unsub2(); unsub3(); };
+    const unsub4 = d.onUpToDate(() => setUpdateCheckState("upToDate"));
+    const unsub5 = d.onUpdateError(() => setUpdateCheckState("upToDate"));
+    return () => { unsub1(); unsub2(); unsub3(); unsub4(); unsub5(); };
   }, []);
 
   // Recalculate dropdown position when panel opens or window resizes
@@ -471,8 +473,7 @@ export function MainShell() {
                   setOpenPanel("update");
                   setUpdateCheckState("checking");
                   window.desktop?.updaterCheck()
-                    .then(() => setTimeout(() => setUpdateCheckState((s) => s === "checking" ? "upToDate" : s), 3000))
-                    .catch(() => setUpdateCheckState("idle"));
+                    .catch(() => setUpdateCheckState("upToDate"));
                 }}
                 type="button"
                 aria-label={t("update.check")}
