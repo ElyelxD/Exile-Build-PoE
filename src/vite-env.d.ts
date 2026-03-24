@@ -26,6 +26,8 @@ declare global {
       onUpdateAvailable: (handler: (version: string) => void) => () => void;
       onDownloadProgress: (handler: (percent: number) => void) => () => void;
       onUpdateDownloaded: (handler: () => void) => () => void;
+      onUpToDate: (handler: () => void) => () => void;
+      onUpdateError: (handler: (msg: string) => void) => () => void;
       getHotkeys: () => Promise<HotkeyConfig>;
       setHotkey: (action: HotkeyAction, accelerator: string) => Promise<HotkeyConfig>;
       resetHotkeys: () => Promise<HotkeyConfig>;
