@@ -81,7 +81,7 @@ jobs:
           fi
 
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Exile-Build-PoE-installer-x64
           path: |
