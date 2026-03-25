@@ -32,6 +32,10 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-extended
+          config: |
+            paths-ignore:
+              - scripts/convert-ggg-tree.mjs
+              - scripts/fetch-poe-icons.mjs
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v4
