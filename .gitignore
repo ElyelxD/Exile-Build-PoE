@@ -8,3 +8,7 @@ __pycache__/
 .venv*
 .env*
 docs
+out/
+*.exe
+*.msi
+.mcp.json

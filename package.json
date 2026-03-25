@@ -1,7 +1,7 @@
 {
   "name": "exile-build-poe",
   "productName": "Exile Build PoE",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "author": "ElyelxD",
   "description": "Open-source Windows desktop overlay for Path of Exile build progression.",
@@ -23,7 +23,7 @@
   "main": "dist-electron/main.js",
   "repository": {
     "type": "git",
-    "url": "git@github.com:ElyelxD/Exile-Build-PoE.git"
+    "url": "https://github.com/ElyelxD/Exile-Build-PoE.git"
   },
   "scripts": {
     "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\" \"npm:dev:app\"",
@@ -114,7 +114,7 @@
       "shortcutName": "Exile Build PoE",
       "uninstallDisplayName": "Exile Build PoE",
       "artifactName": "Exile-Build-PoE-Web-Installer.${ext}",
-      "appPackageUrl": "https://github.com/Elyelx/Exile-Build-PoE/releases/download/windows-installer-latest"
+      "appPackageUrl": "https://github.com/ElyelxD/Exile-Build-PoE/releases/download/windows-installer-latest"
     }
   }
 }

@@ -66,7 +66,7 @@ def main() -> int:
           json.dumps(
               status_payload(
                   "missing-install",
-                  lastError="A pasta escolhida não parece ser uma instalação válida do Path of Exile.",
+                  lastError="The chosen folder does not appear to be a valid Path of Exile installation.",
               )
           )
       )
@@ -92,8 +92,8 @@ def main() -> int:
                     "missing-extractor",
                     extractorName=extractor_name,
                     lastError=(
-                        "Nenhum extractor compatível foi encontrado no Python atual. "
-                        "Instale PyPoE/pydds/pyooz ou aponte uma pasta local de biblioteca compatível."
+                        "No compatible extractor was found in the current Python installation. "
+                        "Install PyPoE/pydds/pyooz or point to a local compatible library folder."
                     ),
                     manifestPath=str(manifest_path),
                 )
