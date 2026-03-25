@@ -4,12 +4,18 @@ Open-source Windows desktop overlay for Path of Exile build progression, powered
 
 ## Quick Start
 
-1. **Download** the latest installer from [GitHub Releases](https://github.com/ElyelxD/Exile-Build-PoE/releases/latest/download/Exile-Build-PoE-Setup-1.0.0.exe)
-2. **Export your build** from [Path of Building](https://pathofbuilding.community/) — Copy → Share → Generate
+1. **Download** the latest installer from [GitHub Releases](https://github.com/ElyelxD/Exile-Build-PoE/releases/latest)
+2. **Grab a build** from any of these sources:
+   - [Path of Building](https://pathofbuilding.community/) — Copy → Share → Generate
+   - [pobb.in](https://pobb.in) — Paste the share link directly
+   - [Mobalytics](https://mobalytics.gg/poe) — Copy the PoB code from any build guide
+   - [PoE Ninja](https://poe.ninja/builds) — Copy the PoB code from any character
+   - [Maxroll](https://maxroll.gg/poe) — Copy the PoB code from any guide
+   - [Pastebin](https://pastebin.com) — Paste the pastebin link
 3. **Paste the code or link** into the import field and click Import
 4. **Press `Ctrl+Shift+O`** to toggle the in-game overlay
 
-The overlay shows your next objectives, current level, and gem/gear targets while you play.
+The overlay shows your next objectives, current level, and gem/gear targets while you play. Any source that gives you a PoB code or link works.
 
 > **Windows SmartScreen:** On first launch, Windows may show a "Windows protected your computer" warning because the installer is not code-signed. Click **"More info"** → **"Run anyway"**. This is normal for free open-source projects — the app is safe and the source code is fully available for inspection.
 
@@ -71,9 +77,9 @@ npm run dist:win
 
 ### Tech Stack
 
-- **Electron 30** — Desktop shell, global shortcuts, tray, auto-update
-- **React 18** — UI components
-- **Vite 5** — Build tool
+- **Electron 41** — Desktop shell, global shortcuts, tray, auto-update
+- **React 19** — UI components
+- **Vite 8** — Build tool
 - **TypeScript** — Strict mode throughout
 - **Canvas API** — Passive tree rendering with GGG sprites
 
