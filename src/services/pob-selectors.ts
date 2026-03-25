@@ -74,15 +74,50 @@ function scoreTitleAgainstTree(
   return score;
 }
 
+/**
+ * Extract PoB spec-index references like {3} or {4,5} from a title string.
+ * Returns the set of referenced spec indices (1-based).
+ */
+function extractSpecRefs(title: string): Set<number> {
+  const refs = new Set<number>();
+  for (const m of title.matchAll(/\{([^}]+)\}/g)) {
+    for (const part of m[1].split(",")) {
+      const n = parseInt(part.trim(), 10);
+      if (Number.isFinite(n)) refs.add(n);
+    }
+  }
+  return refs;
+}
+
 function pickBestTreeMatchedId(
   treeTitle: string | undefined,
   candidates: Array<{ id: string; title: string }>,
   preferredId: string | undefined,
+  treeSpecIndex?: number,
 ) {
   if (!treeTitle || candidates.length <= 1) {
     return preferredId;
   }
 
+  // Primary: match by PoB {N} spec-index references (most reliable)
+  if (treeSpecIndex != null) {
+    const treeRefs = extractSpecRefs(treeTitle);
+    // Check if the tree spec itself declares a {N} that matches its own index
+    // If so, find candidates whose {N} references include this spec index
+    const specRef = treeRefs.size > 0 ? treeRefs : new Set([treeSpecIndex]);
+    for (const candidate of candidates) {
+      const candidateRefs = extractSpecRefs(candidate.title);
+      if (candidateRefs.size > 0) {
+        for (const ref of specRef) {
+          if (candidateRefs.has(ref)) return candidate.id;
+        }
+        // Also check if candidate refs include the tree spec 1-based index
+        if (candidateRefs.has(treeSpecIndex)) return candidate.id;
+      }
+    }
+  }
+
+  // Fallback: score-based title matching
   const bestMatch = candidates
     .map((candidate) => ({
       ...candidate,
@@ -154,6 +189,9 @@ export function getActivePobItemSet(pob?: PobData) {
   }
 
   const activeTreeSpec = getActivePobTreeSpec(pob);
+  const treeSpecIndex = activeTreeSpec
+    ? pob.treeSpecs.indexOf(activeTreeSpec) + 1
+    : undefined;
   const matchedItemSetId = pickBestTreeMatchedId(
     activeTreeSpec?.title,
     pob.itemSets.map((itemSet) => ({
@@ -161,6 +199,7 @@ export function getActivePobItemSet(pob?: PobData) {
       title: itemSet.title,
     })),
     pob.activeItemSetId,
+    treeSpecIndex ?? undefined,
   );
 
   return (
@@ -177,6 +216,9 @@ export function getActivePobSkillGroups(pob?: PobData) {
   }
 
   const activeTreeSpec = getActivePobTreeSpec(pob);
+  const treeSpecIndex = activeTreeSpec
+    ? pob.treeSpecs.indexOf(activeTreeSpec) + 1
+    : undefined;
   const skillSets = Array.from(
     new Map(
       pob.skillGroups.map((group) => [
@@ -192,7 +234,12 @@ export function getActivePobSkillGroups(pob?: PobData) {
   let activeSetId = pob.activeSkillSetId;
 
   if (activeTreeSpec && skillSets.length > 1) {
-    activeSetId = pickBestTreeMatchedId(activeTreeSpec.title, skillSets, pob.activeSkillSetId);
+    activeSetId = pickBestTreeMatchedId(
+      activeTreeSpec.title,
+      skillSets,
+      pob.activeSkillSetId,
+      treeSpecIndex ?? undefined,
+    );
   }
 
   const selectedGroups =
