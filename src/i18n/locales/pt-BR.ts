@@ -83,6 +83,7 @@ const ptBR: Record<TranslationKey, string> = {
   "update.check": "Verificar atualizações",
   "update.checking": "Verificando…",
   "update.upToDate": "Você está atualizado!",
+  "update.currentVersion": "Versão atual: v{{version}}",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

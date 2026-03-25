@@ -81,6 +81,7 @@ const th: Record<TranslationKey, string> = {
   "update.check": "ตรวจสอบการอัปเดต",
   "update.checking": "กำลังตรวจสอบ…",
   "update.upToDate": "คุณใช้เวอร์ชันล่าสุดแล้ว!",
+  "update.currentVersion": "เวอร์ชันปัจจุบัน: v{{version}}",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

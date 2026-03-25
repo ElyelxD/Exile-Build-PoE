@@ -85,6 +85,7 @@ const fr: Record<TranslationKey, string> = {
   "update.check": "Rechercher des mises à jour",
   "update.checking": "Vérification…",
   "update.upToDate": "Vous êtes à jour !",
+  "update.currentVersion": "Version actuelle : v{{version}}",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

@@ -84,6 +84,7 @@ const ja: Record<TranslationKey, string> = {
   "update.check": "アップデートを確認",
   "update.checking": "確認中…",
   "update.upToDate": "最新の状態です！",
+  "update.currentVersion": "現在のバージョン：v{{version}}",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

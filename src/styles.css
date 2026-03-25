@@ -285,6 +285,13 @@ button {
   transition: width 0.3s ease;
 }
 
+.update-version-label {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+
 .tool-trigger.has-badge {
   position: relative;
 }

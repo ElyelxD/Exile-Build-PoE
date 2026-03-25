@@ -79,6 +79,7 @@ const ru: Record<TranslationKey, string> = {
   "update.check": "Проверить обновления",
   "update.checking": "Проверка…",
   "update.upToDate": "У вас последняя версия!",
+  "update.currentVersion": "Текущая версия: v{{version}}",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

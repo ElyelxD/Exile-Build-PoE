@@ -79,6 +79,7 @@ const zhCN: Record<TranslationKey, string> = {
   "update.check": "检查更新",
   "update.checking": "正在检查…",
   "update.upToDate": "已是最新版本！",
+  "update.currentVersion": "当前版本：v{{version}}",
 
   // ── 顶栏 / 工作区 ──
   "header.appName": "Exile Build PoE",

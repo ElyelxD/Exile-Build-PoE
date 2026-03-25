@@ -66,6 +66,7 @@ export function MainShell() {
   const [updateProgress, setUpdateProgress] = useState<number | null>(null);
   const [updateReady, setUpdateReady] = useState(false);
   const [updateCheckState, setUpdateCheckState] = useState<"idle" | "checking" | "upToDate">("idle");
+  const [currentVersion, setCurrentVersion] = useState<string | null>(null);
   const [hotkeys, setHotkeys] = useState<HotkeyConfig | null>(null);
   const [recordingAction, setRecordingAction] = useState<HotkeyAction | null>(null);
 
@@ -472,6 +473,7 @@ export function MainShell() {
                   if (openPanel === "update") { setOpenPanel(null); return; }
                   setOpenPanel("update");
                   setUpdateCheckState("checking");
+                  window.desktop?.updaterGetVersion().then(setCurrentVersion).catch(() => {});
                   window.desktop?.updaterCheck()
                     .catch(() => setUpdateCheckState("upToDate"));
                 }}
@@ -650,6 +652,9 @@ export function MainShell() {
                     <p className="update-status is-ok">{t("update.upToDate")}</p>
                   ) : (
                     <p className="update-status">{t("update.check")}</p>
+                  )}
+                  {currentVersion && (
+                    <p className="update-version-label">{t("update.currentVersion", { version: currentVersion })}</p>
                   )}
                 </div>
               </>

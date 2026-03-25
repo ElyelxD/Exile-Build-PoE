@@ -81,6 +81,7 @@ const ko: Record<TranslationKey, string> = {
   "update.check": "업데이트 확인",
   "update.checking": "확인 중…",
   "update.upToDate": "최신 버전입니다!",
+  "update.currentVersion": "현재 버전: v{{version}}",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",

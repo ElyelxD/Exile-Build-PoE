@@ -78,6 +78,7 @@ const en = {
   "update.check": "Check for updates",
   "update.checking": "Checking…",
   "update.upToDate": "You're up to date!",
+  "update.currentVersion": "Current version: v{{version}}",
 
   // ── Header / workspace ──
   "header.appName": "Exile Build PoE",
