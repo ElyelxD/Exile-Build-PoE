@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-03-25
+
+### Added
+
+- Test suite with 81 tests covering tree decoder, cluster expansion, selectors
+- CODE_OF_CONDUCT.md, SECURITY.md, CHANGELOG.md governance documents
+- GitHub issue templates (bug report, feature request) and PR template
+- Dependabot configuration for npm and GitHub Actions
+- CodeQL security analysis workflow
+- PR validation workflow (typecheck + tests + Windows build)
+
+### Fixed
+
+- Unhandled promise rejections in hotkey IPC calls
+
+### Changed
+
+- Improved package.json metadata (license, homepage, keywords, engines)
+
 ## [1.0.4] - 2026-03-25
 
 ### Fixed
