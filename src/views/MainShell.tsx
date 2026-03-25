@@ -72,7 +72,7 @@ export function MainShell() {
   // Load hotkeys when hotkeys panel opens
   useEffect(() => {
     if (openPanel === "hotkeys" && !hotkeys && window.desktop?.getHotkeys) {
-      window.desktop.getHotkeys().then(setHotkeys);
+      window.desktop.getHotkeys().then(setHotkeys).catch(() => {});
     }
   }, [openPanel, hotkeys]);
 
@@ -106,7 +106,7 @@ export function MainShell() {
         window.desktop.setHotkey(recordingAction, accelerator).then((cfg) => {
           setHotkeys(cfg);
           setRecordingAction(null);
-        });
+        }).catch(() => {});
       }
     }
     window.addEventListener("keydown", onKeyDown, true);
@@ -536,7 +536,7 @@ export function MainShell() {
                     className="hotkey-reset-btn"
                     type="button"
                     onClick={() => {
-                      window.desktop?.resetHotkeys().then((cfg) => setHotkeys(cfg));
+                      window.desktop?.resetHotkeys().then((cfg) => setHotkeys(cfg)).catch(() => {});
                     }}
                   >
                     {t("settings.hotkeyReset")}
