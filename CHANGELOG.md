@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-03-25
+
+### Added
+
+- PoE-style golden cursors (arrow and hand) throughout the app
+- Current app version displayed in the update panel (all 10 locales)
+- Popular build sources listed in README (Mobalytics, PoE Ninja, Maxroll)
+
+### Fixed
+
+- Gems and gear now correctly switch when changing tree specs via PoB `{N}` spec-index matching
+
 ## [1.0.5] - 2026-03-25
 
 ### Added
