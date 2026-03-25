@@ -92,6 +92,10 @@ async function main() {
 
   const result = { gems, uniques, baseTypes };
 
+  // Validate result is serializable before writing
+  const json = JSON.stringify(result);
+  JSON.parse(json);
+
   const outPath = new URL("../src/data/poe-icons.json", import.meta.url);
   const { mkdirSync, writeFileSync } = await import("node:fs");
   const { dirname } = await import("node:path");
@@ -99,7 +103,7 @@ async function main() {
 
   const outFile = fileURLToPath(outPath);
   mkdirSync(dirname(outFile), { recursive: true });
-  writeFileSync(outFile, JSON.stringify(result), "utf8");
+  writeFileSync(outFile, json, "utf8");
 
   const sizeMB = (Buffer.byteLength(JSON.stringify(result)) / 1024 / 1024).toFixed(2);
   console.log(`\nWrote ${outFile} (${sizeMB} MB)`);

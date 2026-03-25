@@ -12,3 +12,4 @@ out/
 *.exe
 *.msi
 .mcp.json
+.ggg-tree-cache.json

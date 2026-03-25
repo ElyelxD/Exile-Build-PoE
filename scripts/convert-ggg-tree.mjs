@@ -8,16 +8,17 @@
  *
  *   --fetch   Download latest data.json from GGG GitHub before converting
  *
- * Reads:  /tmp/ggg-tree.json  (or fetches from GitHub with --fetch)
+ * Reads:  scripts/.ggg-tree-cache.json  (or fetches from GitHub with --fetch)
  * Writes: src/data/tree-default.json
  */
 
 import { writeFileSync, readFileSync } from "fs";
-import { resolve, dirname } from "path";
+import { resolve, dirname, join } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_PATH = resolve(__dirname, "../src/data/tree-default.json");
+const CACHE_PATH = join(__dirname, ".ggg-tree-cache.json");
 const GGG_URL = "https://raw.githubusercontent.com/grindinggear/skilltree-export/master/data.json";
 const ZOOM = "0.3835"; // Corresponds to "-3" sprite sheet suffix
 
@@ -30,10 +31,12 @@ async function main() {
     const res = await fetch(GGG_URL);
     if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
     raw = await res.text();
-    writeFileSync("/tmp/ggg-tree.json", raw);
-    console.log("Saved to /tmp/ggg-tree.json");
+    // Validate that the response is valid JSON before saving
+    JSON.parse(raw);
+    writeFileSync(CACHE_PATH, raw);
+    console.log(`Saved cache to ${CACHE_PATH}`);
   } else {
-    raw = readFileSync("/tmp/ggg-tree.json", "utf-8");
+    raw = readFileSync(CACHE_PATH, "utf-8");
   }
 
   const ggg = JSON.parse(raw);
