@@ -445,7 +445,7 @@ const INFLUENCE_LABELS: Record<string, { short: string; color: string }> = {
 };
 
 function ItemMetaBadges({ item }: { item: PobItem }) {
-  const badges: JSX.Element[] = [];
+  const badges: React.JSX.Element[] = [];
 
   if (item.itemLevel) {
     badges.push(

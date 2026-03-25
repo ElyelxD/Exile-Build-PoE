@@ -875,12 +875,11 @@ function createMainWindow() {
     }
   });
 
-  mainWindow.on("minimize", (event: Electron.Event) => {
+  mainWindow.on("minimize", () => {
     if (process.platform !== "win32" || isQuitting) {
       return;
     }
 
-    event.preventDefault();
     minimizeMainWindowToTray();
   });
 
