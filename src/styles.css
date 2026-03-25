@@ -423,6 +423,14 @@ button {
   background: var(--bg-elevated);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
   animation: settings-dropdown-in 120ms ease;
+  cursor: var(--cursor-default), auto;
+}
+
+.settings-dropdown button,
+.settings-dropdown a,
+.settings-dropdown .lang-option,
+.settings-dropdown .hotkey-btn {
+  cursor: var(--cursor-pointer), pointer;
 }
 
 /* Portal-based dropdown: fixed position, always on top */
