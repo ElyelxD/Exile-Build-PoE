@@ -368,6 +368,15 @@ const translations: Record<Locale, Record<string, string>> = {
 
 let currentLocale: Locale = "en";
 
+/**
+ * Single source of truth for which locales the main process can render.
+ * Callers must gate on this instead of hard-coding a locale list, otherwise
+ * translated dictionaries silently never reach the tray and the dialogs.
+ */
+export function isSupportedLocale(value: string): value is Locale {
+  return Object.prototype.hasOwnProperty.call(translations, value);
+}
+
 function localeFilePath() {
   return path.join(app.getPath("userData"), "locale.json");
 }
@@ -375,8 +384,8 @@ function localeFilePath() {
 export function loadLocale(): Locale {
   try {
     const data = JSON.parse(fs.readFileSync(localeFilePath(), "utf8")) as { locale?: string };
-    if (data.locale && data.locale in translations) {
-      currentLocale = data.locale as Locale;
+    if (data.locale && isSupportedLocale(data.locale)) {
+      currentLocale = data.locale;
     }
   } catch {
     // File doesn't exist yet — use default

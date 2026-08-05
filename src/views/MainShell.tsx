@@ -67,13 +67,16 @@ export function MainShell() {
   const [updateReady, setUpdateReady] = useState(false);
   const [updateCheckState, setUpdateCheckState] = useState<"idle" | "checking" | "upToDate">("idle");
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
-  const [hotkeys, setHotkeys] = useState<HotkeyConfig | null>(null);
+  const [hotkeys, setHotkeys] = useState<HotkeyState | null>(null);
   const [recordingAction, setRecordingAction] = useState<HotkeyAction | null>(null);
 
   // Load hotkeys when hotkeys panel opens
   useEffect(() => {
     if (openPanel === "hotkeys" && !hotkeys && window.desktop?.getHotkeys) {
-      window.desktop.getHotkeys().then(setHotkeys).catch(() => {});
+      window.desktop
+        .getHotkeys()
+        .then(setHotkeys)
+        .catch((err) => console.error("[Hotkeys] Could not read config:", err));
     }
   }, [openPanel, hotkeys]);
 
@@ -104,10 +107,18 @@ export function MainShell() {
 
       const accelerator = parts.join("+");
       if (window.desktop?.setHotkey && recordingAction) {
-        window.desktop.setHotkey(recordingAction, accelerator).then((cfg) => {
-          setHotkeys(cfg);
-          setRecordingAction(null);
-        }).catch(() => {});
+        window.desktop
+          .setHotkey(recordingAction, accelerator)
+          .then((next) => {
+            // `next.failed` drives the conflict badge below: the accelerator is
+            // saved either way, but the OS may have refused to bind it.
+            setHotkeys(next);
+            setRecordingAction(null);
+          })
+          .catch((err) => {
+            console.error("[Hotkeys] Could not save binding:", err);
+            setRecordingAction(null);
+          });
       }
     }
     window.addEventListener("keydown", onKeyDown, true);
@@ -217,6 +228,20 @@ export function MainShell() {
           ? caughtError.message
           : t("import.genericError");
       setError(nextError);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleReimport = async (buildId: string) => {
+    try {
+      setIsImporting(true);
+      await actions.reimportBuild(buildId);
+      setError("");
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error ? caughtError.message : t("import.genericError"),
+      );
     } finally {
       setIsImporting(false);
     }
@@ -360,7 +385,7 @@ export function MainShell() {
                             className="build-list-reimport"
                             onClick={(e) => {
                               e.stopPropagation();
-                              actions.reimportBuild(entry.id);
+                              void handleReimport(entry.id);
                             }}
                             title={t("builds.reimport")}
                             type="button"
@@ -523,22 +548,33 @@ export function MainShell() {
                   <div className="settings-hotkey-row" key={action}>
                     <span>{t(labelKey)}</span>
                     <button
-                      className={`hotkey-btn${recordingAction === action ? " is-recording" : ""}`}
+                      className={`hotkey-btn${recordingAction === action ? " is-recording" : ""}${
+                        hotkeys.failed.includes(action) ? " is-conflicted" : ""
+                      }`}
                       type="button"
+                      title={hotkeys.failed.includes(action) ? t("settings.hotkeyConflict") : undefined}
                       onClick={() => setRecordingAction(recordingAction === action ? null : action)}
                     >
                       {recordingAction === action
                         ? t("settings.hotkeyPress")
-                        : displayAccelerator(hotkeys[action] || "—")}
+                        : displayAccelerator(hotkeys.config[action] || "—")}
                     </button>
                   </div>
                 ))}
+                {hotkeys && hotkeys.failed.length > 0 && (
+                  <span className="settings-help settings-help--warning">
+                    {t("settings.hotkeyConflict")}
+                  </span>
+                )}
                 {hotkeys && (
                   <button
                     className="hotkey-reset-btn"
                     type="button"
                     onClick={() => {
-                      window.desktop?.resetHotkeys().then((cfg) => setHotkeys(cfg)).catch(() => {});
+                      window.desktop
+                        ?.resetHotkeys()
+                        .then(setHotkeys)
+                        .catch((err) => console.error("[Hotkeys] Could not reset:", err));
                     }}
                   >
                     {t("settings.hotkeyReset")}

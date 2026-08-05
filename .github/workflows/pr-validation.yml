@@ -9,7 +9,10 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  # Job name is the required status check on `main`. The release workflow's job of
+  # the same name only runs on push, so a pull request would otherwise wait forever
+  # on a check that can never report. Keep both names in sync with branch protection.
+  build-windows-installer:
     runs-on: windows-latest
 
     steps:

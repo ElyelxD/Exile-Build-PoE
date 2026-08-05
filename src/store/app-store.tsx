@@ -3,7 +3,9 @@ import {
   PropsWithChildren,
   useContext,
   useEffect,
+  useMemo,
   useReducer,
+  useRef,
 } from "react";
 import { AppState, Build, BUILD_TABS, BuildSourceType, BuildTab, UserProgress } from "@/domain/models";
 
@@ -335,9 +337,34 @@ function reducer(state: AppState, action: Action): AppState {
 
 export function AppStoreProvider({ children }: PropsWithChildren) {
   const [state, dispatch] = useReducer(reducer, defaultState, () => loadStoredState());
+  // Last value this window is known to agree with, so a state change that merely
+  // echoes a sibling window's write is not written back. Without it the main
+  // window and the overlay bounce `storage` events off each other on every change.
+  const lastSyncedRef = useRef<string | null>(null);
+  // Lets `actions` stay referentially stable across renders while still reading
+  // the current state; consumers that only depend on actions stop re-rendering.
+  const stateRef = useRef(state);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    const serialized = JSON.stringify(state);
+
+    if (serialized === lastSyncedRef.current) {
+      return;
+    }
+
+    lastSyncedRef.current = serialized;
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, serialized);
+    } catch (err) {
+      // Quota is the realistic failure here: a few imported builds carry the full
+      // passive tree. Losing persistence must not take the running session down.
+      console.error("[Store] Could not persist state:", err);
+    }
   }, [state]);
 
   useEffect(() => {
@@ -347,12 +374,11 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
       }
 
       try {
-        dispatch({
-          type: "hydrate",
-          payload: normalizeState(JSON.parse(event.newValue) as Partial<AppState>),
-        });
-      } catch {
-        return;
+        const payload = normalizeState(JSON.parse(event.newValue) as Partial<AppState>);
+        lastSyncedRef.current = JSON.stringify(payload);
+        dispatch({ type: "hydrate", payload });
+      } catch (err) {
+        console.error("[Store] Ignored malformed state from another window:", err);
       }
     };
 
@@ -363,22 +389,24 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  const actions: AppActions = {
+  const actions = useMemo<AppActions>(() => ({
     importBuild: async (sourceType, sourceValue) => {
       const build = await createImportedBuild(sourceType, sourceValue);
       dispatch({ type: "import-build", build });
     },
     selectBuild: (buildId) => dispatch({ type: "select-build", buildId }),
     deleteBuild: (buildId) => dispatch({ type: "delete-build", buildId }),
+    // Rejects on failure, exactly like importBuild, so the caller can surface the
+    // reason. Swallowing it here left the reimport button looking like a no-op.
     reimportBuild: async (buildId) => {
-      const build = state.builds.find((b) => b.id === buildId);
-      if (!build) return;
-      try {
-        const fresh = await createImportedBuild(build.sourceType, build.sourceValue);
-        dispatch({ type: "replace-build", oldBuildId: buildId, build: fresh });
-      } catch (err) {
-        console.error("[Reimport] failed:", err);
+      const build = stateRef.current.builds.find((entry) => entry.id === buildId);
+
+      if (!build) {
+        throw new Error(`Unknown build: ${buildId}`);
       }
+
+      const fresh = await createImportedBuild(build.sourceType, build.sourceValue);
+      dispatch({ type: "replace-build", oldBuildId: buildId, build: fresh });
     },
     setPobTreeSpec: (buildId, specId) =>
       dispatch({ type: "set-pob-tree-spec", buildId, specId }),
@@ -393,10 +421,12 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
       dispatch({ type: "toggle-pin-next-objective", buildId }),
     setOverlayOpacity: (opacity) =>
       dispatch({ type: "set-overlay-opacity", opacity }),
-  };
+  }), []);
+
+  const value = useMemo<AppStoreValue>(() => ({ state, actions }), [state, actions]);
 
   return (
-    <AppStoreContext.Provider value={{ state, actions }}>
+    <AppStoreContext.Provider value={value}>
       {children}
     </AppStoreContext.Provider>
   );

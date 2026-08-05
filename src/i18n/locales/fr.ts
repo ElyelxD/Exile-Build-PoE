@@ -312,6 +312,7 @@ const fr: Record<TranslationKey, string> = {
   "settings.hotkeyPin": "Épingler/Détacher",
   "settings.hotkeyHelp": "Cliquez sur un raccourci pour le modifier. Appuyez sur Echap pour annuler.",
   "settings.hotkeyPress": "Appuyez sur les touches...",
+  "settings.hotkeyConflict": "Utilisé par une autre application",
   "settings.hotkeyReset": "Réinitialiser",
   "settings.overlayOpacity": "Opacité de l'overlay",
   "settings.language": "Langue",

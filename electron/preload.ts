@@ -10,6 +10,12 @@ type ShortcutName =
 type HotkeyAction = ShortcutName | "toggle-overlay";
 type HotkeyConfig = Record<HotkeyAction, string>;
 
+/** Mirrors the main process: config plus the actions the OS refused to bind. */
+interface HotkeyState {
+  config: HotkeyConfig;
+  failed: HotkeyAction[];
+}
+
 type ImportSourceType = "link" | "code" | "file";
 
 contextBridge.exposeInMainWorld("desktop", {
@@ -62,8 +68,8 @@ contextBridge.exposeInMainWorld("desktop", {
   },
 
   // Hotkeys
-  getHotkeys: () => ipcRenderer.invoke("hotkeys:get") as Promise<HotkeyConfig>,
+  getHotkeys: () => ipcRenderer.invoke("hotkeys:get") as Promise<HotkeyState>,
   setHotkey: (action: HotkeyAction, accelerator: string) =>
-    ipcRenderer.invoke("hotkeys:set", action, accelerator) as Promise<HotkeyConfig>,
-  resetHotkeys: () => ipcRenderer.invoke("hotkeys:reset") as Promise<HotkeyConfig>,
+    ipcRenderer.invoke("hotkeys:set", action, accelerator) as Promise<HotkeyState>,
+  resetHotkeys: () => ipcRenderer.invoke("hotkeys:reset") as Promise<HotkeyState>,
 });

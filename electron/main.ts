@@ -5,8 +5,7 @@ import { gunzipSync, inflateRawSync, inflateSync } from "node:zlib";
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeImage, screen, shell, Tray } from "electron";
 import type { Rectangle } from "electron";
 import { autoUpdater } from "electron-updater";
-import { loadLocale, saveLocale, t } from "./i18n";
-import type { Locale } from "./i18n";
+import { isSupportedLocale, loadLocale, saveLocale, t } from "./i18n";
 
 type ShortcutName =
   | "next-tab"
@@ -18,6 +17,12 @@ type ShortcutName =
 type HotkeyAction = ShortcutName | "toggle-overlay";
 
 type HotkeyConfig = Record<HotkeyAction, string>;
+
+/** Config plus the actions the OS refused to bind, so the renderer can flag them. */
+interface HotkeyState {
+  config: HotkeyConfig;
+  failed: HotkeyAction[];
+}
 
 const DEFAULT_HOTKEYS: HotkeyConfig = {
   "toggle-overlay": "CommandOrControl+Shift+O",
@@ -54,12 +59,18 @@ interface PoeAssetsState {
   lastError?: string;
 }
 
+const WINDOW_STATE_FLUSH_DELAY_MS = 300;
+const OVERLAY_SETTLE_DELAY_MS = 150;
+
 let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
 let appTray: Tray | null = null;
-let isAdjustingOverlayBounds = false;
 let isQuitting = false;
 let poeAssetsSyncPromise: Promise<PoeAssetsState> | null = null;
+let cachedWindowState: PersistedWindowState | null = null;
+let pendingWindowStateFlush: NodeJS.Timeout | null = null;
+let pendingOverlaySettle: NodeJS.Timeout | null = null;
+let hotkeyState: HotkeyState = { config: { ...DEFAULT_HOTKEYS }, failed: [] };
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
 
@@ -97,21 +108,50 @@ function poeAssetsManifestPath() {
 }
 
 function readWindowState(): PersistedWindowState {
-  try {
-    return JSON.parse(fs.readFileSync(stateFilePath(), "utf8")) as PersistedWindowState;
-  } catch {
-    return {};
+  if (!cachedWindowState) {
+    try {
+      cachedWindowState = JSON.parse(
+        fs.readFileSync(stateFilePath(), "utf8"),
+      ) as PersistedWindowState;
+    } catch {
+      cachedWindowState = {};
+    }
   }
+
+  return cachedWindowState;
 }
 
-function writeWindowState(partial: PersistedWindowState) {
-  const nextState = {
-    ...readWindowState(),
-    ...partial,
-  };
+function flushWindowState() {
+  if (pendingWindowStateFlush) {
+    clearTimeout(pendingWindowStateFlush);
+    pendingWindowStateFlush = null;
+  }
+
+  if (!cachedWindowState) {
+    return;
+  }
 
   fs.mkdirSync(path.dirname(stateFilePath()), { recursive: true });
-  fs.writeFileSync(stateFilePath(), JSON.stringify(nextState, null, 2), "utf8");
+  fs.writeFileSync(stateFilePath(), JSON.stringify(cachedWindowState, null, 2), "utf8");
+}
+
+/**
+ * Move/resize fire dozens of times per second while a window is being dragged.
+ * Writing on every tick blocked the main process on a readFileSync + writeFileSync
+ * pair each time, so the state lives in memory and is flushed once the user
+ * settles — and unconditionally on shutdown, so nothing is lost.
+ */
+function writeWindowState(partial: PersistedWindowState) {
+  cachedWindowState = { ...readWindowState(), ...partial };
+
+  if (pendingWindowStateFlush) {
+    return;
+  }
+
+  pendingWindowStateFlush = setTimeout(() => {
+    pendingWindowStateFlush = null;
+    flushWindowState();
+  }, WINDOW_STATE_FLUSH_DELAY_MS);
 }
 
 function defaultPoeAssetsState(): PoeAssetsState {
@@ -291,7 +331,10 @@ async function runPoeAssetMining(state: PoeAssetsState) {
       python.command,
       args,
       {
-        cwd: app.getAppPath(),
+        // Not app.getAppPath(): once packaged that resolves to app.asar, which is
+        // a file, and spawning with a non-directory cwd fails with ENOENT.
+        // Every path handed to the script is absolute, so cwd only needs to exist.
+        cwd: app.getPath("userData"),
         env: process.env,
         maxBuffer: 8 * 1024 * 1024,
       },
@@ -652,9 +695,33 @@ function setOverlayBounds(nextBounds: Rectangle) {
     return;
   }
 
-  isAdjustingOverlayBounds = true;
   overlayWindow.setBounds(normalizedBounds);
-  isAdjustingOverlayBounds = false;
+}
+
+/**
+ * Re-clamping on every move event fought the user's drag, and the old
+ * re-entrancy flag could not prevent it: setBounds emits its own move event,
+ * which Windows delivers asynchronously, long after a synchronous flag was
+ * cleared. Instead we wait for the drag to settle and normalize once.
+ *
+ * The follow-up event that setBounds triggers schedules one more pass, which is
+ * a no-op because normalizing already-normalized bounds is idempotent.
+ */
+function scheduleOverlaySettle() {
+  if (pendingOverlaySettle) {
+    clearTimeout(pendingOverlaySettle);
+  }
+
+  pendingOverlaySettle = setTimeout(() => {
+    pendingOverlaySettle = null;
+
+    if (!overlayWindow || overlayWindow.isDestroyed()) {
+      return;
+    }
+
+    ensureOverlayWindowPosition();
+    saveBounds("overlayBounds", overlayWindow);
+  }, OVERLAY_SETTLE_DELAY_MS);
 }
 
 function recenterOverlayWindow() {
@@ -705,6 +772,16 @@ function shutdownApplication() {
   isQuitting = true;
   globalShortcut.unregisterAll();
 
+  // Main window bounds reach the cache synchronously, but the overlay's only do
+  // so once the drag settles — a quit inside that window would drop them.
+  if (pendingOverlaySettle && overlayWindow && !overlayWindow.isDestroyed()) {
+    clearTimeout(pendingOverlaySettle);
+    pendingOverlaySettle = null;
+    saveBounds("overlayBounds", overlayWindow);
+  }
+
+  flushWindowState();
+
   if (appTray) {
     appTray.destroy();
     appTray = null;
@@ -741,44 +818,45 @@ function minimizeMainWindowToTray() {
   mainWindow.hide();
 }
 
+/** Labels are resolved at build time, so this is re-run whenever the locale changes. */
+function buildTrayMenu() {
+  return Menu.buildFromTemplate([
+    {
+      label: t("electron.trayOpen"),
+      click: () => {
+        restoreMainWindow();
+      },
+    },
+    {
+      label: t("electron.trayShowOverlay"),
+      click: () => {
+        if (!overlayWindow || overlayWindow.isDestroyed()) {
+          return;
+        }
+
+        ensureOverlayWindowPosition();
+        promoteOverlayWindow();
+        overlayWindow.showInactive();
+      },
+    },
+    { type: "separator" },
+    {
+      label: t("electron.trayQuit"),
+      click: () => {
+        shutdownApplication();
+      },
+    },
+  ]);
+}
+
 function createTray() {
   if (appTray) {
     return;
   }
 
-  const icon = nativeImage.createFromPath(trayIconPath());
-
-  appTray = new Tray(icon);
+  appTray = new Tray(nativeImage.createFromPath(trayIconPath()));
   appTray.setToolTip("Exile Build PoE");
-  appTray.setContextMenu(
-    Menu.buildFromTemplate([
-      {
-        label: t("electron.trayOpen"),
-        click: () => {
-          restoreMainWindow();
-        },
-      },
-      {
-        label: t("electron.trayShowOverlay"),
-        click: () => {
-          if (!overlayWindow || overlayWindow.isDestroyed()) {
-            return;
-          }
-
-          ensureOverlayWindowPosition();
-          promoteOverlayWindow();
-          overlayWindow.showInactive();
-        },
-      },
-      { type: "separator" },
-      {
-        label: t("electron.trayQuit"),
-        click: () => {
-          shutdownApplication();
-        },
-      },
-    ]),
-  );
+  appTray.setContextMenu(buildTrayMenu());
 
   appTray.on("click", () => {
     restoreMainWindow();
@@ -786,39 +864,7 @@ function createTray() {
 }
 
 function rebuildTrayMenu() {
-  if (!appTray) {
-    return;
-  }
-
-  appTray.setContextMenu(
-    Menu.buildFromTemplate([
-      {
-        label: t("electron.trayOpen"),
-        click: () => {
-          restoreMainWindow();
-        },
-      },
-      {
-        label: t("electron.trayShowOverlay"),
-        click: () => {
-          if (!overlayWindow || overlayWindow.isDestroyed()) {
-            return;
-          }
-
-          ensureOverlayWindowPosition();
-          promoteOverlayWindow();
-          overlayWindow.showInactive();
-        },
-      },
-      { type: "separator" },
-      {
-        label: t("electron.trayQuit"),
-        click: () => {
-          shutdownApplication();
-        },
-      },
-    ]),
-  );
+  appTray?.setContextMenu(buildTrayMenu());
 }
 
 function createMainWindow() {
@@ -949,19 +995,8 @@ function createOverlayWindow() {
     overlayWindow = null;
   });
 
-  overlayWindow.on("move", () => {
-    if (overlayWindow && !isAdjustingOverlayBounds) {
-      ensureOverlayWindowPosition();
-      saveBounds("overlayBounds", overlayWindow);
-    }
-  });
-
-  overlayWindow.on("resize", () => {
-    if (overlayWindow && !isAdjustingOverlayBounds) {
-      ensureOverlayWindowPosition();
-      saveBounds("overlayBounds", overlayWindow);
-    }
-  });
+  overlayWindow.on("move", scheduleOverlaySettle);
+  overlayWindow.on("resize", scheduleOverlaySettle);
 }
 
 function emitShortcut(shortcut: ShortcutName) {
@@ -1037,14 +1072,24 @@ function setupAutoUpdater() {
   }, 5_000);
 }
 
-function registerShortcuts() {
+/**
+ * Reports which actions could not be bound, so the UI can say so instead of
+ * pretending the rebind worked. globalShortcut.register() signals "another app
+ * already owns this accelerator" by returning false, not by throwing, so the
+ * return value has to be checked as well as the throw caught.
+ */
+function registerShortcuts(): HotkeyState {
   globalShortcut.unregisterAll();
   const config = readHotkeys();
+  const failed: HotkeyAction[] = [];
 
   for (const [action, accelerator] of Object.entries(config) as Array<[HotkeyAction, string]>) {
     if (!accelerator) continue;
+
+    let registered = false;
+
     try {
-      globalShortcut.register(accelerator, () => {
+      registered = globalShortcut.register(accelerator, () => {
         if (action === "toggle-overlay") {
           toggleOverlayVisibility();
           return;
@@ -1052,9 +1097,17 @@ function registerShortcuts() {
         emitShortcut(action);
       });
     } catch (err) {
-      console.warn(`[Hotkeys] Failed to register ${action} → ${accelerator}:`, err);
+      console.warn(`[Hotkeys] Invalid accelerator for ${action} → ${accelerator}:`, err);
+    }
+
+    if (!registered) {
+      console.warn(`[Hotkeys] Could not bind ${action} → ${accelerator}`);
+      failed.push(action);
     }
   }
+
+  hotkeyState = { config, failed };
+  return hotkeyState;
 }
 
 app.whenReady().then(() => {
@@ -1084,28 +1137,27 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle("app:set-locale", async (_event, locale: string) => {
-    if (locale === "en" || locale === "pt-BR") {
-      saveLocale(locale as Locale);
-      rebuildTrayMenu();
+    if (!isSupportedLocale(locale)) {
+      console.warn(`[i18n] Ignoring unsupported locale from renderer: ${locale}`);
+      return;
     }
+
+    saveLocale(locale);
+    rebuildTrayMenu();
   });
 
   ipcMain.handle("hotkeys:get", async () => {
-    return readHotkeys();
+    return hotkeyState;
   });
 
   ipcMain.handle("hotkeys:set", async (_event, action: HotkeyAction, accelerator: string) => {
-    const config = readHotkeys();
-    config[action] = accelerator;
-    saveHotkeys(config);
-    registerShortcuts();
-    return config;
+    saveHotkeys({ ...readHotkeys(), [action]: accelerator });
+    return registerShortcuts();
   });
 
   ipcMain.handle("hotkeys:reset", async () => {
     saveHotkeys({ ...DEFAULT_HOTKEYS });
-    registerShortcuts();
-    return { ...DEFAULT_HOTKEYS };
+    return registerShortcuts();
   });
 
   ipcMain.handle("updater:check", async () => {
@@ -1144,4 +1196,5 @@ app.on("before-quit", () => {
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll();
+  flushWindowState();
 });

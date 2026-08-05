@@ -7,6 +7,18 @@ updates:
       day: "monday"
     target-branch: "main"
     open-pull-requests-limit: 10
+    # Every merge to main republishes the release, so batch routine bumps into one
+    # PR each. Majors stay separate: they need a manual smoke test of the app.
+    groups:
+      npm-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      npm-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -15,3 +27,7 @@ updates:
       day: "monday"
     target-branch: "main"
     open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"

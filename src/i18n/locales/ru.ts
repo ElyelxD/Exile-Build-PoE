@@ -295,6 +295,7 @@ const ru: Record<TranslationKey, string> = {
   "settings.hotkeyPin": "Закрепить/Открепить",
   "settings.hotkeyHelp": "Нажмите на клавишу, чтобы изменить. Escape для отмены.",
   "settings.hotkeyPress": "Нажмите клавиши...",
+  "settings.hotkeyConflict": "Занято другим приложением",
   "settings.hotkeyReset": "Сбросить",
   "settings.overlayOpacity": "Прозрачность оверлея",
   "settings.language": "Язык",

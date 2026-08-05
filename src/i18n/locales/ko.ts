@@ -297,6 +297,7 @@ const ko: Record<TranslationKey, string> = {
   "settings.hotkeyPin": "고정/해제",
   "settings.hotkeyHelp": "단축키를 클릭하여 변경하세요. Escape로 취소합니다.",
   "settings.hotkeyPress": "키를 누르세요...",
+  "settings.hotkeyConflict": "다른 앱이 사용 중",
   "settings.hotkeyReset": "기본값 복원",
   "settings.overlayOpacity": "오버레이 투명도",
   "settings.language": "언어",

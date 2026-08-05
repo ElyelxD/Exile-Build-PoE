@@ -304,6 +304,7 @@ const ja: Record<TranslationKey, string> = {
   "settings.hotkeyPin": "ピン留め切替",
   "settings.hotkeyHelp": "ショートカットをクリックして変更。Escapeでキャンセル。",
   "settings.hotkeyPress": "キーを押してください...",
+  "settings.hotkeyConflict": "他のアプリが使用中",
   "settings.hotkeyReset": "デフォルトに戻す",
   "settings.overlayOpacity": "オーバーレイの不透明度",
   "settings.language": "言語",
