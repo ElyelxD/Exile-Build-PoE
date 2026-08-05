@@ -2,9 +2,10 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],
-    "module": "CommonJS",
-    "moduleResolution": "Node10",
-    "ignoreDeprecations": "6.0",
+    // node18 keeps the CommonJS emit Electron needs (package.json has no
+    // "type": "module") while using modern resolution. The previous
+    // moduleResolution "node10" was deprecated in TS 6 and removed in TS 7.
+    "module": "node18",
     "outDir": "dist-electron",
     "rootDir": "electron",
     "strict": true,
