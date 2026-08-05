@@ -295,6 +295,7 @@ const zhCN: Record<TranslationKey, string> = {
   "settings.hotkeyPin": "固定/取消固定",
   "settings.hotkeyHelp": "点击快捷键进行更改。按 Escape 取消。",
   "settings.hotkeyPress": "按下按键...",
+  "settings.hotkeyConflict": "已被其他应用占用",
   "settings.hotkeyReset": "恢复默认",
   "settings.overlayOpacity": "覆盖层透明度",
   "settings.language": "语言",

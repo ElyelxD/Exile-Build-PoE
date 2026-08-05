@@ -295,6 +295,7 @@ const es: Record<TranslationKey, string> = {
   "settings.hotkeyPin": "Fijar/Desfijar",
   "settings.hotkeyHelp": "Haz clic en un atajo para cambiarlo. Presiona Escape para cancelar.",
   "settings.hotkeyPress": "Presiona teclas...",
+  "settings.hotkeyConflict": "En uso por otra aplicación",
   "settings.hotkeyReset": "Restaurar predeterminados",
   "settings.overlayOpacity": "Opacidad del overlay",
   "settings.language": "Idioma",

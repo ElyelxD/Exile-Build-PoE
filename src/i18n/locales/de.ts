@@ -295,6 +295,7 @@ const de: Record<TranslationKey, string> = {
   "settings.hotkeyPin": "Anheften/Lösen",
   "settings.hotkeyHelp": "Klicken Sie auf eine Taste, um sie zu ändern. Escape zum Abbrechen.",
   "settings.hotkeyPress": "Tasten drücken...",
+  "settings.hotkeyConflict": "Von einer anderen App belegt",
   "settings.hotkeyReset": "Zurücksetzen",
   "settings.overlayOpacity": "Overlay-Deckkraft",
   "settings.language": "Sprache",

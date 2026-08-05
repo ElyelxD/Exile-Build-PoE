@@ -12,6 +12,11 @@ type ImportSourceType = "link" | "code" | "file";
 declare global {
   type HotkeyAction = ShortcutEventName | "toggle-overlay";
   type HotkeyConfig = Record<HotkeyAction, string>;
+  /** Config plus the actions the OS refused to bind (accelerator already taken). */
+  interface HotkeyState {
+    config: HotkeyConfig;
+    failed: HotkeyAction[];
+  }
   interface Window {
     desktop?: {
       toggleOverlay: () => Promise<void>;
@@ -28,9 +33,9 @@ declare global {
       onUpdateDownloaded: (handler: () => void) => () => void;
       onUpToDate: (handler: () => void) => () => void;
       onUpdateError: (handler: (msg: string) => void) => () => void;
-      getHotkeys: () => Promise<HotkeyConfig>;
-      setHotkey: (action: HotkeyAction, accelerator: string) => Promise<HotkeyConfig>;
-      resetHotkeys: () => Promise<HotkeyConfig>;
+      getHotkeys: () => Promise<HotkeyState>;
+      setHotkey: (action: HotkeyAction, accelerator: string) => Promise<HotkeyState>;
+      resetHotkeys: () => Promise<HotkeyState>;
     };
   }
 }

@@ -298,6 +298,7 @@ const en = {
   "settings.hotkeyPin": "Toggle pin",
   "settings.hotkeyHelp": "Click a shortcut to change it. Press Escape to cancel.",
   "settings.hotkeyPress": "Press keys...",
+  "settings.hotkeyConflict": "In use by another app",
   "settings.hotkeyReset": "Reset defaults",
   "settings.overlayOpacity": "Overlay opacity",
   "settings.language": "Language",

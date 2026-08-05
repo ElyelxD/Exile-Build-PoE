@@ -504,6 +504,18 @@ button {
   animation: hotkey-pulse 1s ease-in-out infinite;
 }
 
+/* The accelerator is saved but the OS refused to bind it — usually another app owns it. */
+.hotkey-btn.is-conflicted {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.settings-help--warning {
+  color: var(--danger);
+  font-style: normal;
+  opacity: 1;
+}
+
 @keyframes hotkey-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }

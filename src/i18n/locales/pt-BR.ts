@@ -302,6 +302,7 @@ const ptBR: Record<TranslationKey, string> = {
   "settings.hotkeyPin": "Fixar/Desafixar",
   "settings.hotkeyHelp": "Clique em um atalho para alterar. Pressione Escape para cancelar.",
   "settings.hotkeyPress": "Pressione as teclas...",
+  "settings.hotkeyConflict": "Em uso por outro app",
   "settings.hotkeyReset": "Restaurar padrão",
   "settings.overlayOpacity": "Opacidade do overlay",
   "settings.language": "Idioma",

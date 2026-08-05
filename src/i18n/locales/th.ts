@@ -297,6 +297,7 @@ const th: Record<TranslationKey, string> = {
   "settings.hotkeyPin": "ปักหมุด/ถอนหมุด",
   "settings.hotkeyHelp": "คลิกที่ปุ่มลัดเพื่อเปลี่ยน กด Escape เพื่อยกเลิก",
   "settings.hotkeyPress": "กดปุ่ม...",
+  "settings.hotkeyConflict": "ถูกใช้งานโดยแอปอื่น",
   "settings.hotkeyReset": "รีเซ็ต",
   "settings.overlayOpacity": "ความทึบของโอเวอร์เลย์",
   "settings.language": "ภาษา",
