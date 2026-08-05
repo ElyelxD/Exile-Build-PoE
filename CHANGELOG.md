@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.11] - 2026-08-05
+
+### Fixed
+
+- Path of Exile asset mining never ran in packaged builds. The Python miner was
+  spawned with `app.getAppPath()` as its working directory, which resolves to
+  `app.asar` — a file, not a directory — once packaged, so the spawn failed with
+  ENOENT. The feature worked only when run from source.
+- Eight of the ten languages never reached the desktop layer. Selecting Spanish,
+  French, German, Russian, Korean, Chinese, Japanese or Thai left the tray menu,
+  the exit dialog and every import error in the previous language, even though
+  complete translations already existed for all of them.
+- Hotkey rebinds the operating system refused — because another application
+  already owns that shortcut — were reported as successful. Conflicts are now
+  flagged in the settings panel.
+- Reimporting a build silently swallowed its error, leaving the button looking
+  inert. It now reports the failure like a first import does.
+- The overlay could snap back while being dragged.
+- Window position was written to disk synchronously on every move and resize
+  tick, stalling the main process during a drag.
+
+### Security
+
+Both of these ship inside the installer, because `electron-updater` is a runtime
+dependency:
+
+- `builder-util-runtime` 9.5.1 → 9.7.0. It was pinned to an exact version by
+  `electron-updater` 6.8.3, so no dependency update could lift it on its own.
+- `js-yaml` 4.1.1 → 4.3.1.
+
+All open Dependabot alerts cleared: 23 → 0.
+
+### Changed
+
+- TypeScript 7.0.2, Vite 8.2, Vitest 4.1.10, electron-builder 26.15.3,
+  concurrently 10, `@types/node` 26, React 19.2.8, `actions/checkout` v7 and
+  `actions/setup-node` v7.
+- Pull request validation now reports the status check that branch protection
+  requires, so pull requests are no longer blocked on a check that could never
+  run.
+- Dependabot groups routine updates into a single pull request instead of one
+  per package.
+
 ## [1.0.10] - 2026-03-25
 
 ### Fixed
