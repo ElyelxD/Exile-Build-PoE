@@ -2,6 +2,9 @@ import { ChangeEvent, FormEvent, useEffect, useRef, useState, useCallback } from
 import { createPortal } from "react-dom";
 import { BuildTabContent } from "@/components/BuildTabContent";
 import { BUILD_TABS, BuildSourceType } from "@/domain/models";
+import { CHALLENGE_DIFFICULTIES, type ChallengeDifficulty } from "@/domain/challenge";
+import { DIFFICULTY_LABEL_KEYS } from "@/services/challenge/generator";
+import { normalizeSeed, parseChallengeCode } from "@/services/challenge/rng";
 import { sanitizePobInlineText } from "@/services/pob-display";
 import {
   getActivePobTreeSpec,
@@ -32,6 +35,13 @@ const LOCALE_SHORT: Record<Locale, string> = {
 };
 
 type ImportMode = "paste" | "file";
+
+const DIFFICULTY_HINT_KEYS: Record<ChallengeDifficulty, TranslationKey> = {
+  easy: "challenge.difficultyHint.easy",
+  medium: "challenge.difficultyHint.medium",
+  hard: "challenge.difficultyHint.hard",
+  extreme: "challenge.difficultyHint.extreme",
+};
 
 const HOTKEY_ACTIONS: Array<{ action: HotkeyAction; labelKey: TranslationKey }> = [
   { action: "toggle-overlay", labelKey: "settings.hotkeyOverlay" },
@@ -69,6 +79,9 @@ export function MainShell() {
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
   const [hotkeys, setHotkeys] = useState<HotkeyState | null>(null);
   const [recordingAction, setRecordingAction] = useState<HotkeyAction | null>(null);
+  const [challengeDifficulty, setChallengeDifficulty] = useState<ChallengeDifficulty>("medium");
+  const [challengeSeed, setChallengeSeed] = useState("");
+  const [challengeError, setChallengeError] = useState("");
 
   // Load hotkeys when hotkeys panel opens
   useEffect(() => {
@@ -260,6 +273,43 @@ export function MainShell() {
     setError("");
   };
 
+  /**
+   * With a seed typed in, the challenge is reproduced exactly (the seed is the
+   * whole challenge); with the field empty, a fresh seed is minted. A seed that
+   * cannot be parsed is refused rather than quietly rolling a different one.
+   */
+  const handleRollChallenge = () => {
+    const typed = challengeSeed.trim();
+
+    if (!typed) {
+      actions.rollChallenge(challengeDifficulty);
+      setChallengeError("");
+      return;
+    }
+
+    const parsedCode = parseChallengeCode(typed);
+
+    if (parsedCode) {
+      setChallengeDifficulty(parsedCode.difficulty);
+      actions.rollChallenge(parsedCode.difficulty, parsedCode.seed);
+      setChallengeSeed("");
+      setChallengeError("");
+      return;
+    }
+
+    // A bare seed with no `difficulty:` prefix uses the selected difficulty.
+    const bareSeed = normalizeSeed(typed);
+
+    if (!bareSeed) {
+      setChallengeError(t("challenge.invalidSeed"));
+      return;
+    }
+
+    actions.rollChallenge(challengeDifficulty, bareSeed);
+    setChallengeSeed("");
+    setChallengeError("");
+  };
+
   const toggleOverlay = () => {
     if (window.desktop) {
       void window.desktop.toggleOverlay();
@@ -330,6 +380,56 @@ export function MainShell() {
 
         <section className="sb-section">
           <div className="section-heading">
+            <h2>{t("challenge.heading")}</h2>
+            <span>{t("challenge.badge")}</span>
+          </div>
+          <div className="section-stack">
+            <p className="subtle">{t("challenge.subtitle")}</p>
+            <div className="difficulty-grid">
+              {CHALLENGE_DIFFICULTIES.map((difficulty) => (
+                <button
+                  className={`difficulty-chip is-${difficulty} ${
+                    challengeDifficulty === difficulty ? "is-active" : ""
+                  }`}
+                  key={difficulty}
+                  onClick={() => {
+                    setChallengeDifficulty(difficulty);
+                    setChallengeError("");
+                  }}
+                  type="button"
+                >
+                  {t(DIFFICULTY_LABEL_KEYS[difficulty])}
+                </button>
+              ))}
+            </div>
+            <p className="subtle difficulty-hint">{t(DIFFICULTY_HINT_KEYS[challengeDifficulty])}</p>
+
+            <label className="field">
+              <span className="field-label">{t("challenge.seedLabel")}</span>
+              <input
+                className="build-filter"
+                onChange={(event) => {
+                  setChallengeSeed(event.target.value);
+                  setChallengeError("");
+                }}
+                placeholder={t("challenge.seedPlaceholder")}
+                type="text"
+                value={challengeSeed}
+              />
+            </label>
+
+            {challengeError && <p className="error-copy">{challengeError}</p>}
+
+            <div className="inline-actions">
+              <button className="primary-button" onClick={handleRollChallenge} type="button">
+                {challengeSeed.trim() ? t("challenge.loadSeed") : t("challenge.rollButton")}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="sb-section">
+          <div className="section-heading">
             <h2>{t("builds.heading")}</h2>
             <span>{state.builds.length}</span>
           </div>
@@ -380,6 +480,9 @@ export function MainShell() {
                           >
                             <strong>{entry.name}</strong>
                             <span>{entry.className} · {entry.ascendancy}</span>
+                            {entry.sourceType === "random" && (
+                              <span className="build-seed-chip">{entry.sourceValue}</span>
+                            )}
                           </button>
                           <button
                             className="build-list-reimport"
@@ -396,16 +499,19 @@ export function MainShell() {
                             className="build-list-copy"
                             onClick={(e) => {
                               e.stopPropagation();
-                              const text = entry.sourceType === "link"
-                                ? entry.sourceValue
-                                : entry.sourceValue;
-                              navigator.clipboard.writeText(text).then(() => {
+                              // For a challenge this copies its seed code, which is
+                              // exactly what someone else needs to play the same one.
+                              navigator.clipboard.writeText(entry.sourceValue).then(() => {
                                 const btn = e.currentTarget;
                                 btn.textContent = "✓";
                                 setTimeout(() => { btn.textContent = "⎘"; }, 1200);
                               });
                             }}
-                            title={t("builds.copySource")}
+                            title={
+                              entry.sourceType === "random"
+                                ? t("challenge.copySeed")
+                                : t("builds.copySource")
+                            }
                             type="button"
                           >
                             ⎘

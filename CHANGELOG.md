@@ -5,6 +5,66 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-08-10
+
+### Added
+
+- **Challenge mode.** Roll a random challenge in Easy, Medium, Hard or Extreme and
+  build it yourself. The generator picks a class, ascendancy and main skill and,
+  as the difficulty climbs, adds a mandated weapon, a mandated unique, a mandated
+  keystone, banned support gems and — on Extreme — two extra rules such as
+  Solo Self-Found or a one-Divine gear budget. Every rule becomes a checklist
+  objective, so challenges work in the overlay with the existing hotkeys.
+- Challenges are identified by a seed (`hard:8F3K22`) and regenerate from it, so
+  the same seed always produces the same challenge and can be shared with anyone
+  else running the app. Paste a seed to play someone else's challenge.
+- Every skill, unique and keystone the generator can roll is validated in CI
+  against the bundled Path of Exile data, so a game update that renames or removes
+  one fails the build instead of producing an impossible challenge.
+- Challenges come with a **suggested passive tree**: a real, connected allocation
+  from the class start node, inside the point budget the target level grants,
+  chosen by scoring each passive against the mandated skill. The mandated keystone
+  is always included; no other keystone is ever taken by accident.
+- Challenges also come with **suggested gear**: real base types per slot, filtered
+  by the level requirement the character will have met, the class's attributes and
+  its defence type. Item modifiers are never invented — gear carries a base and a
+  list of stat priorities.
+- Challenges come with a **suggested gem setup**: the mandated skill plus five
+  support gems that can legally link to it, taken from Path of Building's own
+  `requireSkillTypes` / `excludeSkillTypes` data, so a support that would do
+  nothing is never suggested. Supports that cancel each other out — Brutality
+  with Elemental Focus, two flat-damage supports in the same links — are filtered
+  out, and a support the challenge banned is never then suggested. A movement gem
+  and an aura are added only when the challenge's own rules leave room for them.
+- The suggested gems are laid out across the equipment: main links in an item that
+  can hold six, then an aura group, a guard skill, a movement skill and a curse
+  matched to the skill's damage type — each cut to the sockets that item really
+  has, and each skipped when a challenge rule forbids it.
+- `npm run data:tree`, `npm run data:bases`, `npm run data:gems` and
+  `npm run data:icons` refresh the bundled game data.
+
+### Changed
+
+- **Updated the passive tree to 3.29 Curse of the Allflame.** 2935 → 2987 nodes,
+  including the new Luminary ascendancy and the Bitter Frost, Roiling Tempest and
+  Voracious Flame keystones.
+- Class and ascendancy tables, and gem colour resolution, moved out of the
+  importer into shared modules now used by both the importer and challenge mode.
+
+### Fixed
+
+- The ascendancy lookup used for imports without an explicit `ascendClassName`
+  was wrong: Witch's three ascendancies were in the wrong order (an Occultist was
+  labelled Necromancer, an Elementalist Occultist, a Necromancer Elementalist) and
+  Ranger's first ascendancy was still called Raider instead of Warden. Scion was
+  missing Reliquarian and Luminary entirely. The table is now verified against
+  GGG's own tree export.
+- The passive tree canvas filtered out every Luminary node, so a Luminary
+  character's ascendancy rendered empty.
+- Imports from the current league showed no league badge, because the tree version
+  to league table stopped at 3.28.
+- The gem tab counted skill groups twice, rendering "2 2 groups".
+
 ## [1.0.11] - 2026-08-05
 
 ### Fixed

@@ -8,7 +8,9 @@ import {
   useRef,
 } from "react";
 import { AppState, Build, BUILD_TABS, BuildSourceType, BuildTab, UserProgress } from "@/domain/models";
+import type { ChallengeDifficulty } from "@/domain/challenge";
 
+import { createChallengeBuild } from "@/services/challenge/challenge-build";
 import { createImportedBuild, createInitialProgress, rehydrateImportedBuild } from "@/services/importer";
 import { getSuggestedPobTreeSpecForLevel } from "@/services/pob-selectors";
 import { findStageForLevel, getCurrentStage, getNextObjectives } from "@/store/selectors";
@@ -19,6 +21,8 @@ type Direction = 1 | -1;
 
 interface AppActions {
   importBuild: (sourceType: BuildSourceType, sourceValue: string) => Promise<void>;
+  /** Roll a challenge. Omit the seed to mint a new one, pass it to reproduce a shared challenge. */
+  rollChallenge: (difficulty: ChallengeDifficulty, seed?: string) => void;
   selectBuild: (buildId: string) => void;
   deleteBuild: (buildId: string) => void;
   reimportBuild: (buildId: string) => Promise<void>;
@@ -394,6 +398,10 @@ export function AppStoreProvider({ children }: PropsWithChildren) {
       const build = await createImportedBuild(sourceType, sourceValue);
       dispatch({ type: "import-build", build });
     },
+    // Synchronous on purpose: a challenge is generated locally from a seed, with
+    // no source to fetch and nothing that can fail at the I/O level.
+    rollChallenge: (difficulty, seed) =>
+      dispatch({ type: "import-build", build: createChallengeBuild(difficulty, seed) }),
     selectBuild: (buildId) => dispatch({ type: "select-build", buildId }),
     deleteBuild: (buildId) => dispatch({ type: "delete-build", buildId }),
     // Rejects on failure, exactly like importBuild, so the caller can surface the
