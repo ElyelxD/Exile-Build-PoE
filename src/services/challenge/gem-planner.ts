@@ -25,7 +25,6 @@ interface GemDatabase {
     color: string;
     requires: string[];
     excludes: string[];
-    description: string;
   }>;
 }
 

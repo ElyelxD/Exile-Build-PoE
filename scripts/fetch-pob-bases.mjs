@@ -33,6 +33,24 @@ const FILES = [
 /** Bases from removed or unobtainable content that must never be suggested. */
 const EXCLUDED_TAGS = ["atlas_base_type", "demigods", "talisman"];
 
+/**
+ * Every value here comes off the network and ends up in a file that ships inside
+ * the app, so nothing is written unchecked. Names are constrained to the shape
+ * real Path of Exile names have — letters (including accented ones, as in
+ * "Maelström"), digits, spaces and the handful of punctuation marks the game
+ * uses, as in "Kaom's Heart" and "Two-Stone Ring (Fire/Cold)".
+ */
+const SAFE_TEXT = /^[A-Za-zÀ-ÖØ-öø-ÿ0-9 '(),./-]{1,64}$/;
+
+function safeText(value) {
+  return typeof value === "string" && SAFE_TEXT.test(value) ? value : null;
+}
+
+/** Requirements and socket counts are small non-negative integers or nothing. */
+function safeCount(value) {
+  return Number.isInteger(value) && value >= 0 && value <= 10000 ? value : null;
+}
+
 function parseNumber(source, key) {
   const match = source.match(new RegExp(`\\b${key}\\s*=\\s*(\\d+)`));
   return match ? Number(match[1]) : 0;
@@ -46,6 +64,7 @@ function parseNumber(source, key) {
  */
 function parseBases(lua) {
   const entries = [];
+  let rejected = 0;
   const pattern = /itemBases\["([^"]+)"\]\s*=\s*\{/g;
   let match;
 
@@ -71,19 +90,28 @@ function parseBases(lua) {
     const reqMatch = body.match(/\breq\s*=\s*\{([^}]*)\}/);
     const req = reqMatch ? reqMatch[1] : "";
 
-    entries.push({
-      name,
-      type: typeMatch[1],
-      subType: subTypeMatch ? subTypeMatch[1] : "",
-      level: parseNumber(req, "level"),
-      str: parseNumber(req, "str"),
-      dex: parseNumber(req, "dex"),
-      int: parseNumber(req, "int"),
-      sockets: parseNumber(body, "socketLimit"),
-    });
+    const entry = {
+      name: safeText(name),
+      type: safeText(typeMatch[1]),
+      subType: subTypeMatch ? safeText(subTypeMatch[1]) : "",
+      level: safeCount(parseNumber(req, "level")),
+      str: safeCount(parseNumber(req, "str")),
+      dex: safeCount(parseNumber(req, "dex")),
+      int: safeCount(parseNumber(req, "int")),
+      sockets: safeCount(parseNumber(body, "socketLimit")),
+    };
+
+    // Anything that does not look like real game data is dropped rather than
+    // written to a file the app ships.
+    if (Object.values(entry).some((value) => value === null)) {
+      rejected++;
+      continue;
+    }
+
+    entries.push(entry);
   }
 
-  return entries;
+  return { entries, rejected };
 }
 
 async function main() {
@@ -97,15 +125,17 @@ async function main() {
       throw new Error(`Fetch failed for ${file}: ${response.status}`);
     }
 
-    const parsed = parseBases(await response.text());
-    console.log(`  ${file.padEnd(8)} ${String(parsed.length).padStart(4)} bases`);
-    all.push(...parsed);
+    const { entries, rejected } = parseBases(await response.text());
+    // Never truncate silently: a rejected entry means the upstream shape changed
+    // or the data is not what it claims to be, and both are worth seeing.
+    const note = rejected > 0 ? `  (${rejected} rejected)` : "";
+    console.log(`  ${file.padEnd(8)} ${String(entries.length).padStart(4)} bases${note}`);
+    all.push(...entries);
   }
 
   all.sort((a, b) => a.name.localeCompare(b.name));
 
-  // Parse and re-serialize to validate output and satisfy CodeQL taint analysis
-  const json = JSON.stringify(JSON.parse(JSON.stringify(all)));
+  const json = JSON.stringify(all);
   writeFileSync(OUT_PATH, json);
 
   const types = [...new Set(all.map((base) => base.type))].sort();
