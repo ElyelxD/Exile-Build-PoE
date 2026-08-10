@@ -18,29 +18,13 @@ import {
   PobTreeSpec,
   UserProgress,
 } from "@/domain/models";
+import { ASCENDANCY_BY_CLASS_ID, CLASS_ID_TO_NAME } from "@/domain/poe-classes";
+import { createChallengeBuild, rehydrateChallengeBuild } from "@/services/challenge/challenge-build";
+import { parseChallengeCode } from "@/services/challenge/rng";
+import { resolveGemColor } from "@/services/gem-colors";
 import { sanitizePobInlineText, sanitizePobNotes } from "@/services/pob-display";
 import { resolveGemIcons, resolveItemIcons } from "@/services/poe-icons";
 import { t } from "@/i18n";
-
-const classIdToName: Record<string, string> = {
-  "0": "Scion",
-  "1": "Marauder",
-  "2": "Ranger",
-  "3": "Witch",
-  "4": "Duelist",
-  "5": "Templar",
-  "6": "Shadow",
-};
-
-const ascendancyByClassId: Record<string, Record<string, string>> = {
-  "0": { "1": "Ascendant" },
-  "1": { "1": "Juggernaut", "2": "Berserker", "3": "Chieftain" },
-  "2": { "1": "Raider", "2": "Deadeye", "3": "Pathfinder" },
-  "3": { "1": "Necromancer", "2": "Occultist", "3": "Elementalist" },
-  "4": { "1": "Slayer", "2": "Gladiator", "3": "Champion" },
-  "5": { "1": "Inquisitor", "2": "Hierophant", "3": "Guardian" },
-  "6": { "1": "Assassin", "2": "Trickster", "3": "Saboteur" },
-};
 
 function getDesktopBridge() {
   if (!window.desktop?.resolvePobSource) {
@@ -115,50 +99,6 @@ function formatIdentifier(rawValue: string) {
     .replace(/\bAnd\b/g, "and")
     .replace(/\bOf\b/g, "of")
     .trim();
-}
-
-import gemColorsData from "@/data/gem-colors.json";
-
-/** Lookup gem color from the 740+ gem database (poegems.com). */
-const GEM_COLOR_DB = gemColorsData as Record<string, string>;
-
-function classifyGemColor(_skillId: string, name: string): import("@/domain/models").GemColor {
-  // Try exact match first
-  let code = GEM_COLOR_DB[name];
-
-  // Try stripping parenthetical suffix: "Absolution (Absolution)" → "Absolution"
-  if (!code && name.includes("(")) {
-    code = GEM_COLOR_DB[name.replace(/\s*\([^)]*\)\s*$/, "").trim()];
-  }
-
-  // Try with "Support" suffix for support gems without it in the DB
-  if (!code && !name.includes("Support")) {
-    code = GEM_COLOR_DB[`${name} Support`];
-  }
-
-  // Try without "Vaal " prefix
-  if (!code && /^vaal /i.test(name)) {
-    code = GEM_COLOR_DB[name.replace(/^Vaal /i, "")];
-  }
-
-  // Try without "Awakened " prefix
-  if (!code && /^awakened /i.test(name)) {
-    code = GEM_COLOR_DB[name.replace(/^Awakened /i, "")];
-  }
-
-  // Case-insensitive fallback
-  if (!code) {
-    const lower = name.toLowerCase();
-    for (const [k, v] of Object.entries(GEM_COLOR_DB)) {
-      if (k.toLowerCase() === lower) { code = v; break; }
-    }
-  }
-
-  if (code === "R") return "red";
-  if (code === "G") return "green";
-  if (code === "B") return "blue";
-  if (code === "W") return "white";
-  return "blue";
 }
 
 function buildGemName(skillId: string, nameSpec: string) {
@@ -481,7 +421,7 @@ function inferClassName(buildElement: Element | null, activeTreeSpec: Element | 
   }
 
   const classId = attribute(activeTreeSpec, "classId");
-  return classIdToName[classId] ?? t("importer.unknownClass");
+  return CLASS_ID_TO_NAME[classId] ?? t("importer.unknownClass");
 }
 
 function inferAscendancy(buildElement: Element | null, activeTreeSpec: Element | null, className: string) {
@@ -493,7 +433,7 @@ function inferAscendancy(buildElement: Element | null, activeTreeSpec: Element |
 
   const classId = attribute(activeTreeSpec, "classId");
   const ascendClassId = attribute(activeTreeSpec, "ascendClassId");
-  const inferred = ascendancyByClassId[classId]?.[ascendClassId];
+  const inferred = ASCENDANCY_BY_CLASS_ID[classId]?.[ascendClassId];
 
   return inferred ?? (className === "Scion" ? "Ascendant" : t("importer.unknownAscendancy"));
 }
@@ -594,7 +534,10 @@ function stageChecklist(
   };
 }
 
-async function resolvePobXml(sourceType: BuildSourceType, sourceValue: string) {
+/** `random` builds never reach the desktop bridge — they carry a seed, not a PoB source. */
+type PobSourceType = Exclude<BuildSourceType, "random">;
+
+async function resolvePobXml(sourceType: PobSourceType, sourceValue: string) {
   const trimmed = sourceValue.trim();
 
   if ((sourceType === "file" || sourceType === "code") && trimmed.startsWith("<")) {
@@ -713,7 +656,7 @@ function parsePobData(xml: string): {
         ) as import("@/domain/models").GemQualityType;
 
         // Gem color: infer from skill path or keywords
-        const gemColor = classifyGemColor(skillId, name);
+        const gemColor = resolveGemColor(name);
 
         return {
           id: `${setId}-${groupIndex + 1}-${gemIndex + 1}`,
@@ -997,6 +940,7 @@ function createCharacterCards(buildId: string, ascendancy: string, pob: PobData)
 }
 
 export const TREE_VERSION_TO_LEAGUE: Record<string, string> = {
+  "3_29": "3.29 Allflame",
   "3_28": "3.28 Mirage",
   "3_27": "3.27 Early Access",
   "3_26": "3.26 Dawn",
@@ -1024,6 +968,18 @@ function detectLeague(pob: PobData): string | undefined {
 }
 
 export async function createImportedBuild(sourceType: BuildSourceType, sourceValue: string): Promise<Build> {
+  // Re-importing a challenge means re-rolling the same seed, which by construction
+  // reproduces it exactly (src/services/challenge/README.md, M4).
+  if (sourceType === "random") {
+    const parsed = parseChallengeCode(sourceValue);
+
+    if (!parsed) {
+      throw new Error(t("challenge.invalidCode", { code: sourceValue }));
+    }
+
+    return createChallengeBuild(parsed.difficulty, parsed.seed);
+  }
+
   const xml = await resolvePobXml(sourceType, sourceValue);
   const { name, className, ascendancy, notes, pob } = parsePobData(xml);
   const id = crypto.randomUUID();
@@ -1047,6 +1003,13 @@ export async function createImportedBuild(sourceType: BuildSourceType, sourceVal
 }
 
 export function rehydrateImportedBuild(build: Build): Build {
+  // Challenges are not imported data — they are regenerated from their seed, so the
+  // PoB snapshot path below would overwrite the challenge with a snapshot of its own
+  // requirements sheet (src/services/challenge/README.md, M3).
+  if (build.sourceType === "random") {
+    return rehydrateChallengeBuild(build);
+  }
+
   if (!build.pob) {
     return build;
   }

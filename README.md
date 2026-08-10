@@ -24,6 +24,7 @@ The overlay shows your next objectives, current level, and gem/gear targets whil
 Exile Build PoE bridges the gap between planning a build in Path of Building and actually playing it. Instead of alt-tabbing to PoB every few minutes, the overlay keeps your roadmap visible while you play.
 
 - **In-Game Overlay** — Always-on-top overlay with tabs, level tracking, progress checklist, and configurable opacity. Toggle with a hotkey.
+- **Challenge Mode** — Roll a random challenge in Easy, Medium, Hard or Extreme: a class, an ascendancy, a mandated main skill and, as difficulty climbs, a mandated weapon, unique, keystone, banned supports and brutal extra rules. Every rule is a checklist objective in the overlay. Each challenge also comes with a **suggested passive tree** (real pathfinding, inside the level's point budget) and **suggested gear** (real base types you can actually equip). Challenges are identified by a shareable seed (`hard:8F3K22`) — paste a friend's seed to play the exact same challenge.
 - **Full PoB Import** — Paste a pobb.in link, pastebin URL, raw export code, or load a `.xml` file. Extracts passive tree, gems, gear, labs, masteries, jewels, and notes.
 - **Passive Tree Canvas** — Interactive tree with zoom/pan, GGG sprite rendering, cluster jewel expansion, mastery selections, node tooltips, and jewel socket details.
 - **Gear Display** — Item cards with mod tiers (T1/T2/T3), socket colors and links, rarity badges, influence badges, iLvl/quality/corrupted indicators.

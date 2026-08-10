@@ -83,8 +83,8 @@ const allNodes: TreeNode[] = [];
 // Ascendancy names to include: standard (7 classes + Scion) + alternate/bloodline (3.25+).
 // Only filter out far-flung boss clusters (Farrul, Aul, Catarina, etc.) that expand bounds too much.
 const STANDARD_ASC = new Set([
-  // Standard
-  "Ascendant", "Reliquarian",
+  // Standard — Scion's three (Luminary joined in 3.29 Allflame)
+  "Ascendant", "Reliquarian", "Luminary",
   "Juggernaut", "Berserker", "Chieftain",
   "Deadeye", "Warden", "Pathfinder",
   "Elementalist", "Occultist", "Necromancer",

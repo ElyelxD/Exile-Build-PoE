@@ -1,7 +1,8 @@
 export const BUILD_TABS = ["overview", "tree", "gems", "gear", "labs", "notes"] as const;
 
 export type BuildTab = (typeof BUILD_TABS)[number];
-export type BuildSourceType = "link" | "code" | "file";
+/** `random` builds are not imported — they are regenerated from a seed (see domain/challenge.ts). */
+export type BuildSourceType = "link" | "code" | "file" | "random";
 export type ChecklistType = "quest" | "gear" | "gem" | "lab" | "note";
 export type GemCategory = "main" | "utility" | "movement" | "aura";
 export type PoeAssetStatus =

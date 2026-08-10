@@ -1035,7 +1035,8 @@ export function BuildTabContent({
                   <span className="tree-version-badge">{gemsLeagueName}</span>
                 )}
                 <span className="detail-meta">
-                  {visibleGroups.length} {t("gems.groupCount", { count: visibleGroups.length })}
+                  {/* The translation already interpolates the count. */}
+                  {t("gems.groupCount", { count: visibleGroups.length })}
                 </span>
                 {pob.treeSpecs.length > 1 && (
                   <select
