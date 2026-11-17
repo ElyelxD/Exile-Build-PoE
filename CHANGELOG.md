@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-11-17
+
+### Fixed
+
+- The suggested passive tree of a challenge ignored the mandated weapon. A bow
+  challenge could be handed axe, sword, mace, two-handed, shield and dual-wield
+  notables, because passives were scored only by matching the skill's tags
+  against their text. A notable is now taken only when every line that names
+  equipment is met by the build: "with Axes" needs an axe, "holding a Shield" a
+  shield beside a one-handed weapon, "Melee" a melee skill, and dual-wield
+  notables are never taken. Saved challenges regenerate from their seed, so their
+  suggested tree changes with this release.
+- A challenge could mandate a shield unique beside a bow or a two-handed weapon,
+  in about 3% of those rolls. Every challenge that was already coherent keeps
+  its unique.
+- A minimized overlay still caught clicks and drags meant for the game around
+  its minibar: the window kept its full size and only its content was hidden.
+  The window now shrinks to the minibar and reopens full size where the minibar
+  was dragged to.
+
+### Changed
+
+These ship inside the installer:
+
+- Electron 43.2.0 → 43.8.1.
+- React 19.2.8 → 19.3.1.
+- `electron-updater` 6.8.9 → 6.8.11.
+- `js-yaml` 4.3.1 → 4.3.2, via `electron-updater`.
+
 ## [1.1.0] - 2026-08-10
 
 ### Added
