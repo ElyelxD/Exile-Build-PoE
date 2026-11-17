@@ -9,7 +9,7 @@
  */
 
 import baseItemsData from "@/data/base-items.json";
-import type { ChallengeSkillTag, WeaponFamily } from "@/domain/challenge";
+import { offHandFor, type ChallengeSkillTag, type WeaponFamily } from "@/domain/challenge";
 import type { Roller } from "@/services/challenge/rng";
 
 export interface BaseItem {
@@ -53,8 +53,6 @@ const WEAPON_FAMILY_TO_TYPE: Record<WeaponFamily, string | null> = {
   oneHandMace: "One Handed Mace",
   twoHandMace: "Two Handed Mace",
 };
-
-const TWO_HANDED: WeaponFamily[] = ["bow", "staff", "twoHandSword", "twoHandAxe", "twoHandMace"];
 
 export const ARMOUR_SLOTS = ["Helmet", "Body Armour", "Gloves", "Boots"] as const;
 
@@ -155,8 +153,9 @@ export function planGear({ classId, level, weapon, occupiedSlots, roller }: Gear
     push("Weapon 1", pickBase(weaponType, level, classId, roller, [], true));
   }
 
-  // A shield only makes sense next to a one-handed weapon.
-  if (weapon && !TWO_HANDED.includes(weapon) && weapon !== "any") {
+  const offHand = offHandFor(weapon);
+
+  if (offHand === "shield") {
     push("Weapon 2", pickBase("Shield", level, classId, roller, defences));
   }
 
@@ -169,7 +168,7 @@ export function planGear({ classId, level, weapon, occupiedSlots, roller }: Gear
   push("Ring 2", pickBase("Ring", level, classId, roller));
   push("Belt", pickBase("Belt", level, classId, roller));
 
-  if (weapon === "bow") {
+  if (offHand === "quiver") {
     push("Weapon 2", pickBase("Quiver", level, classId, roller));
   }
 

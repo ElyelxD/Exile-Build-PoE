@@ -12,7 +12,9 @@
  *   2. Connect the mandated keystone first, if the challenge has one.
  *   3. Repeatedly attach the notable with the best score-per-extra-point, where
  *      score comes from matching the notable's own stat text against the main
- *      skill's tags.
+ *      skill's tags. A notable with a line that only works with gear the build
+ *      does not hold ("with Axes", "while Dual Wielding", "holding a Shield") is
+ *      never a candidate: its damage would read as relevant and do nothing.
  *   4. Stop when the point budget is spent.
  *
  * Keystones are never picked up opportunistically: they redefine how a build
@@ -20,7 +22,13 @@
  */
 
 import treeRaw from "@/data/tree-default.json";
-import type { ChallengeSkillTag } from "@/domain/challenge";
+import {
+  TWO_HANDED_WEAPONS,
+  offHandFor,
+  type ChallengeSkillTag,
+  type OffHand,
+  type WeaponFamily,
+} from "@/domain/challenge";
 
 type RawNode = [number, number, number, number, string, string, string, number, number, number, unknown, number[]?];
 
@@ -92,6 +100,70 @@ const TAG_WEIGHT = 3;
 const DEFENCE_WEIGHT = 2;
 /** Share of the budget that may go to nodes offering defence and nothing else. */
 const MAX_DEFENCE_SHARE = 0.35;
+
+/* ── Equipment conditions ── */
+
+/** One way the build might be equipped, plus whether its skill hits in melee. */
+interface Loadout {
+  weapon: WeaponFamily;
+  offHand: OffHand;
+  melee: boolean;
+}
+
+const ONE_HANDED_MELEE: readonly WeaponFamily[] = ["dagger", "claw", "oneHandSword", "oneHandAxe", "oneHandMace", "sceptre"];
+const TWO_HANDED_MELEE = TWO_HANDED_WEAPONS.filter((family) => family !== "bow");
+const ONE_HANDED = [...ONE_HANDED_MELEE, "wand"] as readonly WeaponFamily[];
+
+const wields =
+  (...families: readonly WeaponFamily[]) =>
+  (loadout: Loadout) =>
+    families.includes(loadout.weapon);
+
+/**
+ * Phrases that make a stat line conditional on the player's equipment, longest
+ * first: they are matched in one pass, so "Two Handed Melee Weapons" is consumed
+ * whole and never also read as "Melee". The first entry is about the *enemy's*
+ * weapon and holds for any build — it exists only so the "melee" in it is consumed.
+ */
+const EQUIPMENT_CONDITIONS: Array<[phrase: string, holds: (loadout: Loadout) => boolean]> = [
+  ["melee attackers|enemy with a melee weapon", () => true],
+  ["dual wield\\w*", () => false],
+  ["two handed melee weapons?", wields(...TWO_HANDED_MELEE)],
+  ["two handed weapons?", wields(...TWO_HANDED_WEAPONS)],
+  ["one handed melee weapons?", wields(...ONE_HANDED_MELEE)],
+  ["one handed weapons?", wields(...ONE_HANDED)],
+  ["melee weapons?", wields(...ONE_HANDED_MELEE, ...TWO_HANDED_MELEE)],
+  ["(?<!energy )shields?", (loadout) => loadout.offHand === "shield"],
+  ["bows?|quivers?", wields("bow")],
+  ["wands?", wields("wand")],
+  ["staff|staves", wields("staff")],
+  ["daggers?", wields("dagger")],
+  ["claws?", wields("claw")],
+  ["swords?", wields("oneHandSword", "twoHandSword")],
+  ["axes?", wields("oneHandAxe", "twoHandAxe")],
+  ["maces?", wields("oneHandMace", "twoHandMace")],
+  ["sceptres?", wields("sceptre")],
+  ["unarmed", wields("unarmed")],
+  ["melee", (loadout) => loadout.melee],
+];
+
+const EQUIPMENT_PATTERN = new RegExp(`\\b(?:${EQUIPMENT_CONDITIONS.map(([phrase]) => `(${phrase})`).join("|")})\\b`, "gi");
+
+/**
+ * A line holds when it names no equipment, or when any equipment it names is
+ * there — game text joins alternatives with "or" ("Maces or Sceptres", "Dual
+ * Wielding or holding a Shield"). A node fits only if every one of its lines holds.
+ */
+function fitsLoadout(stats: string, loadout: Loadout): boolean {
+  return stats.split("\n").every((line) => {
+    const matches = [...line.matchAll(EQUIPMENT_PATTERN)];
+
+    return (
+      matches.length === 0 ||
+      matches.some((match) => EQUIPMENT_CONDITIONS[match.slice(1).findIndex(Boolean)][1](loadout))
+    );
+  });
+}
 
 /* ── Graph, built once ── */
 
@@ -212,6 +284,11 @@ export interface TreePlan {
 interface PlanRequest {
   classId: string;
   tags: readonly ChallengeSkillTag[];
+  /**
+   * Weapon families the build may wield: the mandated one, or every family the
+   * skill allows when none is mandated. Notables must fit all of them.
+   */
+  weapons: readonly WeaponFamily[];
   level: number;
   /** Mandated keystone, connected before anything else. */
   requiredNodeId?: number;
@@ -242,12 +319,22 @@ function distancesFromTree(allocated: Set<number>) {
   return { distance, parent };
 }
 
-export function planTree({ classId, tags, level, requiredNodeId }: PlanRequest): TreePlan {
+export function planTree({ classId, tags, weapons, level, requiredNodeId }: PlanRequest): TreePlan {
   const start = classStartByClassId.get(classId);
 
   if (start === undefined) {
     throw new Error(`No start node for class ${classId}`);
   }
+
+  if (weapons.length === 0) {
+    throw new Error("A tree plan needs at least one weapon family to fit");
+  }
+
+  const loadouts: Loadout[] = weapons.map((weapon) => ({
+    weapon,
+    offHand: offHandFor(weapon),
+    melee: tags.includes("melee"),
+  }));
 
   const budget = passivePointsForLevel(level);
   const allocated = new Set<number>([start]);
@@ -292,6 +379,7 @@ export function planTree({ classId, tags, level, requiredNodeId }: PlanRequest):
 
   for (const node of nodesById.values()) {
     if (node.type !== NODE_TYPE_NOTABLE) continue;
+    if (!loadouts.every((loadout) => fitsLoadout(node.stats, loadout))) continue;
 
     const { offence, defence } = scoreNode(node, tags);
     if (offence === 0 && defence < DEFENCE_WEIGHT * 2) continue;
