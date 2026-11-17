@@ -17,6 +17,7 @@ import {
   type ChallengeSpec,
   type ChallengeUnique,
   type WeaponFamily,
+  offHandFor,
 } from "@/domain/challenge";
 import { ASCENDANCY_BY_CLASS_ID, CLASS_ID_TO_NAME, CLASS_IDS, ascendancyIdsForClass } from "@/domain/poe-classes";
 import { planGear, preferredDefences, statPrioritiesFor } from "@/services/challenge/gear-planner";
@@ -174,9 +175,30 @@ function eligibleKeystones(skill: ChallengeSkill): ChallengeKeystone[] {
   );
 }
 
-/** Rule C5 — a weapon unique may only be mandated alongside its own weapon family. */
-function eligibleUniques(weapon: WeaponFamily | undefined): ChallengeUnique[] {
-  return pool.uniques.filter((unique) => !unique.weapon || unique.weapon === weapon);
+/**
+ * Rule C5 — a weapon unique may only be mandated alongside its own weapon family,
+ * and an off-hand unique (every one in the pool is a shield) only beside a weapon
+ * that leaves room for a shield.
+ */
+export function eligibleUniques(weapon: WeaponFamily | undefined): ChallengeUnique[] {
+  return pool.uniques.filter((unique) => {
+    if (unique.weapon) return unique.weapon === weapon;
+    if (unique.slot === "Weapon 2") return offHandFor(weapon) === "shield";
+    return true;
+  });
+}
+
+/**
+ * Rolls a unique without moving any challenge that was already coherent. Stored
+ * challenges are regenerated from their seed (M3), so the first roll still draws
+ * from the pool as it was before the off-hand rule existed; only a roll that lands
+ * on an off-hand the weapon cannot carry draws again, from the coherent pool.
+ */
+function pickUnique(roller: Roller, weapon: WeaponFamily | undefined): ChallengeUnique {
+  const first = roller.pick(pool.uniques.filter((unique) => !unique.weapon || unique.weapon === weapon));
+  const coherent = eligibleUniques(weapon);
+
+  return coherent.includes(first) ? first : roller.pick(coherent);
 }
 
 /** Rule C7 — an extra rule already implied by the mandated keystone adds nothing. */
@@ -265,9 +287,7 @@ export function generateChallenge(difficulty: ChallengeDifficulty, seed: string)
   const skill = toSkill(createRoller(seed, "skill").pick(pool.skills));
 
   const weapon = config.mandatesWeapon ? pickWeapon(createRoller(seed, "weapon"), skill) : undefined;
-  const unique = config.mandatesUnique
-    ? createRoller(seed, "unique").pick(eligibleUniques(weapon))
-    : undefined;
+  const unique = config.mandatesUnique ? pickUnique(createRoller(seed, "unique"), weapon) : undefined;
   const keystone = config.mandatesKeystone
     ? createRoller(seed, "keystone").pick(eligibleKeystones(skill))
     : undefined;
@@ -286,6 +306,8 @@ export function generateChallenge(difficulty: ChallengeDifficulty, seed: string)
   const tree = planTree({
     classId,
     tags: skill.tags,
+    // Without a mandated weapon the plan must suit every family the skill allows.
+    weapons: weapon ? [weapon] : skill.weapons,
     level: config.targetLevel,
     requiredNodeId: keystone?.nodeId,
   });

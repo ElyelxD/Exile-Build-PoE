@@ -86,6 +86,11 @@ Technique` forbids `crit` and requires `attack`; `Minion Instability` requires `
 "no other uniques" ban (hard/extreme), and its slot never collides with the mandated
 weapon family — a mandated weapon unique replaces the weapon-family rule instead of
 contradicting it.
+An off-hand unique (every one in the pool is a shield) is only mandated beside a weapon
+that leaves the off hand free: never beside a bow, whose off hand holds its quiver, nor
+beside a two-handed weapon. A roll is drawn from the pool as it stood before this rule
+and drawn again only when it lands on such a shield, so every challenge that was
+already coherent keeps its unique when it is regenerated from its seed (D1, M3).
 
 **Rule C6 — Banned supports must be relevant to the skill.** The ban pool is exactly
 the set of supports the suggested links would have wanted (see M5): legal for the skill
@@ -129,6 +134,13 @@ an imported build. The plan is produced by `tree-planner.ts`:
   quest points); ascendancy points are separate and never counted;
 - the mandated keystone is connected first, then notables are attached by best
   score-per-extra-point, scoring each node's own stat text against the skill's tags;
+- a notable is a candidate only if every stat line that names equipment is met by
+  the build's loadout (`offHandFor` in `src/domain/challenge.ts`): "with Axes" needs
+  an axe, "holding a Shield" a shield beside a one-handed weapon, "Melee" a melee
+  skill, and "Dual Wielding" never holds because dual wielding is never suggested.
+  Alternatives joined by "or" ("Maces or Sceptres") hold if either does. Without a
+  mandated weapon, a notable must suit every family the skill allows. A notable can
+  still be crossed as a junction on the way to another one; it is never a target;
 - keystones are **never** picked up opportunistically — they redefine how a build
   works, so taking one by accident would sabotage the player;
 - at most 35% of the budget goes to nodes that offer defence and nothing else.
