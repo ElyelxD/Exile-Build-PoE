@@ -86,7 +86,7 @@
         "provider": "github",
         "owner": "ElyelxD",
         "repo": "Exile-Build-PoE",
-        "releaseType": "release"
+        "releaseType": "draft"
       }
     ],
     "win": {

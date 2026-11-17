@@ -42,43 +42,62 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Delete existing draft release for this version
+      # electron-builder must never create the release itself. When it does, every
+      # file it uploads in parallel tries to create it: one wins, the rest get a 422,
+      # the build dies before latest.yml is uploaded, and the release keeps
+      # electron-builder's bare "1.2.3" name. Without latest.yml the auto-updater
+      # cannot see the version at all. So the release is created here, as a draft
+      # with its final name, and electron-builder (releaseType "draft") only uploads.
+      #
+      # Re-running for the same version starts over: any release or tag for it is
+      # removed first, so every run ends in the same state.
+      - name: Create draft release for this version
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.pkg.outputs.version }}
         run: |
-          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases --jq '.[] | select(.tag_name == "v${{ steps.pkg.outputs.version }}" and .draft == true) | .id' 2>/dev/null || true)
-          if [ -n "$RELEASE_ID" ]; then
-            gh api -X DELETE repos/${{ github.repository }}/releases/$RELEASE_ID
-            echo "Deleted draft release $RELEASE_ID"
-          fi
+          for RELEASE_ID in $(gh api "repos/${{ github.repository }}/releases" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | .id"); do
+            gh api -X DELETE "repos/${{ github.repository }}/releases/$RELEASE_ID"
+            echo "Deleted release $RELEASE_ID ($TAG)"
+          done
+          git push origin ":refs/tags/$TAG" 2>/dev/null || true
 
-      - name: Delete existing tag if present
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          git push origin :refs/tags/v${{ steps.pkg.outputs.version }} 2>/dev/null || true
+          printf 'Windows installer build from `main`.\n\nCommit: %s\n' "${{ github.sha }}" > "$RUNNER_TEMP/release-notes.md"
+          gh release create "$TAG" --draft --target "${{ github.sha }}" \
+            --title "Exile Build PoE $TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
 
-      - name: Build & publish Windows installer
+      - name: Build & upload Windows installer
         env:
           GH_TOKEN: ${{ github.token }}
         run: npm run build && npx electron-builder --publish always --win nsis --x64
 
-      - name: Publish release (remove draft flag)
+      - name: Check the auto-update files reached the release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.pkg.outputs.version }}
+          VERSION: ${{ steps.pkg.outputs.version }}
         run: |
-          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases --jq '.[] | select(.tag_name == "v${{ steps.pkg.outputs.version }}" and .draft == true) | .id' 2>/dev/null || true)
-          if [ -n "$RELEASE_ID" ]; then
-            gh api -X PATCH repos/${{ github.repository }}/releases/$RELEASE_ID \
-              -f name="Exile Build PoE v${{ steps.pkg.outputs.version }}" \
-              -f body="Windows installer build from \`main\`.\n\nCommit: ${{ github.sha }}" \
-              -F draft=false \
-              -F make_latest=true
-            echo "Published release v${{ steps.pkg.outputs.version }}"
-          fi
+          ASSETS=$(gh api "repos/${{ github.repository }}/releases" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | .assets[].name")
+          for FILE in latest.yml "Exile-Build-PoE-Setup-$VERSION.exe" "Exile-Build-PoE-Setup-$VERSION.exe.blockmap"; do
+            if ! grep -qxF "$FILE" <<< "$ASSETS"; then
+              echo "::error::$FILE is missing from $TAG; the auto-updater would not see this release"
+              exit 1
+            fi
+          done
+
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.pkg.outputs.version }}
+        run: |
+          RELEASE_ID=$(gh api "repos/${{ github.repository }}/releases" --paginate --jq ".[] | select(.tag_name == \"$TAG\" and .draft == true) | .id")
+          gh api -X PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" \
+            -F draft=false \
+            -f make_latest=true
+          echo "Published $TAG"
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v7
