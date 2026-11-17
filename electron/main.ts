@@ -61,6 +61,7 @@ interface PoeAssetsState {
 
 const WINDOW_STATE_FLUSH_DELAY_MS = 300;
 const OVERLAY_SETTLE_DELAY_MS = 150;
+const OVERLAY_MIN_SIZE = { width: 430, height: 500 };
 
 let mainWindow: BrowserWindow | null = null;
 let overlayWindow: BrowserWindow | null = null;
@@ -70,6 +71,13 @@ let poeAssetsSyncPromise: Promise<PoeAssetsState> | null = null;
 let cachedWindowState: PersistedWindowState | null = null;
 let pendingWindowStateFlush: NodeJS.Timeout | null = null;
 let pendingOverlaySettle: NodeJS.Timeout | null = null;
+/**
+ * Full-size bounds to restore while the overlay is collapsed to its minibar, null
+ * while it is expanded. The window itself shrinks to the minibar: a transparent
+ * area is still part of the window, so it would keep catching clicks meant for the
+ * game underneath.
+ */
+let overlayExpandedBounds: Rectangle | null = null;
 let hotkeyState: HotkeyState = { config: { ...DEFAULT_HOTKEYS }, failed: [] };
 
 const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? "http://127.0.0.1:5173";
@@ -562,10 +570,7 @@ function saveBounds(key: "mainBounds" | "overlayBounds", window: BrowserWindow) 
     return;
   }
 
-  const bounds =
-    key === "overlayBounds"
-      ? normalizeOverlayBounds(window.getBounds())
-      : window.getBounds();
+  const bounds = key === "overlayBounds" ? persistableOverlayBounds(window) : window.getBounds();
 
   if (key === "mainBounds") {
     writeWindowState({ mainBounds: bounds });
@@ -573,6 +578,19 @@ function saveBounds(key: "mainBounds" | "overlayBounds", window: BrowserWindow) 
   }
 
   writeWindowState({ overlayBounds: bounds });
+}
+
+/**
+ * While collapsed, what is worth remembering is the full panel at the minibar's
+ * current position — never the minibar's own size, or the next start would open a
+ * sliver of a window.
+ */
+function persistableOverlayBounds(window: BrowserWindow): Rectangle {
+  const current = window.getBounds();
+
+  return overlayExpandedBounds
+    ? normalizeOverlayBounds({ ...overlayExpandedBounds, x: current.x, y: current.y })
+    : normalizeOverlayBounds(current);
 }
 
 function getPrimaryWorkArea() {
@@ -588,10 +606,10 @@ function getPrimaryWorkAreaBounds() {
   return getPrimaryWorkArea().workArea;
 }
 
-function clampBoundsToPrimaryDisplay(bounds: Rectangle): Rectangle {
+function clampBoundsToPrimaryDisplay(bounds: Rectangle, minimum: OverlaySizeHint = OVERLAY_MIN_SIZE): Rectangle {
   const { x, y, width, height } = getPrimaryWorkAreaBounds();
-  const minimumWidth = Math.min(430, width);
-  const minimumHeight = Math.min(500, height);
+  const minimumWidth = Math.min(minimum.width ?? OVERLAY_MIN_SIZE.width, width);
+  const minimumHeight = Math.min(minimum.height ?? OVERLAY_MIN_SIZE.height, height);
   const clampedWidth = Math.min(Math.max(bounds.width, minimumWidth), width);
   const clampedHeight = Math.min(Math.max(bounds.height, minimumHeight), height);
 
@@ -634,10 +652,10 @@ function getRectIntersectionArea(left: Rectangle, right: Rectangle) {
   return overlapWidth * overlapHeight;
 }
 
-function normalizeOverlayBounds(bounds: Rectangle) {
+function normalizeOverlayBounds(bounds: Rectangle, minimum: OverlaySizeHint = OVERLAY_MIN_SIZE) {
   const primaryDisplay = getPrimaryWorkArea();
   const primaryBounds = primaryDisplay.workArea;
-  const clampedBounds = clampBoundsToPrimaryDisplay(bounds);
+  const clampedBounds = clampBoundsToPrimaryDisplay(bounds, minimum);
 
   if (isBoundsInsideArea(bounds, primaryBounds)) {
     return clampedBounds;
@@ -650,23 +668,29 @@ function normalizeOverlayBounds(bounds: Rectangle) {
     return clampedBounds;
   }
 
-  return getCenteredOverlayBounds({
-    width: clampedBounds.width,
-    height: clampedBounds.height,
-  });
+  return getCenteredOverlayBounds(
+    {
+      width: clampedBounds.width,
+      height: clampedBounds.height,
+    },
+    minimum,
+  );
 }
 
-function getCenteredOverlayBounds(size?: OverlaySizeHint): Rectangle {
+function getCenteredOverlayBounds(size?: OverlaySizeHint, minimum: OverlaySizeHint = OVERLAY_MIN_SIZE): Rectangle {
   const { x, y, width, height } = getPrimaryWorkAreaBounds();
   const overlayWidth = size?.width ?? 450;
   const overlayHeight = size?.height ?? 540;
 
-  return clampBoundsToPrimaryDisplay({
-    width: overlayWidth,
-    height: overlayHeight,
-    x: Math.round(x + (width - overlayWidth) / 2),
-    y: Math.round(y + (height - overlayHeight) / 2),
-  });
+  return clampBoundsToPrimaryDisplay(
+    {
+      width: overlayWidth,
+      height: overlayHeight,
+      x: Math.round(x + (width - overlayWidth) / 2),
+      y: Math.round(y + (height - overlayHeight) / 2),
+    },
+    minimum,
+  );
 }
 
 function getInitialOverlayBounds(persisted: PersistedWindowState) {
@@ -688,7 +712,7 @@ function setOverlayBounds(nextBounds: Rectangle) {
     return;
   }
 
-  const normalizedBounds = normalizeOverlayBounds(nextBounds);
+  const normalizedBounds = normalizeOverlayBounds(nextBounds, currentOverlayMinimum());
   const currentBounds = overlayWindow.getBounds();
 
   if (areBoundsEqual(currentBounds, normalizedBounds)) {
@@ -732,10 +756,13 @@ function recenterOverlayWindow() {
   const currentBounds = overlayWindow.getBounds();
 
   setOverlayBounds(
-    getCenteredOverlayBounds({
-      width: currentBounds.width,
-      height: currentBounds.height,
-    }),
+    getCenteredOverlayBounds(
+      {
+        width: currentBounds.width,
+        height: currentBounds.height,
+      },
+      currentOverlayMinimum(),
+    ),
   );
 }
 
@@ -744,7 +771,63 @@ function ensureOverlayWindowPosition() {
     return;
   }
 
-  setOverlayBounds(normalizeOverlayBounds(overlayWindow.getBounds()));
+  setOverlayBounds(overlayWindow.getBounds());
+}
+
+/** Collapsed, the minibar is the size to keep; only its position is clamped. */
+function currentOverlayMinimum(): OverlaySizeHint {
+  if (overlayExpandedBounds && overlayWindow && !overlayWindow.isDestroyed()) {
+    const { width, height } = overlayWindow.getBounds();
+    return { width, height };
+  }
+
+  return OVERLAY_MIN_SIZE;
+}
+
+/**
+ * Collapse the overlay window to `size` (the minibar), or restore it with null.
+ * Idempotent both ways: collapsing again only resizes, expanding while expanded
+ * does nothing. The panel reopens where the minibar was dragged to, clamped so the
+ * whole panel stays on screen.
+ */
+function setOverlayMinimized(size: { width: number; height: number } | null) {
+  if (!overlayWindow || overlayWindow.isDestroyed()) {
+    return;
+  }
+
+  const current = overlayWindow.getBounds();
+
+  if (size === null) {
+    if (!overlayExpandedBounds) return;
+
+    const restored = normalizeOverlayBounds({ ...overlayExpandedBounds, x: current.x, y: current.y });
+    overlayExpandedBounds = null;
+    overlayWindow.setResizable(true);
+    overlayWindow.setBounds(restored);
+    overlayWindow.setMinimumSize(OVERLAY_MIN_SIZE.width, OVERLAY_MIN_SIZE.height);
+    return;
+  }
+
+  if (!overlayExpandedBounds) {
+    overlayExpandedBounds = normalizeOverlayBounds(current);
+  }
+
+  overlayWindow.setMinimumSize(size.width, size.height);
+  overlayWindow.setResizable(false);
+  overlayWindow.setBounds({ x: current.x, y: current.y, width: size.width, height: size.height });
+}
+
+function parseOverlaySize(size: unknown): { width: number; height: number } | null {
+  if (size === null) return null;
+
+  const { width, height } = (size ?? {}) as { width?: unknown; height?: unknown };
+  const valid = (value: unknown): value is number => Number.isInteger(value) && (value as number) > 0;
+
+  if (!valid(width) || !valid(height)) {
+    throw new Error(`Invalid overlay size: ${JSON.stringify(size)}`);
+  }
+
+  return { width, height };
 }
 
 function promoteOverlayWindow() {
@@ -974,7 +1057,7 @@ function createOverlayWindow() {
     },
   });
 
-  overlayWindow.setMinimumSize(430, 500);
+  overlayWindow.setMinimumSize(OVERLAY_MIN_SIZE.width, OVERLAY_MIN_SIZE.height);
 
   attachExternalLinkHandlers(overlayWindow);
   loadRendererWindow(overlayWindow, "/overlay");
@@ -993,6 +1076,7 @@ function createOverlayWindow() {
 
   overlayWindow.on("closed", () => {
     overlayWindow = null;
+    overlayExpandedBounds = null;
   });
 
   overlayWindow.on("move", scheduleOverlaySettle);
@@ -1130,6 +1214,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle("overlay:reset-position", async () => {
     recenterOverlayWindow();
+  });
+
+  ipcMain.handle("overlay:set-minimized", async (_event, size: unknown) => {
+    setOverlayMinimized(parseOverlaySize(size));
   });
 
   ipcMain.handle("pob:resolve-source", async (_event, sourceType: ImportSourceType, sourceValue: string) => {

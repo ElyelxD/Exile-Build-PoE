@@ -21,6 +21,8 @@ type ImportSourceType = "link" | "code" | "file";
 contextBridge.exposeInMainWorld("desktop", {
   toggleOverlay: () => ipcRenderer.invoke("app:toggle-overlay"),
   resetOverlayPosition: () => ipcRenderer.invoke("overlay:reset-position"),
+  setOverlayMinimized: (size: { width: number; height: number } | null) =>
+    ipcRenderer.invoke("overlay:set-minimized", size),
   resolvePobSource: (sourceType: ImportSourceType, sourceValue: string) =>
     ipcRenderer.invoke("pob:resolve-source", sourceType, sourceValue),
   setLocale: (locale: string) => ipcRenderer.invoke("app:set-locale", locale),

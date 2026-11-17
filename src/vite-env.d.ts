@@ -21,6 +21,8 @@ declare global {
     desktop?: {
       toggleOverlay: () => Promise<void>;
       resetOverlayPosition: () => Promise<void>;
+      /** Shrink the overlay window to the minibar's size, or restore it with null. */
+      setOverlayMinimized: (size: { width: number; height: number } | null) => Promise<void>;
       resolvePobSource: (sourceType: ImportSourceType, sourceValue: string) => Promise<string>;
       setLocale: (locale: string) => Promise<void>;
       onShortcut: (handler: (name: ShortcutEventName) => void) => () => void;
