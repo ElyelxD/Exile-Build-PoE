@@ -2835,15 +2835,12 @@ textarea {
 
 /* ── Overlay minibar (minimized) ── */
 
+/* The window shrinks to the minibar (OverlayWindow), so nothing around it is left
+   to catch clicks — CSS pointer-events never reached the OS window anyway. */
 .overlay-route.is-minimized {
   min-height: unset;
   height: auto;
   -webkit-app-region: no-drag;
-  pointer-events: none;
-}
-
-.overlay-route.is-minimized .overlay-minibar {
-  pointer-events: auto;
 }
 
 .overlay-minibar {

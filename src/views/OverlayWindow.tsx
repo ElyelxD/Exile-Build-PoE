@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { OverlayPanel } from "@/components/OverlayPanel";
 import { useAppStore } from "@/store/app-store";
 import {
@@ -11,6 +11,9 @@ import {
 import { getActivePobTreeSpec } from "@/services/pob-selectors";
 import { useI18n } from "@/i18n";
 
+/** `.overlay-route` padding around the minibar, kept inside the collapsed window. */
+const MINIBAR_GUTTER_PX = 6;
+
 export function OverlayWindow() {
   const { state, actions } = useAppStore();
   const { t } = useI18n();
@@ -20,6 +23,30 @@ export function OverlayWindow() {
   const nextObjectives = build && progress ? getNextObjectives(build, progress, 3) : [];
   const pinnedItems = build && progress ? getPinnedItems(build, progress) : [];
   const [minimized, setMinimized] = useState(false);
+  const minibarRef = useRef<HTMLDivElement>(null);
+  const hasBuild = Boolean(build && progress && currentStage);
+  // The minibar only exists with a build: losing it while collapsed must give the
+  // empty state a full-size window again.
+  const collapsed = minimized && hasBuild;
+  const treeLabel = build ? (getActivePobTreeSpec(build.pob)?.title ?? currentStage?.title) : undefined;
+
+  // The window itself follows the minibar: a transparent leftover would still be
+  // part of the window and keep catching clicks meant for the game. Measured in a
+  // layout effect so the window resizes before the collapsed frame is painted.
+  useLayoutEffect(() => {
+    if (!window.desktop) return;
+
+    if (!collapsed) {
+      void window.desktop.setOverlayMinimized(null);
+      return;
+    }
+
+    const rect = minibarRef.current!.getBoundingClientRect();
+    void window.desktop.setOverlayMinimized({
+      width: Math.ceil(rect.right + MINIBAR_GUTTER_PX),
+      height: Math.ceil(rect.bottom + MINIBAR_GUTTER_PX),
+    });
+  }, [collapsed, build?.name, treeLabel]);
 
   useEffect(() => {
     document.body.dataset.view = "overlay";
@@ -43,13 +70,10 @@ export function OverlayWindow() {
     );
   }
 
-  const activeTreeSpec = getActivePobTreeSpec(build.pob);
-  const treeLabel = activeTreeSpec?.title ?? currentStage.title;
-
-  if (minimized) {
+  if (collapsed) {
     return (
       <div className="overlay-route is-minimized">
-        <div className="overlay-minibar" onClick={() => setMinimized(false)}>
+        <div className="overlay-minibar" onClick={() => setMinimized(false)} ref={minibarRef}>
           <span className="minibar-name">{build.name}</span>
           <span className="minibar-sep">·</span>
           <span className="minibar-tree">{treeLabel}</span>
