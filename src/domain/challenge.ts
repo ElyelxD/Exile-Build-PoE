@@ -56,6 +56,23 @@ export type WeaponFamily =
   | "twoHandMace"
   | "unarmed";
 
+/** Families that occupy both hands. A bow still takes a quiver in the off hand. */
+export const TWO_HANDED_WEAPONS: readonly WeaponFamily[] = ["bow", "staff", "twoHandSword", "twoHandAxe", "twoHandMace"];
+
+/** What the off hand holds. Dual wielding is never suggested, so it has no value here. */
+export type OffHand = "shield" | "quiver" | "none";
+
+/**
+ * The off hand that goes with a weapon family: a quiver beside a bow, nothing beside
+ * any other two-handed weapon, a shield beside everything else (unarmed included).
+ * With no family mandated nothing is known, so nothing is assumed.
+ */
+export function offHandFor(weapon: WeaponFamily | undefined): OffHand {
+  if (weapon === undefined || weapon === "any") return "none";
+  if (weapon === "bow") return "quiver";
+  return TWO_HANDED_WEAPONS.includes(weapon) ? "none" : "shield";
+}
+
 export interface ChallengeSkill {
   name: string;
   tags: ChallengeSkillTag[];

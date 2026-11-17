@@ -1,8 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { CHALLENGE_DIFFICULTIES, type ChallengeDifficulty } from "@/domain/challenge";
+import { CHALLENGE_DIFFICULTIES, TWO_HANDED_WEAPONS, type ChallengeDifficulty, type WeaponFamily } from "@/domain/challenge";
+import treeRaw from "@/data/tree-default.json";
 import { ASCENDANCY_BY_CLASS_ID, CLASS_ID_TO_NAME } from "@/domain/poe-classes";
 import poolData from "@/data/challenge-pool.json";
-import { DIFFICULTY_CONFIG, generateChallenge } from "../generator";
+import { DIFFICULTY_CONFIG, eligibleUniques, generateChallenge } from "../generator";
 import { bannableSupports, eligibleSupports, stripSupportSuffix, withSupportSuffix } from "../gem-planner";
 
 /**
@@ -24,6 +25,11 @@ import { bannableSupports, eligibleSupports, stripSupportSuffix, withSupportSuff
  *   - The mandated weapon is one the mandated skill can actually use.
  *   - The mandated keystone fits the skill's tags (requires ⊆ tags, forbids ∩ tags = ∅).
  *   - A mandated weapon unique only appears alongside its own weapon family.
+ *   - A mandated off-hand unique (a shield) only appears beside a one-handed weapon:
+ *     a bow needs its quiver and a two-handed weapon needs both hands.
+ *   - The suggested tree never chooses a notable for gear the build does not hold
+ *     (regression: medium:K4MN03, a bow build, was given axe, sword, mace,
+ *     two-handed, shield and dual-wield notables).
  *   - Banned supports are supports the skill could actually have used, and distinct.
  *   - Extreme's extra rules are distinct and never redundant with the keystone.
  */
@@ -212,6 +218,47 @@ describe("coherence", () => {
         expect(spec.unique.weapon).toBe(spec.weapon);
       }
     });
+  });
+
+  it("only mandates an off-hand unique beside a one-handed weapon (C5)", () => {
+    const offHandUniques = (weapon: WeaponFamily) =>
+      eligibleUniques(weapon).filter((unique) => unique.slot === "Weapon 2");
+
+    for (const weapon of TWO_HANDED_WEAPONS) {
+      expect(offHandUniques(weapon), weapon).toEqual([]);
+    }
+
+    for (const weapon of ["wand", "sceptre", "dagger", "claw", "oneHandSword", "oneHandAxe", "oneHandMace", "unarmed"] as const) {
+      expect(offHandUniques(weapon).length, weapon).toBeGreaterThan(0);
+    }
+  });
+
+  it("never mandates an off-hand unique the rolled weapon cannot carry", () => {
+    // Swept across seeds because it guards the roll itself, not just the filter.
+    for (let index = 0; index < 120; index++) {
+      const spec = generateChallenge("medium", `OFFHAND${index}`);
+
+      if (spec.unique?.slot === "Weapon 2") {
+        expect(TWO_HANDED_WEAPONS, spec.code).not.toContain(spec.weapon);
+      }
+    }
+  }, 15_000);
+
+  it("keeps the unique of a challenge that was already coherent (D1, medium:K4MN03)", () => {
+    // Saved challenges are regenerated from their seed on every start: fixing an
+    // incoherent roll must not move the mandated unique of a valid one.
+    expect(generateChallenge("medium", "K4MN03").unique?.name).toBe("Rat's Nest");
+  });
+
+  it("plans no notable for gear the bow build of medium:K4MN03 does not hold", () => {
+    const spec = generateChallenge("medium", "K4MN03");
+    const stats = new Map(
+      (treeRaw as unknown as { nodes: Array<[number, ...unknown[]]> }).nodes.map((node) => [node[5] as string, node[6] as string]),
+    );
+    const offWeapon = /\b(axes?|swords?|maces?|sceptres?|two handed melee|dual wield\w*|(?<!energy )shields?)\b/i;
+
+    expect(spec.weapon).toBe("bow");
+    expect(spec.tree.highlights.filter((name) => offWeapon.test(stats.get(name)!))).toEqual([]);
   });
 
   it("only bans supports the skill could have used, without repeats (C6)", () => {
